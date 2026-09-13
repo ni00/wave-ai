@@ -34,7 +34,7 @@ jobs:
             else
               git show "$BASE_SHA:clients/operations.json" > /tmp/wave-previous-operations.json
             fi
-            python3 tools/clients/compat.py /tmp/wave-previous-openapi.json /tmp/wave-previous-operations.json
+            go run ./tools/clients compat /tmp/wave-previous-openapi.json /tmp/wave-previous-operations.json
           fi
       - run: make clients-integration
       - run: make clients-package

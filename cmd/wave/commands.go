@@ -12,6 +12,7 @@ import (
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/config"
 	"wave-ai.local/wave/internal/platform/database"
+	"wave-ai.local/wave/tools/bench"
 )
 
 const helpText = `Wave AI local service and administration
@@ -21,6 +22,7 @@ Usage:
   wave init-db
   wave bootstrap -org NAME [-user admin] [-key-label default] [-format human|json|key]
   wave config check
+  wave bench [-workers 2,5,10,20] [-tasks 100] [-clients 32] [-format human|json]
 
 Use 'wave COMMAND --help' for flags. Configuration is read from WAVE_* environment variables.
 init-db initializes a new database; it does not migrate or reset existing deployments.
@@ -46,6 +48,8 @@ func runCommand(ctx context.Context, args []string, out, diagnostics io.Writer) 
 		err = bootstrapCommand(ctx, args, out, diagnostics)
 	case "config":
 		err = configCommand(args, out, diagnostics)
+	case "bench":
+		err = bench.Run(ctx, args, out, diagnostics)
 	default:
 		return fmt.Errorf("unknown command %q; use wave --help", name)
 	}

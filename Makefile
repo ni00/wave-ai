@@ -3,13 +3,17 @@ BINDIR ?= $(CACHE_DIR)/bin
 COMPOSE := docker compose --project-directory deploy
 DOCS_DIR ?= internal/platform/apidocs
 
-.PHONY: build run test integration check docs docs-check setup up down
+.PHONY: build run test integration check docs docs-check setup up down bench bench-test
 build:
 	go build -trimpath -tags=nomsgpack -o "$(BINDIR)/wave" ./cmd/wave
 run: build
 	"$(BINDIR)/wave" serve
 test:
 	go test ./...
+bench: build
+	"$(BINDIR)/wave" bench $(BENCH_ARGS)
+bench-test:
+	WAVE_BENCH_INTEGRATION=1 go test -race ./tools/bench -count=1
 integration:
 	bash internal/tests/integration.sh
 check:

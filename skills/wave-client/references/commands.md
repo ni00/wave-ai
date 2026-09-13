@@ -55,8 +55,8 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | --- | --- | --- | --- |
 | `wavectl files list` | — | — | List files |
 | `wavectl files upload` | — | `--file` | Upload a file |
-| `wavectl files get` | `--id` | — | Get file metadata |
 | `wavectl files delete` | `--id` | — | Delete a file |
+| `wavectl files get` | `--id` | — | Get file metadata |
 | `wavectl files download` | `--id` | `--output` | Download file content |
 
 ## health
@@ -72,9 +72,9 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | `wavectl memory list` | — | — | List memory stores |
 | `wavectl memory create` | — | `--name` | Create a memory store |
 | `wavectl memory conflicts` | `--id` | — | List memory conflicts |
+| `wavectl memory delete` | `--id` | `--path` | Delete a memory entry |
 | `wavectl memory entries` | `--id` | — | List memory entries |
 | `wavectl memory write` | `--id` | `--path` | Write a memory entry |
-| `wavectl memory delete` | `--id` | `--path` | Delete a memory entry |
 | `wavectl memory revisions` | `--id` | — | Memory revision history |
 
 ## sessions

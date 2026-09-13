@@ -16,11 +16,11 @@ Server Go types and Swagger annotations are the contract source. The toolchain c
 | `cli/internal/command/` | CLI workflows, configuration and terminal output |
 | `skills/` | External-agent instructions, workflow references and request examples |
 
-The exact generated paths are listed in `generate.py`. `config.json` pins the generator image digest and package names. `operations.json` records pagination, transport, idempotency and command names that OpenAPI cannot fully express. Every new operationId must have metadata; missing entries fail generation.
+The exact generated paths are listed in `generate.go`. `config.json` pins the generator image digest and package names. `operations.json` records pagination, transport, idempotency and command names that OpenAPI cannot fully express. Every new operationId must have metadata; missing entries fail generation.
 
 ## Development
 
-Requires Go, Node.js/npm, Python/uv and Docker. Run from the repository root:
+Go runs the toolchain; Node.js converts the contract, and Docker runs the pinned generators. Python/uv is needed only to test and package the Python SDK. Run from the repository root:
 
 ```bash
 make clients-setup       # Install tool, TypeScript and Python dependencies from lockfiles.
@@ -33,7 +33,9 @@ make clients-integration # Full workflows with temporary PostgreSQL, S3 and dete
 
 Generation runs in a temporary directory, then updates only owned files and preserves handwritten runtimes. `--check` regenerates and compares without updating the checkout. For CLI-only work, `make cli-build` does not require other language dependencies.
 
-`tests/clients/run.py` covers shared authentication, pagination, errors, SSE, retries and file behavior. CLI tests additionally cover input validation, profile migration, dry-run redaction, exit codes and cursors. Real-service tests connect Agent/Session/Task creation, approval, client-tool results, completion, uploads and downloads, and exercise commands and tool definitions used by the skills. Tests clean up their own containers and data.
+The single entry point is `go run ./tools/clients <command>`: `generate [--check]`, `check`, `compat SPEC OPERATIONS`, `test`, `integration`, `package`, or `smoke`. The Make targets call this same tool. Go source files separate these responsibilities within one package; there are no independent Python orchestration scripts.
+
+`tests/clients/fixture/` serves shared authentication, pagination, errors, SSE, retries and file cases. CLI tests additionally cover validation, profiles, redaction and exit codes. Real-service tests exercise task approval, tool results, completion, uploads and downloads, including skill workflows. Python SDK tests live in `sdks/python/tests/`; generated Python APIs remain in `wave_ai_generated/`. Tests clean up their own containers and data, including on interruption.
 
 `.github/workflows/clients.yml` compares protocol and operation metadata against the PR baseline. Compatibility checks do not replace runtime tests for new behavior.
 
@@ -60,7 +62,7 @@ make clients-package
 make clients-smoke
 ```
 
-Output goes to `dist/clients/<version>/`: six platform CLI archives, Python wheel/sdist, npm tarball, Go source archive, two Skill ZIPs, both OpenAPI contracts, a manifest and SHA256SUMS. Installation smoke tests use fresh temporary directories and the actual archives. These commands do not publish packages or create Git tags.
+Output goes to `dist/clients/<version>/`: six platform CLI archives, Python wheel/sdist, npm tarball, Go source archive, two Skill ZIPs, both OpenAPI contracts, a manifest and SHA256SUMS. Packaging replaces the output directory only after all builds succeed. Smoke tests verify checksums and install the actual archives in fresh temporary directories. These commands do not publish packages or create Git tags.
 
 Version and package names are configured in `config.json`; synchronize module versions and run checks before release. The repository is `https://github.com/ni00/wave-ai`. Go submodules need `sdks/go/v<version>` and `cli/v<version>` tags. Confirm Python/npm package names and registry permissions before publishing. `cli/go.work` is for repository development only; the published CLI depends on the published Go SDK at the same version.
 

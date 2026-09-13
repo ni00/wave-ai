@@ -9,6 +9,7 @@
 cli
 sdks
 skills
-tools
+tools/*
+!tools/bench
 tests
 **/*.log

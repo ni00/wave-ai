@@ -16,11 +16,11 @@
 | `cli/internal/command/` | CLI 用户流程、配置和终端输出 |
 | `skills/` | 外部 Agent 操作说明、工作流参考和请求样例 |
 
-具体生成路径以 `generate.py` 的输出清单为准。`config.json` 固定生成器镜像摘要和包名；`operations.json` 记录 OpenAPI 无法完整表达的分页、传输、幂等性与命令命名。新增 operationId 必须补齐这些元数据，检查器会拒绝漏项。
+具体生成路径以 `generate.go` 的输出清单为准。`config.json` 固定生成器镜像摘要和包名；`operations.json` 记录 OpenAPI 无法完整表达的分页、传输、幂等性与命令命名。新增 operationId 必须补齐这些元数据，检查器会拒绝漏项。
 
 ## 日常开发
 
-需要 Go、Node.js/npm、Python/uv 和 Docker。仓库根目录执行：
+Go 统一执行工具链，Node.js 负责协议转换，Docker 运行固定版本的生成器。Python/uv 仅用于 Python SDK 的测试和打包。在仓库根目录执行：
 
 ```bash
 make clients-setup       # 按锁文件安装工具、TS 与 Python 依赖
@@ -33,7 +33,9 @@ make clients-integration # 临时 PostgreSQL、S3、确定性模型下的完整�
 
 生成器在临时目录完成生成后更新清单内文件，保留手写运行时。`--check` 重新生成后比较结果，避免提交过期产物。CLI 单独开发可用 `make cli-build`，无需安装其他语言依赖。
 
-`tests/clients/run.py` 覆盖认证、分页、错误、SSE、重试和文件等共同协议；Go CLI 测试另覆盖参数校验、配置迁移、dry-run 脱敏、退出码和游标。真实服务测试串起创建 Agent/Session/Task、审批、客户端工具结果、任务完成、上传与下载，也执行 Skill 所用的命令与工具定义。测试会清理自己创建的容器和数据。
+统一入口是 `go run ./tools/clients <command>`，支持 `generate [--check]`、`check`、`compat SPEC OPERATIONS`、`test`、`integration`、`package`、`smoke`。Make 目标调用同一工具；Go 源文件按职责拆分在同一个包中，不再保留独立的 Python 编排脚本。
+
+`tests/clients/fixture/` 提供认证、分页、错误、SSE、重试和文件的共享 HTTP 用例。CLI 测试另覆盖校验、配置、脱敏与退出码。真实服务测试串起任务审批、工具结果、完成和文件传输，也执行 Skill 工作流。Python SDK 测试归于 `sdks/python/tests/`，生成的 Python API 保留在 `wave_ai_generated/`。测试会清理自己创建的容器和数据，中断时也执行清理。
 
 兼容性检查由 `.github/workflows/clients.yml` 在 PR 中对比基线契约和操作元数据。它检查协议变化；新增行为仍需要运行时测试，不能只看代码生成成功。
 
@@ -60,7 +62,7 @@ make clients-package
 make clients-smoke
 ```
 
-输出位于 `dist/clients/<version>/`：六个平台 CLI、Python wheel/sdist、npm tarball、Go 源码包、两份 Skill ZIP、中英文 OpenAPI、manifest 和 SHA256SUMS。安装冒烟测试使用新临时目录，验证实际归档。以上命令不发布包、不创建 Git tag。
+输出位于 `dist/clients/<version>/`：六个平台 CLI、Python wheel/sdist、npm tarball、Go 源码包、两份 Skill ZIP、中英文 OpenAPI、manifest 和 SHA256SUMS。全部构建成功后才替换产物目录；冒烟测试校验摘要，并在新临时目录安装实际归档。以上命令不发布包、不创建 Git tag。
 
 版本和目标包名统一配置在 `config.json`，发布前同步各模块版本并运行检查。仓库地址为 `https://github.com/ni00/wave-ai`，Go 子模块需要 `sdks/go/v<version>` 和 `cli/v<version>` 标签；Python/npm 包名与 registry 权限需在正式发布前确认。当前 `cli/go.work` 仅用于仓库内联调，发布的 CLI 依赖已发布的同版本 Go SDK。
 

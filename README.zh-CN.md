@@ -44,6 +44,21 @@ WAVE_LEASE_SECONDS=30
 
 不使用 Compose 的本机开发需要 Go 1.27+、PostgreSQL 16+，可设置 `WAVE_STORAGE_BACKEND=local`，详见[启动说明](skills/wave-admin/references/setup.md)。
 
+## 性能压测
+
+在目标服务器上运行 `make bench`（需要本机 Docker 和 Go）；已有 `wave` 二进制时可直接运行 `wave bench`。工具自动创建临时 PostgreSQL，使用本地模拟模型，通过真实 HTTP API 测试鉴权、任务入队、worker、模型流式处理和持久化。它忽略部署的 `WAVE_*` 配置，不需要 API Key；结束或 Ctrl-C 后删除测试容器、数据卷和临时文件。
+
+```bash
+make bench
+make bench BENCH_ARGS='-workers 2,5,10,20 -clients 32 -tasks 500 -warmup 20 -timeout 5m'
+# JSON 报告适合对比不同服务器或提交；构建进度和压测进度写入 stderr。
+make -s bench BENCH_ARGS='-format json' > bench.json
+```
+
+每档 worker 使用独立数据库，预热不计入结果。报告包含成功任务/秒、失败率、排队/执行/端到端延迟的 P50/P95/P99、数据库连接池等待和进程 Go 堆内存采样峰值。`-model-delay 2s` 可模拟较慢模型，`-chunks`、`-chunk-bytes` 可调整流式响应负载。完整参数见 `wave bench --help` 和 [压测说明](tools/bench/README.zh-CN.md)。
+
+这是一项不含沙箱、浏览器、真实模型和 S3 文件负载的基础压测，不能直接等同于实际 Agent 容量。固定 `-clients`，增加 worker，观察吞吐何时不再明显提升，以及 P95、错误率和资源消耗；较长测试建议至少 500 个任务，并重复运行。`-clients` 是压测端的在途任务数，`-workers` 是服务端 worker 数。
+
 ## 客户端与 API
 
 - [CLI](cli/README.zh-CN.md)：`make cli-build`；`wavectl` 操作远程资源，`wave` 管理本机服务。

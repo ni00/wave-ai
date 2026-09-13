@@ -1,9 +1,9 @@
 {
-  "version": "0.1.0",
-  "sourceSHA256": "ae21853ff79826e61e5e0e0ba0903e33754e986ef2748b98248ba9c3c32608fa",
-  "openapiSHA256": "e45ddcfa58d83a2975a927f1dab0e029e87b49073aa90eb075020cf66e26c700",
-  "openapiChineseSHA256": "8aa085dd737b27d7009295cfaa24e4f9d5991fc6de62ded51ac71fb81e3b755f",
   "defaultLanguage": "en",
   "generatorImage": "openapitools/openapi-generator-cli@sha256:2ab0a9680222de65dc9d3baf861aa02b99e1b80c211d8221ebf3ae8f8a102524",
-  "operations": 54
+  "openapiChineseSHA256": "8aa085dd737b27d7009295cfaa24e4f9d5991fc6de62ded51ac71fb81e3b755f",
+  "openapiSHA256": "e45ddcfa58d83a2975a927f1dab0e029e87b49073aa90eb075020cf66e26c700",
+  "operations": 54,
+  "sourceSHA256": "ae21853ff79826e61e5e0e0ba0903e33754e986ef2748b98248ba9c3c32608fa",
+  "version": "0.1.0"
 }

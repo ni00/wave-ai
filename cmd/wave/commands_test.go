@@ -10,7 +10,7 @@ import (
 
 func TestHelpWithoutConfiguration(t *testing.T) {
 	t.Setenv("WAVE_LEASE_SECONDS", "invalid")
-	for _, args := range [][]string{{"--help"}, {"serve", "--help"}, {"bootstrap", "--help"}, {"init-db", "--help"}, {"config", "--help"}} {
+	for _, args := range [][]string{{"--help"}, {"serve", "--help"}, {"bootstrap", "--help"}, {"init-db", "--help"}, {"config", "--help"}, {"bench", "--help"}} {
 		var out, diagnostics bytes.Buffer
 		if err := runCommand(context.Background(), args, &out, &diagnostics); err != nil {
 			t.Fatal(args, err)
