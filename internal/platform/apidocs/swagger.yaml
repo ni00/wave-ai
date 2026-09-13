@@ -1,0 +1,4093 @@
+definitions:
+  agents.Agent:
+    properties:
+      archived:
+        type: boolean
+      config:
+        $ref: '#/definitions/agents.Config'
+      created_at:
+        format: date-time
+        type: string
+      id:
+        type: string
+      updated_at:
+        format: date-time
+        type: string
+      version:
+        type: integer
+    required:
+    - archived
+    - config
+    - created_at
+    - id
+    - updated_at
+    - version
+    type: object
+  agents.Config:
+    properties:
+      effort:
+        type: string
+      expert_ids:
+        items:
+          type: string
+        type: array
+        x-nullable: true
+      instructions:
+        example: Answer clearly and cite your sources.
+        type: string
+      model:
+        example: your-model-id
+        type: string
+      name:
+        example: Research assistant
+        type: string
+      skill_ids:
+        items:
+          type: string
+        type: array
+        x-nullable: true
+      tools:
+        items:
+          $ref: '#/definitions/agents.Tool'
+        type: array
+        x-nullable: true
+    required:
+    - model
+    - name
+    type: object
+  agents.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/agents.Agent'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  agents.Tool:
+    properties:
+      approval:
+        type: boolean
+      credential_id:
+        type: string
+      description:
+        type: string
+      kind:
+        description: builtin, mcp, custom
+        enum:
+        - builtin
+        - mcp
+        - custom
+        example: custom
+        type: string
+      name:
+        example: lookup
+        type: string
+      parameters:
+        additionalProperties: {}
+        description: 工具参数的 JSON Schema；kind=custom 时必须提供非 null 对象。 || JSON Schema
+          for tool parameters; kind=custom requires a non-null object.
+        type: object
+        x-nullable: true
+      remote_name:
+        type: string
+      server_url:
+        description: kind=mcp 时必须提供 HTTPS URL，禁止内嵌用户名和密码。 || When kind=mcp, an HTTPS
+          URL is required; embedded usernames and passwords are forbidden.
+        type: string
+    required:
+    - kind
+    - name
+    type: object
+  agents.UpdateRequest:
+    properties:
+      config:
+        $ref: '#/definitions/agents.Config'
+      version:
+        example: 1
+        minimum: 1
+        type: integer
+    required:
+    - config
+    - version
+    type: object
+  agents.Version:
+    properties:
+      agent_id:
+        type: string
+      config:
+        $ref: '#/definitions/agents.Config'
+      created_at:
+        format: date-time
+        type: string
+      version:
+        type: integer
+    required:
+    - agent_id
+    - config
+    - created_at
+    - version
+    type: object
+  agents.VersionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/agents.Version'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  apierr.Envelope:
+    properties:
+      error:
+        $ref: '#/definitions/apierr.EnvelopeEr'
+      request_id:
+        example: req_example
+        type: string
+      type:
+        enum:
+        - error
+        example: error
+        type: string
+    required:
+    - error
+    - request_id
+    - type
+    type: object
+  apierr.EnvelopeEr:
+    properties:
+      details:
+        additionalProperties: {}
+        type: object
+      message:
+        example: input is required
+        type: string
+      type:
+        enum:
+        - invalid_request_error
+        - authentication_error
+        - permission_error
+        - not_found_error
+        - request_too_large
+        - rate_limit_error
+        - api_error
+        - timeout_error
+        - overloaded_error
+        example: invalid_request_error
+        type: string
+    required:
+    - message
+    - type
+    type: object
+  deployments.CreateRequest:
+    properties:
+      agent_id:
+        type: string
+      cron:
+        type: string
+      environment_id:
+        type: string
+      input:
+        type: string
+      name:
+        type: string
+    required:
+    - agent_id
+    - input
+    - name
+    type: object
+  deployments.Deployment:
+    properties:
+      agent_id:
+        type: string
+      created_at:
+        format: date-time
+        type: string
+      cron:
+        type: string
+      environment_id:
+        type: string
+      id:
+        type: string
+      input:
+        type: string
+      last_task_id:
+        type: string
+      name:
+        type: string
+      next_at:
+        format: date-time
+        type: string
+      paused:
+        type: boolean
+    required:
+    - agent_id
+    - created_at
+    - id
+    - input
+    - name
+    - paused
+    type: object
+  deployments.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/deployments.Deployment'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  deployments.PauseRequest:
+    properties:
+      paused:
+        type: boolean
+        x-nullable: true
+    required:
+    - paused
+    type: object
+  deployments.Run:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      deployment_id:
+        type: string
+      id:
+        type: string
+      reason:
+        type: string
+      session_id:
+        type: string
+      task_id:
+        type: string
+    required:
+    - created_at
+    - deployment_id
+    - id
+    type: object
+  deployments.RunsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/deployments.Run'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  environments.CreateRequest:
+    properties:
+      name:
+        type: string
+      packages:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+        x-nullable: true
+    required:
+    - name
+    type: object
+  environments.Environment:
+    properties:
+      archived:
+        type: boolean
+      created_at:
+        format: date-time
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      packages:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+        x-nullable: true
+    required:
+    - archived
+    - created_at
+    - id
+    - name
+    - packages
+    type: object
+  environments.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/environments.Environment'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  execution.Budget:
+    properties:
+      max_agents:
+        description: '根任务：<=0 使用 6（含协调者）；子任务固定为 0。 || Root tasks: <=0 uses 6, including
+          the coordinator. Child tasks: fixed at 0.'
+        type: integer
+      max_concurrent_agents:
+        description: '根任务：<=0 使用 3；子任务固定为 0，不能再委派。 || Root tasks: <=0 uses 3. Child
+          tasks: fixed at 0, with no further delegation.'
+        type: integer
+      max_seconds:
+        description: '根任务：<=0 使用 1800；子任务：<=0 继承父限制，正数仅可收窄。 || Root tasks: <=0 uses
+          1800. Child tasks: <=0 inherits the parent limit; positive values may only
+          narrow it.'
+        type: integer
+      max_tokens:
+        description: '根任务：<=0 使用 200000；子任务：<=0 继承父限制，正数仅可收窄。 || Root tasks: <=0 uses
+          200000. Child tasks: <=0 inherits the parent limit; positive values may
+          only narrow it.'
+        format: int64
+        type: integer
+      max_tool_calls:
+        description: '根任务：<=0 使用 200；子任务：<=0 继承父限制，正数仅可收窄。 || Root tasks: <=0 uses
+          200. Child tasks: <=0 inherits the parent limit; positive values may only
+          narrow it.'
+        type: integer
+    type: object
+  execution.CreateSessionRequest:
+    properties:
+      environment_id:
+        type: string
+      file_ids:
+        items:
+          type: string
+        type: array
+        x-nullable: true
+      memory_store_ids:
+        items:
+          type: string
+        type: array
+        x-nullable: true
+      title:
+        type: string
+    type: object
+  execution.Event:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      data:
+        additionalProperties: {}
+        type: object
+      sequence:
+        format: int64
+        type: integer
+      session_id:
+        type: string
+      task_id:
+        type: string
+      type:
+        type: string
+    required:
+    - created_at
+    - data
+    - sequence
+    - session_id
+    - type
+    type: object
+  execution.EventsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/execution.Event'
+        type: array
+    required:
+    - data
+    type: object
+  execution.Generation:
+    properties:
+      attempt:
+        type: integer
+      duration_ms:
+        description: 耗时，单位毫秒；未知时为 null。 || Duration in milliseconds; null when unknown.
+        format: int64
+        type: integer
+        x-nullable: true
+      error:
+        type: string
+      finished_at:
+        format: date-time
+        type: string
+      first_delta_ms:
+        description: 首个增量的延迟，单位毫秒；尚未收到或未知时为 null。 || First-delta latency in milliseconds;
+          null if no delta has arrived or the value is unknown.
+        format: int64
+        type: integer
+        x-nullable: true
+      id:
+        type: string
+      message_id:
+        type: string
+      model:
+        type: string
+      purpose:
+        type: string
+      started_at:
+        format: date-time
+        type: string
+      state:
+        enum:
+        - running
+        - completed
+        - failed
+        - interrupted
+        type: string
+      task_id:
+        type: string
+      usage:
+        $ref: '#/definitions/modelclient.Usage'
+    required:
+    - attempt
+    - duration_ms
+    - first_delta_ms
+    - id
+    - model
+    - purpose
+    - started_at
+    - state
+    - task_id
+    - usage
+    type: object
+  execution.GenerationsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/execution.Generation'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  execution.Input:
+    properties:
+      consumed:
+        type: boolean
+      created_at:
+        format: date-time
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+      text:
+        type: string
+    required:
+    - consumed
+    - created_at
+    - id
+    - task_id
+    - text
+    type: object
+  execution.InputsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/execution.Input'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  execution.Message:
+    properties:
+      call_id:
+        type: string
+      created_at:
+        format: date-time
+        type: string
+      error_code:
+        type: string
+      id:
+        type: string
+      is_error:
+        type: boolean
+      role:
+        type: string
+      root_id:
+        type: string
+      sequence:
+        format: int64
+        type: integer
+      session_id:
+        type: string
+      source:
+        type: string
+      source_task_id:
+        type: string
+      task_id:
+        type: string
+      text:
+        type: string
+      tool_calls:
+        items:
+          $ref: '#/definitions/modelclient.ToolCall'
+        type: array
+    required:
+    - created_at
+    - id
+    - role
+    - root_id
+    - sequence
+    - session_id
+    - source
+    - task_id
+    - text
+    type: object
+  execution.MessagesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/execution.Message'
+        type: array
+      next_after:
+        format: int64
+        type: integer
+    required:
+    - data
+    - next_after
+    type: object
+  execution.ReconcileRequest:
+    properties:
+      confirm_stopped:
+        enum:
+        - true
+        example: true
+        type: boolean
+    required:
+    - confirm_stopped
+    type: object
+  execution.RequiredAction:
+    properties:
+      call_id:
+        type: string
+      reason:
+        type: string
+      task_id:
+        type: string
+      tool:
+        $ref: '#/definitions/execution.ToolCall'
+      type:
+        enum:
+        - approve_tool
+        - submit_tool_result
+        - confirm_tool_outcome
+        - reconcile_task
+        type: string
+    required:
+    - task_id
+    - type
+    type: object
+  execution.RequiredActionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/execution.RequiredAction'
+        type: array
+    required:
+    - data
+    type: object
+  execution.Session:
+    properties:
+      active_task_id:
+        type: string
+      archived:
+        type: boolean
+      created_at:
+        format: date-time
+        type: string
+      environment_id:
+        type: string
+      event_sequence:
+        format: int64
+        type: integer
+      file_ids:
+        items:
+          type: string
+        type: array
+        x-nullable: true
+      id:
+        type: string
+      memory_store_ids:
+        items:
+          type: string
+        type: array
+        x-nullable: true
+      message_sequence:
+        format: int64
+        type: integer
+      title:
+        type: string
+    required:
+    - archived
+    - created_at
+    - event_sequence
+    - file_ids
+    - id
+    - memory_store_ids
+    - message_sequence
+    - title
+    type: object
+  execution.SessionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/execution.Session'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  execution.Task:
+    properties:
+      agent:
+        $ref: '#/definitions/agents.Config'
+      agent_count:
+        type: integer
+      agent_id:
+        type: string
+      agent_version:
+        type: integer
+      attempts:
+        type: integer
+      budget:
+        $ref: '#/definitions/execution.Budget'
+      cancel_requested:
+        type: boolean
+      created_at:
+        format: date-time
+        type: string
+      error:
+        type: string
+      experts:
+        additionalProperties:
+          $ref: '#/definitions/agents.Agent'
+        type: object
+      finished_at:
+        format: date-time
+        type: string
+      id:
+        type: string
+      parent_id:
+        type: string
+      result:
+        type: string
+      root_id:
+        type: string
+      session_id:
+        type: string
+      started_at:
+        format: date-time
+        type: string
+      state:
+        enum:
+        - queued
+        - running
+        - waiting
+        - unknown
+        - succeeded
+        - partial
+        - failed
+        - canceled
+        example: queued
+        type: string
+      tool_calls:
+        type: integer
+      updated_at:
+        format: date-time
+        type: string
+      usage_known:
+        type: boolean
+      used_tokens:
+        format: int64
+        type: integer
+    required:
+    - agent
+    - agent_count
+    - agent_id
+    - agent_version
+    - attempts
+    - budget
+    - cancel_requested
+    - created_at
+    - id
+    - root_id
+    - session_id
+    - state
+    - tool_calls
+    - updated_at
+    - usage_known
+    - used_tokens
+    type: object
+  execution.TaskRequest:
+    properties:
+      agent_id:
+        example: agent_example
+        minLength: 1
+        type: string
+      budget:
+        $ref: '#/definitions/execution.Budget'
+      input:
+        example: Summarize the uploaded report.
+        minLength: 1
+        type: string
+    required:
+    - agent_id
+    - input
+    type: object
+  execution.TasksResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/execution.Task'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  execution.TextRequest:
+    properties:
+      text:
+        example: Focus on the deployment risks.
+        minLength: 1
+        type: string
+    required:
+    - text
+    type: object
+  execution.ToolCall:
+    properties:
+      approval:
+        type: boolean
+      arguments:
+        type: string
+      created_at:
+        format: date-time
+        type: string
+      delivered:
+        type: boolean
+      error_code:
+        type: string
+      finished_at:
+        format: date-time
+        type: string
+      id:
+        type: string
+      is_error:
+        type: boolean
+      model_call_id:
+        type: string
+      result:
+        type: string
+      started_at:
+        format: date-time
+        type: string
+      status:
+        description: waiting_children 表示协调者工具正在等待子任务。 || waiting_children means the
+          coordinator tool is waiting for child tasks.
+        enum:
+        - ready
+        - approval
+        - custom
+        - running
+        - waiting_children
+        - unknown
+        - completed
+        type: string
+      task_id:
+        type: string
+      tool:
+        $ref: '#/definitions/agents.Tool'
+      updated_at:
+        format: date-time
+        type: string
+    required:
+    - arguments
+    - created_at
+    - delivered
+    - id
+    - is_error
+    - model_call_id
+    - status
+    - task_id
+    - tool
+    - updated_at
+    type: object
+  execution.ToolCallsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/execution.ToolCall'
+        type: array
+    required:
+    - data
+    type: object
+  execution.ToolResultRequest:
+    properties:
+      approve:
+        description: 与 result 互斥；false 表示拒绝，null 等同未提供。 || Mutually exclusive with
+          result; false rejects the call, while null means not provided.
+        type: boolean
+        x-nullable: true
+      error_code:
+        description: 仅在 is_error=true 时允许非空。 || May be nonempty only when is_error=true.
+        type: string
+      is_error:
+        type: boolean
+      result:
+        description: 与 approve 互斥；空字符串是有效结果，null 等同未提供。 || Mutually exclusive with
+          approve; an empty string is a valid result, while null means not provided.
+        type: string
+        x-nullable: true
+    type: object
+  files.File:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      deleted:
+        type: boolean
+      id:
+        type: string
+      mime_type:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      session_id:
+        type: string
+      size:
+        format: int64
+        type: integer
+      task_id:
+        type: string
+    required:
+    - created_at
+    - deleted
+    - id
+    - mime_type
+    - name
+    - size
+    type: object
+  files.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/files.File'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  memory.Conflict:
+    properties:
+      actual_version:
+        type: integer
+      content:
+        type: string
+      created_at:
+        format: date-time
+        type: string
+      expected_version:
+        type: integer
+      id:
+        type: string
+      path:
+        type: string
+      store_id:
+        type: string
+    required:
+    - actual_version
+    - content
+    - created_at
+    - expected_version
+    - id
+    - path
+    - store_id
+    type: object
+  memory.ConflictsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/memory.Conflict'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  memory.CreateStoreRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  memory.DeleteEntryRequest:
+    properties:
+      path:
+        example: notes/project.md
+        minLength: 1
+        type: string
+      version:
+        description: 期望版本；不匹配返回 409。 || Expected version; a mismatch returns 409.
+        type: integer
+    required:
+    - path
+    type: object
+  memory.EntriesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/memory.Entry'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  memory.Entry:
+    properties:
+      content:
+        type: string
+      deleted:
+        type: boolean
+      path:
+        type: string
+      sha256:
+        type: string
+      store_id:
+        type: string
+      updated_at:
+        format: date-time
+        type: string
+      version:
+        type: integer
+    required:
+    - content
+    - deleted
+    - path
+    - sha256
+    - store_id
+    - updated_at
+    - version
+    type: object
+  memory.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/memory.Store'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  memory.Revision:
+    properties:
+      content:
+        type: string
+      created_at:
+        format: date-time
+        type: string
+      deleted:
+        type: boolean
+      id:
+        type: string
+      path:
+        type: string
+      session_id:
+        type: string
+      store_id:
+        type: string
+      version:
+        type: integer
+    required:
+    - content
+    - created_at
+    - deleted
+    - id
+    - path
+    - store_id
+    - version
+    type: object
+  memory.RevisionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/memory.Revision'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  memory.Store:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    required:
+    - created_at
+    - id
+    - name
+    type: object
+  memory.WriteEntryRequest:
+    properties:
+      content:
+        type: string
+      path:
+        example: notes/project.md
+        minLength: 1
+        type: string
+      version:
+        description: 期望版本；新条目使用 0，更新使用当前版本，不匹配返回 409。 || Expected version; use 0 for
+          new entries and the current version for updates. A mismatch returns 409.
+        type: integer
+    required:
+    - path
+    type: object
+  modelclient.FuncCallSpec:
+    properties:
+      arguments:
+        description: JSON string
+        type: string
+      name:
+        type: string
+    required:
+    - arguments
+    - name
+    type: object
+  modelclient.ToolCall:
+    properties:
+      function:
+        $ref: '#/definitions/modelclient.FuncCallSpec'
+      id:
+        type: string
+      type:
+        description: function
+        type: string
+    required:
+    - function
+    - id
+    - type
+    type: object
+  modelclient.Usage:
+    properties:
+      cache_read_input_tokens:
+        description: 供应商报告的缓存读取 token 数；未知时为 null。 || Provider-reported cache-read
+          token count; null when unknown.
+        format: int64
+        type: integer
+        x-nullable: true
+      completion_tokens:
+        description: 供应商报告的输出 token 数；未知时为 null。 || Provider-reported output token
+          count; null when unknown.
+        format: int64
+        type: integer
+        x-nullable: true
+      prompt_tokens:
+        description: 供应商报告的输入 token 数；未知时为 null，不能按 0 计费。 || Provider-reported input
+          token count; null when unknown and must not be billed as zero.
+        format: int64
+        type: integer
+        x-nullable: true
+    required:
+    - cache_read_input_tokens
+    - completion_tokens
+    - prompt_tokens
+    type: object
+  skills.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/skills.Skill'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+  skills.Skill:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    required:
+    - created_at
+    - description
+    - id
+    - name
+    type: object
+  vault.CreateRequest:
+    properties:
+      host:
+        type: string
+      name:
+        type: string
+      token:
+        type: string
+    required:
+    - host
+    - name
+    - token
+    type: object
+  vault.Credential:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      host:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      revoked:
+        type: boolean
+    required:
+    - created_at
+    - host
+    - id
+    - name
+    - revoked
+    type: object
+  vault.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/vault.Credential'
+        type: array
+      next_offset:
+        description: 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted
+          on the last page.
+        type: integer
+    required:
+    - data
+    type: object
+info:
+  contact: {}
+  description: |-
+    Managed Agents 服务。所有 /v1 接口使用 Bearer Wave API Key 认证； || Managed Agents service. All /v1 endpoints require a Bearer Wave API Key;
+    由 `wave bootstrap` 签发。Authorization 填写完整的 `Bearer <Wave API Key>`。 || issue it with `wave bootstrap`. Set Authorization to the full `Bearer <Wave API Key>` value.
+    offset 分页返回 data 和可选 next_offset（省略表示末页）；消息历史使用 next_after，事件列表使用最后一条 sequence 续读。 || Offset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence.
+    JSON 错误返回 {"type":"error","error":{"type":"api_error","message":"..."},"request_id":"req_..."}。文件传输的 Range 错误返回 text/plain；条件下载和健康检查可返回空响应。 || JSON errors return {"type":"error","error":{"type":"api_error","message":"..."},"request_id":"req_..."}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses.
+    JSON 请求拒绝未知字段，非 multipart 请求体上限为 2 MiB。可空字段通过 x-nullable 标记；省略与 null 不等价。 || JSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use x-nullable; omission is not equivalent to null.
+    交互式文档见 /swagger/index.html，OpenAPI spec 见 /swagger/doc.json。 || Interactive documentation: /swagger/index.html. OpenAPI spec: /swagger/doc.json.
+  title: Wave AI API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: 无需认证；检查数据库连通性，超时时间 1 秒。所有响应均无响应体。 || No authentication required.
+        Check database connectivity with a one-second timeout. All responses have
+        empty bodies.
+      operationId: health
+      responses:
+        "204":
+          description: 数据库可用 || Database available
+        "503":
+          description: 数据库不可用 || Database unavailable
+      summary: 健康检查 || Health check
+      tags:
+      - system
+  /v1/agents:
+    get:
+      description: 分页返回当前所有者可见的 Agent，按 id 排序。 || Return Agents visible to the current
+        owner, paginated and ordered by id.
+      operationId: agentsList
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.ListResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出 Agent || List Agents
+      tags:
+      - agents
+    post:
+      consumes:
+      - application/json
+      description: 创建一个带初始配置（版本 1）的 Agent。配置不可变字段之外的内容通过 PUT /v1/agents/:id 更新并产生新版本。
+        || Create an Agent with an initial configuration (version 1). Update mutable
+        configuration fields through PUT /v1/agents/:id to create a new version.
+      operationId: agentsCreate
+      parameters:
+      - description: Agent 配置 || Agent configuration
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/agents.Config'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/agents.Agent'
+        "400":
+          description: 请求体不是合法 JSON 或缺少必填字段 || Invalid JSON body or missing required
+            fields
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 创建 Agent || Create an Agent
+      tags:
+      - agents
+  /v1/agents/{id}:
+    get:
+      description: 按 ID 返回单个 Agent。 || Return an Agent by ID.
+      operationId: agentsGet
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.Agent'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: Agent 不存在或不在当前所有者范围内 || Agent not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 获取 Agent || Get an Agent
+      tags:
+      - agents
+    put:
+      consumes:
+      - application/json
+      description: 提交期望的 version 和新配置；版本匹配才生效，产生 version+1 的新配置版本。 || Submit the expected
+        version and new configuration. A matching version creates a new configuration
+        at version+1.
+      operationId: agentsUpdate
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 期望版本与新配置 || Expected version and new configuration
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/agents.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.Agent'
+        "400":
+          description: 请求体不是合法 JSON 或缺少必填字段 || Invalid JSON body or missing required
+            fields
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: Agent 不存在 || Agent not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 版本冲突 || Version conflict
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 更新 Agent || Update an Agent
+      tags:
+      - agents
+  /v1/agents/{id}/archive:
+    post:
+      description: 将 Agent 标记为 archived，不再出现在默认列表中。 || Mark the Agent as archived
+        so it no longer appears in default lists.
+      operationId: agentsArchive
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 已归档 || Archived
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: Agent 不存在 || Agent not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 归档 Agent || Archive an Agent
+      tags:
+      - agents
+  /v1/agents/{id}/versions:
+    get:
+      description: 按版本号倒序返回该 Agent 的历史配置版本。 || Return the Agent's historical configurations
+        by version descending.
+      operationId: agentsVersions
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.VersionsResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: Agent 不存在 || Agent not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: Agent 版本历史 || Agent version history
+      tags:
+      - agents
+  /v1/credentials:
+    get:
+      description: 分页返回当前所有者可见的凭据元数据。凭据 token 只写不读，响应中永远不包含明文或密文。 || Return credential
+        metadata visible to the current owner, with pagination. Tokens are write-only;
+        responses never contain plaintext or ciphertext.
+      operationId: vaultList
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vault.ListResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出凭据 || List credentials
+      tags:
+      - vault
+    post:
+      consumes:
+      - application/json
+      description: 为当前所有者录入一条主机凭据。凭据 token 仅在写入时加密存储，接口不提供任何读取明文的途径，响应中只返回元数据。 ||
+        Store a host credential for the current owner. The token is encrypted on write;
+        the API never exposes plaintext and returns metadata only.
+      operationId: vaultCreate
+      parameters:
+      - description: 凭据名称、主机与 token || Credential name, host and token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vault.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/vault.Credential'
+        "400":
+          description: 请求体不是合法 JSON 或 host 不是不含路径与用户信息的精确 authority || Invalid JSON
+            body, or host is not an exact authority without a path or user information
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 录入凭据 || Store a credential
+      tags:
+      - vault
+  /v1/credentials/{id}:
+    delete:
+      description: 将凭据标记为 revoked，此后不再可用于任务执行；凭据记录与密文保留用于审计，不提供明文读取。 || Mark the credential
+        as revoked so it can no longer be used for task execution. Its record and
+        ciphertext are retained for auditing; plaintext cannot be read.
+      operationId: vaultRevoke
+      parameters:
+      - description: 凭据 ID || Credential ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 已吊销 || Revoked
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 凭据不存在或不在当前所有者范围内 || Credential not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 吊销凭据 || Revoke a credential
+      tags:
+      - vault
+  /v1/deployments:
+    get:
+      description: 分页返回当前所有者可见的部署。 || Return deployments visible to the current owner,
+        with pagination.
+      operationId: deploymentsList
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/deployments.ListResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出部署 || List deployments
+      tags:
+      - deployments
+    post:
+      consumes:
+      - application/json
+      description: 创建一个将 Agent 与可选环境绑定、按输入运行的部署；cron 为标准五段表达式，填写时计算下次触发时间，为空则仅手动触发。
+        || Create a deployment that binds an Agent to an optional environment and
+        runs the supplied input. cron uses the standard five-field syntax; when set,
+        the next run is calculated, otherwise runs are manual only.
+      operationId: deploymentsCreate
+      parameters:
+      - description: 部署名称、Agent ID、可选环境 ID、输入与 cron || Deployment name, Agent ID,
+          optional environment ID, input and cron
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/deployments.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/deployments.Deployment'
+        "400":
+          description: 请求体不是合法 JSON 或 cron 表达式不合法 || Invalid JSON body or cron expression
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: Agent 或环境不存在 || Agent or environment not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 创建部署 || Create a deployment
+      tags:
+      - deployments
+  /v1/deployments/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: 设置部署的暂停状态；恢复时会重新计算 cron 的下次触发时间。 || Set the deployment's paused
+        state; resuming recalculates the next cron run.
+      operationId: deploymentsPause
+      parameters:
+      - description: 部署 ID || Deployment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 目标暂停状态 || Desired paused state
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/deployments.PauseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/deployments.Deployment'
+        "400":
+          description: 请求体不是合法 JSON 或缺少 paused 字段 || Invalid JSON body or missing
+            paused field
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 部署不存在或不在当前所有者范围内 || Deployment not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 暂停或恢复部署 || Pause or resume a deployment
+      tags:
+      - deployments
+  /v1/deployments/{id}/run:
+    post:
+      description: 立即触发一次部署运行，创建会话与任务并异步执行；部署处于暂停状态时返回 409。 || Trigger a deployment
+        immediately, creating a session and task for asynchronous execution. A paused
+        deployment returns 409.
+      operationId: deploymentsRun
+      parameters:
+      - description: 部署 ID || Deployment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/deployments.Run'
+        "400":
+          description: 环境或 Agent 已归档，或任务资源校验失败 || Environment or Agent is archived,
+            or task resource validation failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 部署不存在或不在当前所有者范围内 || Deployment not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 部署已暂停 || Deployment is paused
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 手动触发部署 || Trigger a deployment manually
+      tags:
+      - deployments
+  /v1/deployments/{id}/runs:
+    get:
+      description: 分页返回该部署的触发记录，包含关联的任务与会话 ID。 || Return run records for the deployment,
+        with pagination, including the associated task and session IDs.
+      operationId: deploymentsRuns
+      parameters:
+      - description: 部署 ID || Deployment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/deployments.RunsResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 部署不存在或不在当前所有者范围内 || Deployment not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 部署运行记录 || Deployment run records
+      tags:
+      - deployments
+  /v1/environments:
+    get:
+      description: 分页返回当前所有者可见的环境配置。 || Return environment configurations visible
+        to the current owner, with pagination.
+      operationId: environmentsList
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/environments.ListResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出环境 || List environments
+      tags:
+      - environments
+    post:
+      consumes:
+      - application/json
+      description: 为当前所有者创建一个环境配置，声明各包管理器（apt、npm、pip、go、cargo、gem）要安装的包。 || Create
+        an environment configuration for the current owner, declaring packages to
+        install with apt, npm, pip, go, cargo and gem.
+      operationId: environmentsCreate
+      parameters:
+      - description: 环境名称与包清单 || Environment name and package list
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/environments.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/environments.Environment'
+        "400":
+          description: 请求体不是合法 JSON、包管理器不受支持或包名为空 || Invalid JSON body, unsupported
+            package manager or empty package name
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 创建环境 || Create an environment
+      tags:
+      - environments
+  /v1/environments/{id}:
+    get:
+      description: 按 ID 返回单个环境配置。 || Return an environment configuration by ID.
+      operationId: environmentsGet
+      parameters:
+      - description: 环境 ID || Environment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/environments.Environment'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 环境不存在或不在当前所有者范围内 || Environment not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 获取环境 || Get an environment
+      tags:
+      - environments
+  /v1/environments/{id}/archive:
+    post:
+      description: 将环境标记为 archived，归档后不能再被部署引用。 || Mark the environment as archived;
+        deployments can no longer reference it.
+      operationId: environmentsArchive
+      parameters:
+      - description: 环境 ID || Environment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 已归档 || Archived
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 环境不存在或不在当前所有者范围内 || Environment not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 归档环境 || Archive an environment
+      tags:
+      - environments
+  /v1/files:
+    get:
+      description: 分页返回未删除的文件元数据，按 id 排序；可用 session_id 或 task_id 过滤。 || Return metadata
+        for files that are not deleted, paginated and ordered by id; filter by session_id
+        or task_id.
+      operationId: filesList
+      parameters:
+      - description: 按会话 ID 过滤 || Filter by session ID
+        in: query
+        name: session_id
+        type: string
+      - description: 按任务 ID 过滤 || Filter by task ID
+        in: query
+        name: task_id
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/files.ListResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出文件 || List files
+      tags:
+      - files
+    post:
+      consumes:
+      - multipart/form-data
+      description: 通过 multipart/form-data 上传单个文件，整个 multipart 请求体上限 32 MiB（含边界与字段开销）。内容按所有者维度以
+        SHA-256 对象键写入对象存储，相同内容在同一所有者内复用，不会重复存储。返回新建的文件元数据。 || Upload one file using
+        multipart/form-data. The entire multipart request is limited to 32 MiB, including
+        boundaries and field overhead. Content is stored under owner-scoped SHA-256
+        object keys; identical content is reused within the same owner. Return metadata
+        for the newly created file.
+      operationId: filesUpload
+      parameters:
+      - description: 要上传的文件 || File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/files.File'
+        "400":
+          description: 缺少 file 字段、文件名非法或超过 32 MiB 上限 || Missing file field, invalid
+            filename or exceeded 32 MiB limit
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 上传文件 || Upload a file
+      tags:
+      - files
+  /v1/files/{id}:
+    delete:
+      description: 软删除：仅将文件标记为 deleted，普通接口和新引用不再可见；已有会话引用仍可使用，对象存储内容不立即擦除。 || Soft-delete
+        the file by marking it deleted. It is hidden from ordinary APIs and new references,
+        while existing session references remain usable; object-store content is not
+        immediately erased.
+      operationId: filesDelete
+      parameters:
+      - description: 文件 ID || File ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 已删除 || Deleted
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 文件不存在、已删除或不在当前所有者范围内 || File not found, deleted or outside
+            the current owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 删除文件 || Delete a file
+      tags:
+      - files
+    get:
+      description: 按 ID 返回单个未删除文件的元数据，不含内容。 || Return metadata for a non-deleted file
+        by ID, without its content.
+      operationId: filesGet
+      parameters:
+      - description: 文件 ID || File ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/files.File'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 文件不存在、已删除或不在当前所有者范围内 || File not found, deleted or outside
+            the current owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 获取文件元数据 || Get file metadata
+      tags:
+      - files
+  /v1/files/{id}/content:
+    get:
+      description: '按 ID 读取文件内容，经身份和归属校验后由服务端流式返回；文件按附件（Content-Disposition: attachment）发送，支持
+        Range 请求，禁止浏览器缓存。 || Download file content by ID after authentication and
+        ownership checks. The server streams it with Content-Disposition: attachment
+        and Range support; browser caching is disabled.'
+      operationId: filesContent
+      parameters:
+      - description: 文件 ID || File ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 字节范围，如 bytes=0-1023 || Byte range, for example bytes=0-1023
+        in: header
+        name: Range
+        type: string
+      - description: 仅当 Last-Modified 日期匹配时返回范围，否则返回完整文件 || Return the range only
+          if the Last-Modified date matches; otherwise return the full file
+        in: header
+        name: If-Range
+        type: string
+      - description: 未修改时返回 304（HTTP 日期） || Return 304 if unmodified (HTTP date)
+        in: header
+        name: If-Modified-Since
+        type: string
+      - description: 此日期后有修改时返回 412（HTTP 日期） || Return 412 if modified after this
+          date (HTTP date)
+        in: header
+        name: If-Unmodified-Since
+        type: string
+      produces:
+      - application/octet-stream
+      - multipart/byteranges
+      - application/json
+      - text/plain
+      responses:
+        "200":
+          description: 文件二进制内容 || File bytes
+          headers:
+            Accept-Ranges:
+              description: bytes
+              type: string
+            Content-Disposition:
+              description: attachment; filename=...
+              type: string
+            Last-Modified:
+              description: HTTP 日期 || HTTP date
+              type: string
+          schema:
+            type: file
+        "206":
+          description: 部分内容；多个范围返回 multipart/byteranges || Partial content; multiple
+            ranges return multipart/byteranges
+          headers:
+            Accept-Ranges:
+              description: bytes
+              type: string
+            Content-Disposition:
+              description: attachment; filename=...
+              type: string
+            Content-Range:
+              description: '单范围响应：bytes start-end/total || Single-range response:
+                bytes start-end/total'
+              type: string
+            Last-Modified:
+              description: HTTP 日期 || HTTP date
+              type: string
+          schema:
+            type: file
+        "304":
+          description: 未修改，无响应体 || Not modified; empty body
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 文件不存在、已删除或不在当前所有者范围内 || File not found, deleted or outside
+            the current owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "412":
+          description: 条件请求失败，无响应体 || Precondition failed; empty body
+        "416":
+          description: Range 无效或越界；底层下载错误为 text/plain || Invalid or unsatisfiable
+            Range; underlying download errors use text/plain
+          headers:
+            Content-Range:
+              description: '范围越界时：bytes */total || For an unsatisfiable range: bytes
+                */total'
+              type: string
+          schema:
+            type: string
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 下载文件内容 || Download file content
+      tags:
+      - files
+  /v1/memory-stores:
+    get:
+      description: 分页返回当前所有者可见的记忆库。 || Return memory stores visible to the current
+        owner, with pagination.
+      operationId: memoryListStores
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/memory.ListResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出记忆库 || List memory stores
+      tags:
+      - memory
+    post:
+      consumes:
+      - application/json
+      description: 为当前所有者创建一个命名的记忆库。 || Create a named memory store for the current
+        owner.
+      operationId: memoryCreateStore
+      parameters:
+      - description: 记忆库名称 || Memory store name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/memory.CreateStoreRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/memory.Store'
+        "400":
+          description: 请求体不是合法 JSON 或缺少必填字段 || Invalid JSON body or missing required
+            fields
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 创建记忆库 || Create a memory store
+      tags:
+      - memory
+  /v1/memory-stores/{id}/conflicts:
+    get:
+      description: 分页返回该记忆库因版本冲突被保留的冲突记录，包含期望版本、实际版本与冲突内容。 || Return retained version-conflict
+        records for the memory store, with pagination, including expected and actual
+        versions and conflicting content.
+      operationId: memoryListConflicts
+      parameters:
+      - description: 记忆库 ID || Memory store ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/memory.ConflictsResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 记忆库不存在或不在当前所有者范围内 || Memory store not found or outside the
+            current owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出记忆冲突 || List memory conflicts
+      tags:
+      - memory
+  /v1/memory-stores/{id}/entries:
+    delete:
+      consumes:
+      - application/json
+      description: 按乐观锁删除指定路径的记忆条目；版本不匹配时保留冲突内容并返回 409，产生一条删除修订记录。 || Delete a memory
+        entry at the specified path using optimistic locking. A version mismatch retains
+        the conflict and returns 409; a successful deletion creates a deletion revision.
+      operationId: memoryDeleteEntry
+      parameters:
+      - description: 记忆库 ID || Memory store ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 目标路径与期望版本 || Target path and expected version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/memory.DeleteEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/memory.Entry'
+        "400":
+          description: 请求体不是合法 JSON 或路径不是相对路径 || Invalid JSON body or non-relative
+            path
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 记忆库不存在或不在当前所有者范围内 || Memory store not found or outside the
+            current owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 版本冲突，冲突内容已被保留 || Version conflict; conflicting content retained
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 删除记忆条目 || Delete a memory entry
+      tags:
+      - memory
+    get:
+      description: 按路径排序分页返回该记忆库的全部条目（含已删除标记的条目）。 || Return all entries in the memory
+        store, including entries marked deleted, paginated and ordered by path.
+      operationId: memoryListEntries
+      parameters:
+      - description: 记忆库 ID || Memory store ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/memory.EntriesResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 记忆库不存在或不在当前所有者范围内 || Memory store not found or outside the
+            current owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出记忆条目 || List memory entries
+      tags:
+      - memory
+    put:
+      consumes:
+      - application/json
+      description: 按乐观锁写入指定路径的记忆条目；版本匹配才生效并产生新版本与修订记录，版本不匹配时保留冲突内容并返回 409。 || Write
+        a memory entry at the specified path using optimistic locking. A matching
+        version creates a new version and revision; a mismatch retains the conflicting
+        content and returns 409.
+      operationId: memoryWriteEntry
+      parameters:
+      - description: 记忆库 ID || Memory store ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 目标路径、内容与期望版本 || Target path, content and expected version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/memory.WriteEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/memory.Entry'
+        "400":
+          description: 请求体不是合法 JSON 或路径不是相对路径 || Invalid JSON body or non-relative
+            path
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 记忆库不存在或不在当前所有者范围内 || Memory store not found or outside the
+            current owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 版本冲突，冲突内容已被保留 || Version conflict; conflicting content retained
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 写入记忆条目 || Write a memory entry
+      tags:
+      - memory
+  /v1/memory-stores/{id}/revisions:
+    get:
+      description: 按修订 ID 倒序分页返回该记忆库的所有修订（含写入与删除）。 || Return all revisions of the
+        memory store, including writes and deletions, paginated by revision ID descending.
+      operationId: memoryListRevisions
+      parameters:
+      - description: 记忆库 ID || Memory store ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/memory.RevisionsResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 记忆库不存在或不在当前所有者范围内 || Memory store not found or outside the
+            current owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 记忆修订历史 || Memory revision history
+      tags:
+      - memory
+  /v1/sessions:
+    get:
+      description: 分页返回当前所有者可见的会话，按 id 排序。 || Return sessions visible to the current
+        owner, paginated and ordered by id.
+      operationId: executionListSessions
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.SessionsResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出会话 || List sessions
+      tags:
+      - execution
+    post:
+      consumes:
+      - application/json
+      description: 创建一个执行会话。可选绑定环境，以及挂载文件（最多 100 个）和记忆库（最多 20 个）；挂载资源必须提供 environment_id，且环境不能已归档。
+        || Create an execution session, optionally binding an environment and mounting
+        files (up to 100) and memory stores (up to 20). Mounting resources requires
+        environment_id, and the environment must not be archived.
+      operationId: executionCreateSession
+      parameters:
+      - description: 会话标题、环境与挂载资源 || Session title, environment and mounted resources
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/execution.CreateSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/execution.Session'
+        "400":
+          description: 请求体不是合法 JSON、环境已归档、挂载资源缺少环境或数量超限 || Invalid JSON body, archived
+            environment, mounted resources without an environment, or exceeded resource-count
+            limits
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 环境、文件或记忆库不存在 || Environment, file or memory store not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 创建会话 || Create a session
+      tags:
+      - execution
+  /v1/sessions/{id}:
+    get:
+      description: 按 ID 返回单个会话。 || Return a session by ID.
+      operationId: executionGetSession
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.Session'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 会话不存在或不在当前所有者范围内 || Session not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 获取会话 || Get a session
+      tags:
+      - execution
+  /v1/sessions/{id}/archive:
+    post:
+      description: 将会话标记为 archived。会话存在未结束任务或活动根任务时拒绝归档。 || Mark the session as archived.
+        Archiving is rejected if unfinished tasks or an active root task remain.
+      operationId: executionArchiveSession
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 已归档 || Archived
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 会话不存在或不在当前所有者范围内 || Session not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 会话仍有未结束任务 || Session still has unfinished tasks
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 归档会话 || Archive a session
+      tags:
+      - execution
+  /v1/sessions/{id}/events:
+    get:
+      description: 按 sequence 升序返回会话在 after 之后的事件（每批最多 200 条）。after 也可以通过 Last-Event-ID
+        请求头提供。 || Return session events after the cursor, ordered by sequence ascending,
+        up to 200 per batch. The cursor may also be supplied through the Last-Event-ID
+        header.
+      operationId: executionListEvents
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 0
+        description: 从该事件序号之后读取，默认 0 || Read after this event sequence; defaults to
+          0
+        format: int64
+        in: query
+        minimum: 0
+        name: after
+        type: integer
+      - description: 事件序号的备用游标；after 非空时优先使用 after || Fallback event-sequence cursor;
+          a nonempty after takes precedence
+        in: header
+        name: Last-Event-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.EventsResponse'
+        "400":
+          description: after/Last-Event-ID 不是非负整数 || after/Last-Event-ID must be a
+            nonnegative integer
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 会话不存在或不在当前所有者范围内 || Session not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 会话事件列表 || List session events
+      tags:
+      - execution
+  /v1/sessions/{id}/events/stream:
+    get:
+      description: |-
+        以 SSE 持续推送会话事件。通过 after 查询参数或 Last-Event-ID 请求头从指定序号续读；游标超过事件历史时拒绝连接。连接期间每 15 秒发送 ping 注释保活。非空 after 优先于 Last-Event-ID；两者均未提供时从 0 续读。data 为完整 Event JSON，id 对应 sequence，event 对应 type。连接建立前的错误返回 JSON；开始推流后发生错误会断开连接，客户端应保存最后收到的序号再重连。 || Stream session events over SSE. Resume from the after query parameter or Last-Event-ID header; a cursor beyond event history is rejected. A ping comment is sent every 15 seconds. A nonempty after takes precedence over Last-Event-ID; when neither is provided, resume from 0. data contains the full Event JSON, id is sequence, and event is type. Errors before streaming return JSON; errors during streaming close the connection. Save the last received sequence before reconnecting.
+
+        示例（每条消息由空行结束）： || Example (each message ends with a blank line):
+        ```text
+        id: 1
+        event: task.created
+        data: {"session_id":"session_example","sequence":1,"task_id":"task_example","type":"task.created","data":{"task_id":"task_example"},"created_at":"2026-09-13T00:00:00Z"}
+
+        : ping
+        ```
+      operationId: executionStreamEvents
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 0
+        description: 从该事件序号之后开始，默认 0 || Start after this event sequence; defaults
+          to 0
+        format: int64
+        in: query
+        minimum: 0
+        name: after
+        type: integer
+      - description: 断线续读：最后收到的事件序号；after 非空时优先使用 after || Resume after the last received
+          event sequence; a nonempty after takes precedence
+        in: header
+        name: Last-Event-ID
+        type: string
+      produces:
+      - text/event-stream
+      - application/json
+      responses:
+        "200":
+          description: SSE 事件流 || SSE event stream
+          schema:
+            type: string
+        "400":
+          description: 游标不合法或超过事件历史 || Cursor is invalid or beyond event history
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 会话不存在或不在当前所有者范围内 || Session not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 订阅会话事件流 || Subscribe to session events
+      tags:
+      - execution
+  /v1/sessions/{id}/messages:
+    get:
+      description: 返回会话的不可变消息历史，按会话序号升序分页，每页最多 200 条，通过 next_after 继续读取。可用 task_id
+        过滤单个任务的消息。模型预览和事件不在此历史中，只有确认完成的输出才会提交。 || Return immutable session message
+        history, paginated by session sequence ascending, up to 200 messages per page.
+        Continue with next_after and filter a task with task_id. Model previews and
+        events are excluded; only confirmed completed output is committed.
+      operationId: executionMessages
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 0
+        description: 从该会话消息序号之后读取，默认 0 || Read after this session message sequence;
+          defaults to 0
+        format: int64
+        in: query
+        minimum: 0
+        name: after
+        type: integer
+      - description: 按任务 ID 过滤 || Filter by task ID
+        in: query
+        name: task_id
+        type: string
+      - description: 消息序号的备用游标；after 非空时优先使用 after || Fallback message-sequence cursor;
+          a nonempty after takes precedence
+        in: header
+        name: Last-Event-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.MessagesResponse'
+        "400":
+          description: after 序号不合法 || Invalid after sequence
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 会话不存在或不在当前所有者范围内 || Session not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 会话消息历史 || Session message history
+      tags:
+      - execution
+  /v1/sessions/{id}/required_actions:
+    get:
+      description: '返回会话中未结束任务当前需要的动作：approve_tool（审批工具）、submit_tool_result（自定义工具返回结果）、confirm_tool_outcome（确认外部执行结果）、reconcile_task（环境准备或收尾结果未知，需先确认外部操作已停止再调用
+        reconcile）。该列表从当前任务与工具状态实时计算，重连后可直接查询。 || Return actions currently required
+        by unfinished tasks in the session: approve_tool (tool approval), submit_tool_result
+        (custom-tool result), confirm_tool_outcome (confirm an external execution
+        outcome), and reconcile_task (unknown environment preparation or finalization
+        outcome; confirm external operations have stopped before calling reconcile).
+        The list is computed from current task and tool states and can be queried
+        after reconnecting.'
+      operationId: executionRequiredActions
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.RequiredActionsResponse'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 会话不存在或不在当前所有者范围内 || Session not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 待处理的用户动作 || Required user actions
+      tags:
+      - execution
+  /v1/sessions/{id}/tasks:
+    get:
+      description: 分页返回会话内的全部任务（含协调者与子任务），按 id 排序。 || Return all tasks in the session,
+        including coordinator and child tasks, paginated and ordered by id.
+      operationId: executionListTasks
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.TasksResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 会话不存在或不在当前所有者范围内 || Session not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出会话任务 || List session tasks
+      tags:
+      - execution
+    post:
+      consumes:
+      - application/json
+      description: 在会话中按 agent_id 创建根任务并提交初始输入，任务进入 queued 状态。快照固定 Agent 配置与专家名册；预算缺省值自动补齐。会话或
+        Agent 已归档、技能缺少环境、凭据目标不匹配等会拒绝创建。 || Create a root task in the session using
+        agent_id and initial input; its state starts as queued. The snapshot fixes
+        the Agent configuration and expert roster, and budget defaults are filled
+        in. Creation is rejected for archived sessions or Agents, skills without an
+        environment, mismatched credential targets, and other invalid resources.
+      operationId: executionCreateTask
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Agent ID、输入文本与预算 || Agent ID, input text and budget
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/execution.TaskRequest'
+      - description: 最长 128 字节；作用域为当前身份和请求路径。同键同请求体返回首次结果，换请求体返回 409 || At most 128
+          bytes; scoped to the current identity and request path. The same key and
+          body return the original result; a different body returns 409
+        in: header
+        maxLength: 128
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/execution.Task'
+        "400":
+          description: 请求体不是合法 JSON、缺少输入或资源校验失败 || Invalid JSON body, missing input
+            or resource validation failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 会话、Agent、专家、技能或凭据不存在 || Session, Agent, expert, skill or credential
+            not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: Idempotency-Key 已与其他请求体一起使用 || Idempotency-Key has already
+            been used with a different request body
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 创建任务 || Create a task
+      tags:
+      - execution
+  /v1/skills:
+    get:
+      description: 分页返回当前所有者可见的技能包元数据，按主键排序。 || Return skill-package metadata visible
+        to the current owner, paginated and ordered by primary key.
+      operationId: skillsList
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/skills.ListResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出技能包 || List skill packages
+      tags:
+      - skills
+    post:
+      consumes:
+      - multipart/form-data
+      description: 通过 multipart/form-data 上传技能 ZIP 包（请求体上限 24 MiB）。ZIP 根目录必须包含带 YAML
+        frontmatter（name 和 description）的 SKILL.md，最多 200 个文件且路径必须安全；包内容解压后上限 20 MiB。技能
+        ID 不可变，创建后不可更换。 || Upload a skill ZIP using multipart/form-data, with a 24
+        MiB request limit. The ZIP root must contain SKILL.md with YAML frontmatter
+        (name and description). At most 200 files with safe paths are allowed; extracted
+        content is limited to 20 MiB. Skill IDs are immutable and packages cannot
+        be replaced after creation.
+      operationId: skillsUpload
+      parameters:
+      - description: 包含根目录 SKILL.md 的 ZIP 技能包 || ZIP skill package containing SKILL.md
+          at its root
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/skills.Skill'
+        "400":
+          description: 缺少 file 字段、ZIP 非法或超出大小/文件数限制、SKILL.md 缺失或元数据不合法 || Missing
+            file field, invalid ZIP, exceeded size or file-count limits, missing SKILL.md
+            or invalid metadata
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 上传技能包 || Upload a skill package
+      tags:
+      - skills
+  /v1/skills/{id}/content:
+    get:
+      description: 按 ID 读取技能 ZIP 原包，经身份和归属校验后由服务端流式返回，文件名为 `<name>.zip`，按附件发送，支持 Range
+        请求。 || Download the original skill ZIP by ID after authentication and ownership
+        checks. The server streams it as an attachment named `<name>.zip`, with Range
+        support.
+      operationId: skillsContent
+      parameters:
+      - description: 技能 ID || Skill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 字节范围，如 bytes=0-1023 || Byte range, for example bytes=0-1023
+        in: header
+        name: Range
+        type: string
+      - description: 仅当 Last-Modified 日期匹配时返回范围，否则返回完整文件 || Return the range only
+          if the Last-Modified date matches; otherwise return the full file
+        in: header
+        name: If-Range
+        type: string
+      - description: 未修改时返回 304（HTTP 日期） || Return 304 if unmodified (HTTP date)
+        in: header
+        name: If-Modified-Since
+        type: string
+      - description: 此日期后有修改时返回 412（HTTP 日期） || Return 412 if modified after this
+          date (HTTP date)
+        in: header
+        name: If-Unmodified-Since
+        type: string
+      produces:
+      - application/octet-stream
+      - multipart/byteranges
+      - application/json
+      - text/plain
+      responses:
+        "200":
+          description: 技能 ZIP 包二进制内容 || Skill ZIP package bytes
+          headers:
+            Accept-Ranges:
+              description: bytes
+              type: string
+            Content-Disposition:
+              description: attachment; filename=...
+              type: string
+            Last-Modified:
+              description: HTTP 日期 || HTTP date
+              type: string
+          schema:
+            type: file
+        "206":
+          description: 部分内容；多个范围返回 multipart/byteranges || Partial content; multiple
+            ranges return multipart/byteranges
+          headers:
+            Accept-Ranges:
+              description: bytes
+              type: string
+            Content-Disposition:
+              description: attachment; filename=...
+              type: string
+            Content-Range:
+              description: '单范围响应：bytes start-end/total || Single-range response:
+                bytes start-end/total'
+              type: string
+            Last-Modified:
+              description: HTTP 日期 || HTTP date
+              type: string
+          schema:
+            type: file
+        "304":
+          description: 未修改，无响应体 || Not modified; empty body
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 技能不存在或不在当前所有者范围内 || Skill not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "412":
+          description: 条件请求失败，无响应体 || Precondition failed; empty body
+        "416":
+          description: Range 无效或越界；底层下载错误为 text/plain || Invalid or unsatisfiable
+            Range; underlying download errors use text/plain
+          headers:
+            Content-Range:
+              description: '范围越界时：bytes */total || For an unsatisfiable range: bytes
+                */total'
+              type: string
+          schema:
+            type: string
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 下载技能包 || Download a skill package
+      tags:
+      - skills
+  /v1/tasks/{id}:
+    get:
+      description: 按 ID 返回单个任务，包括状态、预算与用量、协调快照与结果。 || Return a task by ID, including
+        its state, budget and usage, coordination snapshot and result.
+      operationId: executionGetTask
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.Task'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 获取任务 || Get a task
+      tags:
+      - execution
+  /v1/tasks/{id}/agents:
+    post:
+      consumes:
+      - application/json
+      description: 由父任务向其固定的专家名册中的 Agent 委派子任务，子预算只能收窄父预算。父任务自身是子任务、已终态、已请求取消或正在收尾时不能委派；累计代理预算（max_agents）耗尽时同样拒绝。
+        || Delegate a child task to an Agent in the parent's fixed expert roster.
+        Child budgets may only narrow the parent budget. Delegation is rejected if
+        the parent is itself a child task, terminal, cancellation-requested or being
+        finalized, or if its cumulative agent budget (max_agents) is exhausted.
+      operationId: executionDelegateTask
+      parameters:
+      - description: 父任务 ID || Parent task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 专家 Agent ID、输入文本与预算 || Expert Agent ID, input text and budget
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/execution.TaskRequest'
+      - description: 最长 128 字节；作用域为当前身份和请求路径。同键同请求体返回首次结果，换请求体返回 409 || At most 128
+          bytes; scoped to the current identity and request path. The same key and
+          body return the original result; a different body returns 409
+        in: header
+        maxLength: 128
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/execution.Task'
+        "400":
+          description: 请求体不是合法 JSON、Agent 不在专家名册或缺少输入 || Invalid JSON body, Agent
+            not in the expert roster or missing input
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 父任务不存在或不在当前所有者范围内 || Parent task not found or outside the current
+            owner's scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 父任务不能委派、代理预算耗尽，或 Idempotency-Key 已与其他请求体一起使用 || Parent task
+            cannot delegate, the agent budget is exhausted, or Idempotency-Key was
+            used with a different body
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 委派子任务 || Delegate a child task
+      tags:
+      - execution
+  /v1/tasks/{id}/cancel:
+    post:
+      description: 请求取消任务；根任务会级联标记全部未结束子任务。取消请求与最终停止分开记录，终态在收尾完成后发布。 || Request task
+        cancellation; root tasks also mark all unfinished child tasks. Cancellation
+        requests and final stoppage are recorded separately; the terminal state is
+        published after finalization.
+      operationId: executionCancelTask
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: 已接受 || Accepted
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 取消任务 || Cancel a task
+      tags:
+      - execution
+  /v1/tasks/{id}/generations:
+    get:
+      description: 按任务返回每次模型调用的记录，包括压缩与重试，涵盖耗时、首个增量时间与供应商 token 用量。缺失的用量保持 null，中断调用标记
+        interrupted，不按零消耗计算。 || Return model-call records for the task, including
+        compaction and retries, with duration, first-delta latency and provider token
+        usage. Missing usage remains null; interrupted calls are marked interrupted
+        and are not counted as zero usage.
+      operationId: executionGenerations
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.GenerationsResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 任务模型调用记录 || Task model-call records
+      tags:
+      - execution
+  /v1/tasks/{id}/inputs:
+    get:
+      description: 按提交顺序返回任务收到的全部输入（用户输入、委派输入等）。 || Return all inputs received by
+        the task, including user and delegation inputs, in submission order.
+      operationId: executionListInputs
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.InputsResponse'
+        "400":
+          description: 分页参数不合法 || Invalid pagination parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出任务输入 || List task inputs
+      tags:
+      - execution
+    post:
+      consumes:
+      - application/json
+      description: 向运行中的任务追加用户输入。任务在等待输入或等待工具时会被重新排队；已终态、已请求取消或正在收尾的任务拒绝接收。 || Append
+        user input to a running task. Tasks waiting for input or tools are requeued;
+        terminal tasks, tasks with cancellation requested, and tasks being finalized
+        reject input.
+      operationId: executionAddInput
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 输入文本 || Input text
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/execution.TextRequest'
+      - description: 最长 128 字节；作用域为当前身份和请求路径。同键同请求体返回首次结果，换请求体返回 409 || At most 128
+          bytes; scoped to the current identity and request path. The same key and
+          body return the original result; a different body returns 409
+        in: header
+        maxLength: 128
+        name: Idempotency-Key
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: 已接受 || Accepted
+        "400":
+          description: 请求体不是合法 JSON 或文本为空 || Invalid JSON body or empty text
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 任务不再接受输入，或 Idempotency-Key 已与其他请求体一起使用 || Task no longer accepts
+            input, or Idempotency-Key has been used with a different request body
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 任务转向输入 || Steer a task with additional input
+      tags:
+      - execution
+  /v1/tasks/{id}/reconcile:
+    post:
+      consumes:
+      - application/json
+      description: 任务状态未知（unknown）时，操作者显式确认外部操作已停止（confirm_stopped=true）后，把任务重新排队。请求体必须显式确认；任务仍有未决工具结果时须先逐个提交结果。
+        || Requeue an unknown task after the operator explicitly confirms that external
+        operations have stopped (confirm_stopped=true). The request body must include
+        this confirmation; submit each unresolved tool result first.
+      operationId: executionReconcile
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 确认外部操作已停止 || Confirm that external operations have stopped
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/execution.ReconcileRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: 已接受，任务重新排队 || Accepted; task requeued
+        "400":
+          description: 请求体不是合法 JSON 或未显式确认 || Invalid JSON body or missing explicit
+            confirmation
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 任务不是未知状态，或仍有未决的工具结果 || Task is not unknown, or tool results
+            are still unresolved
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 确认任务恢复 || Reconcile a task
+      tags:
+      - execution
+  /v1/tasks/{id}/resume:
+    post:
+      consumes:
+      - application/json
+      description: 在协调者仍持有会话时，用新输入恢复一个已终态的子任务；上下文与累计预算保持挂载在同一子任务上。协调者已终态或正在收尾时拒绝恢复。
+        || Resume a terminal child task with new input while its coordinator still
+        holds the session. Context and cumulative budget remain attached to the same
+        child task. Resuming is rejected if the coordinator is terminal or being finalized.
+      operationId: executionResumeTask
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 续跑输入文本 || Input text for resuming
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/execution.TextRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: 已接受 || Accepted
+        "400":
+          description: 请求体不是合法 JSON、文本为空、不是已完成的子任务或协调者不再接受协作 || Invalid JSON body,
+            empty text, task not a terminal child task, or coordinator no longer accepting
+            collaboration
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 恢复已完成的子任务 || Resume a terminal child task
+      tags:
+      - execution
+  /v1/tasks/{id}/tools:
+    get:
+      description: 按创建时间返回任务的工具调用，包括参数、状态（ready、approval、custom、running、waiting_children、unknown、completed）、结果与起止时间。
+        || Return task tool calls by creation time, including arguments, status (ready,
+        approval, custom, running, waiting_children, unknown, completed), results,
+        and start and finish times.
+      operationId: executionListTools
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.ToolCallsResponse'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出任务工具调用 || List task tool calls
+      tags:
+      - execution
+  /v1/tasks/{id}/tools/{call}/result:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        批准示例：`{"approve":true}`；拒绝示例：`{"approve":false}`。 || Approval example: `{"approve":true}`; rejection example: `{"approve":false}`.
+        成功结果示例：`{"result":"tool response","is_error":false}`；失败结果示例：`{"result":"confirmed failure","is_error":true,"error_code":"remote_failure"}`。 || Success example: `{"result":"tool response","is_error":false}`; failure example: `{"result":"confirmed failure","is_error":true,"error_code":"remote_failure"}`.
+        请选用上述示例之一；Swagger 2.0 无法表达字段互斥，不要同时发送自动生成示例中的所有字段。 || Choose one example above. Swagger 2.0 cannot express mutually exclusive fields; do not send all fields from its automatically generated example together.
+        提交以下三种互斥形式之一：审批 {"approve": true|false}；确认结果 {"result": "...", "is_error": false}；明确失败 {"result": "...", "is_error": true, "error_code": "..."}。审批与结果不能混在一个请求中，error_code 要求 is_error=true，空字符串也是有效结果。相同审批或相同完整结果可重复提交（包括任务完成后）；更改已有决定返回 409。任务等待中会因此重新排队。 || Submit exactly one of three forms: approval {"approve": true|false}; confirmed result {"result": "...", "is_error": false}; confirmed failure {"result": "...", "is_error": true, "error_code": "..."}. Do not combine approval and result; error_code requires is_error=true, and an empty string is a valid result. Identical approvals or complete results may be resubmitted, including after task completion; changing an existing decision returns 409. Waiting tasks are requeued.
+      operationId: executionResolveToolResult
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 工具调用 ID || Tool-call ID
+        in: path
+        name: call
+        required: true
+        type: string
+      - description: 审批或工具结果（三选一） || Approval or tool result (choose one of three
+          forms)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/execution.ToolResultRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: 已接受 || Accepted
+        "400":
+          description: 请求体不是合法 JSON、同时提交 result 与 approve 或 error_code 缺少 is_error
+            || Invalid JSON body, both result and approve submitted, or error_code
+            without is_error
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务或工具调用不存在 || Task or tool call not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 工具不在等待审批或结果状态，或审批/结果与已有决定不一致 || Tool is not waiting for approval
+            or a result, or the submission conflicts with an existing decision
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误，可用 request_id 排查 || Internal error; use request_id for
+            troubleshooting
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 提交工具审批或结果 || Submit tool approval or result
+      tags:
+      - execution
+securityDefinitions:
+  BearerAuth:
+    description: 填写完整的 Bearer <Wave API Key>，包含 Bearer 前缀和空格。 || Enter the full Bearer
+      <Wave API Key> value, including the Bearer prefix and a space.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

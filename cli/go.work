@@ -1,0 +1,5 @@
+go 1.23
+
+use .
+
+replace github.com/ni00/wave-ai/sdks/go v0.1.0 => ../sdks/go

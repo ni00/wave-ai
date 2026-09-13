@@ -1,0 +1,45 @@
+name: Clients
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@v6
+      - run: make clients-setup
+      - run: make docs-check clients-check clients-test
+      - name: Check previous HTTP and CLI contracts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git cat-file -e "$BASE_SHA:api/openapi.json" 2>/dev/null; then
+            git show "$BASE_SHA:api/openapi.json" > /tmp/wave-previous-openapi.json
+            if git cat-file -e "$BASE_SHA:tools/clients/operations.json" 2>/dev/null; then
+              git show "$BASE_SHA:tools/clients/operations.json" > /tmp/wave-previous-operations.json
+            else
+              git show "$BASE_SHA:clients/operations.json" > /tmp/wave-previous-operations.json
+            fi
+            python3 tools/clients/compat.py /tmp/wave-previous-openapi.json /tmp/wave-previous-operations.json
+          fi
+      - run: make clients-integration
+      - run: make clients-package
+      - run: make clients-smoke
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wave-client-packages
+          path: dist/clients/

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Wave Administration"
+  short_description: "Configure Wave deployments and diagnose service failures"
+  default_prompt: "Use $wave-admin to inspect this Wave deployment, identify the issue and apply authorized fixes."

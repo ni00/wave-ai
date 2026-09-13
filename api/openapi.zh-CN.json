@@ -1,0 +1,6846 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "Managed Agents 服务。所有 /v1 接口使用 Bearer Wave API Key 认证；\n由 `wave bootstrap` 签发。SDK 和 Swagger UI 的 bearer 配置填写原始 Wave API Key。\noffset 分页返回 data 和可选 next_offset（省略表示末页）；消息历史使用 next_after，事件列表使用最后一条 sequence 续读。\nJSON 错误返回 {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}。文件传输的 Range 错误返回 text/plain；条件下载和健康检查可返回空响应。\nJSON 请求拒绝未知字段，非 multipart 请求体上限为 2 MiB。可空字段通过 nullable 标记；省略与 null 不等价。\n交互式文档见 /swagger/index.html，OpenAPI 3 spec 见 /swagger/openapi.zh-CN.json；旧 Swagger 2 见 /swagger/doc.json。\n\n[English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)",
+    "title": "Wave AI API",
+    "contact": {},
+    "version": "1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "无需认证；检查数据库连通性，超时时间 1 秒。所有响应均无响应体。",
+        "tags": [
+          "system"
+        ],
+        "summary": "健康检查",
+        "operationId": "health",
+        "responses": {
+          "204": {
+            "description": "数据库可用"
+          },
+          "503": {
+            "description": "数据库不可用"
+          }
+        }
+      }
+    },
+    "/v1/agents": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回当前所有者可见的 Agent，按 id 排序。",
+        "tags": [
+          "agents"
+        ],
+        "summary": "列出 Agent",
+        "operationId": "agentsList",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "创建一个带初始配置（版本 1）的 Agent。配置不可变字段之外的内容通过 PUT /v1/agents/:id 更新并产生新版本。",
+        "tags": [
+          "agents"
+        ],
+        "summary": "创建 Agent",
+        "operationId": "agentsCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/agents.Config"
+              }
+            }
+          },
+          "description": "Agent 配置",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.Agent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或缺少必填字段",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按 ID 返回单个 Agent。",
+        "tags": [
+          "agents"
+        ],
+        "summary": "获取 Agent",
+        "operationId": "agentsGet",
+        "parameters": [
+          {
+            "description": "Agent ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.Agent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent 不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "提交期望的 version 和新配置；版本匹配才生效，产生 version+1 的新配置版本。",
+        "tags": [
+          "agents"
+        ],
+        "summary": "更新 Agent",
+        "operationId": "agentsUpdate",
+        "parameters": [
+          {
+            "description": "Agent ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/agents.UpdateRequest"
+              }
+            }
+          },
+          "description": "期望版本与新配置",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.Agent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或缺少必填字段",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent 不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/archive": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "将 Agent 标记为 archived，不再出现在默认列表中。",
+        "tags": [
+          "agents"
+        ],
+        "summary": "归档 Agent",
+        "operationId": "agentsArchive",
+        "parameters": [
+          {
+            "description": "Agent ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "已归档"
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent 不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/versions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按版本号倒序返回该 Agent 的历史配置版本。",
+        "tags": [
+          "agents"
+        ],
+        "summary": "Agent 版本历史",
+        "operationId": "agentsVersions",
+        "parameters": [
+          {
+            "description": "Agent ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.VersionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent 不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credentials": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回当前所有者可见的凭据元数据。凭据 token 只写不读，响应中永远不包含明文或密文。",
+        "tags": [
+          "vault"
+        ],
+        "summary": "列出凭据",
+        "operationId": "vaultList",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "为当前所有者录入一条主机凭据。凭据 token 仅在写入时加密存储，接口不提供任何读取明文的途径，响应中只返回元数据。",
+        "tags": [
+          "vault"
+        ],
+        "summary": "录入凭据",
+        "operationId": "vaultCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/vault.CreateRequest"
+              }
+            }
+          },
+          "description": "凭据名称、主机与 token",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.Credential"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或 host 不是不含路径与用户信息的精确 authority",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credentials/{id}": {
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "将凭据标记为 revoked，此后不再可用于任务执行；凭据记录与密文保留用于审计，不提供明文读取。",
+        "tags": [
+          "vault"
+        ],
+        "summary": "吊销凭据",
+        "operationId": "vaultRevoke",
+        "parameters": [
+          {
+            "description": "凭据 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "已吊销"
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "凭据不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回当前所有者可见的部署。",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "列出部署",
+        "operationId": "deploymentsList",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "创建一个将 Agent 与可选环境绑定、按输入运行的部署；cron 为标准五段表达式，填写时计算下次触发时间，为空则仅手动触发。",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "创建部署",
+        "operationId": "deploymentsCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deployments.CreateRequest"
+              }
+            }
+          },
+          "description": "部署名称、Agent ID、可选环境 ID、输入与 cron",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或 cron 表达式不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent 或环境不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}": {
+      "patch": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "设置部署的暂停状态；恢复时会重新计算 cron 的下次触发时间。",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "暂停或恢复部署",
+        "operationId": "deploymentsPause",
+        "parameters": [
+          {
+            "description": "部署 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deployments.PauseRequest"
+              }
+            }
+          },
+          "description": "目标暂停状态",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或缺少 paused 字段",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "部署不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}/run": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "立即触发一次部署运行，创建会话与任务并异步执行；部署处于暂停状态时返回 409。",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "手动触发部署",
+        "operationId": "deploymentsRun",
+        "parameters": [
+          {
+            "description": "部署 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "环境或 Agent 已归档，或任务资源校验失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "部署不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "部署已暂停",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}/runs": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回该部署的触发记录，包含关联的任务与会话 ID。",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "部署运行记录",
+        "operationId": "deploymentsRuns",
+        "parameters": [
+          {
+            "description": "部署 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.RunsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "部署不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/environments": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回当前所有者可见的环境配置。",
+        "tags": [
+          "environments"
+        ],
+        "summary": "列出环境",
+        "operationId": "environmentsList",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/environments.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "为当前所有者创建一个环境配置，声明各包管理器（apt、npm、pip、go、cargo、gem）要安装的包。",
+        "tags": [
+          "environments"
+        ],
+        "summary": "创建环境",
+        "operationId": "environmentsCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/environments.CreateRequest"
+              }
+            }
+          },
+          "description": "环境名称与包清单",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/environments.Environment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON、包管理器不受支持或包名为空",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/environments/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按 ID 返回单个环境配置。",
+        "tags": [
+          "environments"
+        ],
+        "summary": "获取环境",
+        "operationId": "environmentsGet",
+        "parameters": [
+          {
+            "description": "环境 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/environments.Environment"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "环境不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/environments/{id}/archive": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "将环境标记为 archived，归档后不能再被部署引用。",
+        "tags": [
+          "environments"
+        ],
+        "summary": "归档环境",
+        "operationId": "environmentsArchive",
+        "parameters": [
+          {
+            "description": "环境 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "已归档"
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "环境不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回未删除的文件元数据，按 id 排序；可用 session_id 或 task_id 过滤。",
+        "tags": [
+          "files"
+        ],
+        "summary": "列出文件",
+        "operationId": "filesList",
+        "parameters": [
+          {
+            "description": "按会话 ID 过滤",
+            "name": "session_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "按任务 ID 过滤",
+            "name": "task_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/files.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "通过 multipart/form-data 上传单个文件，整个 multipart 请求体上限 32 MiB（含边界与字段开销）。内容按所有者维度以 SHA-256 对象键写入对象存储，相同内容在同一所有者内复用，不会重复存储。返回新建的文件元数据。",
+        "tags": [
+          "files"
+        ],
+        "summary": "上传文件",
+        "operationId": "filesUpload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "要上传的文件",
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/files.File"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "缺少 file 字段、文件名非法或超过 32 MiB 上限",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按 ID 返回单个未删除文件的元数据，不含内容。",
+        "tags": [
+          "files"
+        ],
+        "summary": "获取文件元数据",
+        "operationId": "filesGet",
+        "parameters": [
+          {
+            "description": "文件 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/files.File"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "文件不存在、已删除或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "软删除：仅将文件标记为 deleted，普通接口和新引用不再可见；已有会话引用仍可使用，对象存储内容不立即擦除。",
+        "tags": [
+          "files"
+        ],
+        "summary": "删除文件",
+        "operationId": "filesDelete",
+        "parameters": [
+          {
+            "description": "文件 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "已删除"
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "文件不存在、已删除或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{id}/content": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按 ID 读取文件内容，经身份和归属校验后由服务端流式返回；文件按附件（Content-Disposition: attachment）发送，支持 Range 请求，禁止浏览器缓存。",
+        "tags": [
+          "files"
+        ],
+        "summary": "下载文件内容",
+        "operationId": "filesContent",
+        "parameters": [
+          {
+            "description": "文件 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "字节范围，如 bytes=0-1023",
+            "name": "Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "仅当 Last-Modified 日期匹配时返回范围，否则返回完整文件",
+            "name": "If-Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "未修改时返回 304（HTTP 日期）",
+            "name": "If-Modified-Since",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "此日期后有修改时返回 412（HTTP 日期）",
+            "name": "If-Unmodified-Since",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "文件二进制内容",
+            "headers": {
+              "Accept-Ranges": {
+                "description": "bytes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=...",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP 日期",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "部分内容；多个范围返回 multipart/byteranges",
+            "headers": {
+              "Accept-Ranges": {
+                "description": "bytes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=...",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Range": {
+                "description": "单范围响应：bytes start-end/total",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP 日期",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "multipart/byteranges": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "未修改，无响应体"
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "文件不存在、已删除或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "条件请求失败，无响应体"
+          },
+          "416": {
+            "description": "Range 无效或越界；底层下载错误为 text/plain",
+            "headers": {
+              "Content-Range": {
+                "description": "范围越界时：bytes */total",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memory-stores": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回当前所有者可见的记忆库。",
+        "tags": [
+          "memory"
+        ],
+        "summary": "列出记忆库",
+        "operationId": "memoryListStores",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "为当前所有者创建一个命名的记忆库。",
+        "tags": [
+          "memory"
+        ],
+        "summary": "创建记忆库",
+        "operationId": "memoryCreateStore",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/memory.CreateStoreRequest"
+              }
+            }
+          },
+          "description": "记忆库名称",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.Store"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或缺少必填字段",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memory-stores/{id}/conflicts": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回该记忆库因版本冲突被保留的冲突记录，包含期望版本、实际版本与冲突内容。",
+        "tags": [
+          "memory"
+        ],
+        "summary": "列出记忆冲突",
+        "operationId": "memoryListConflicts",
+        "parameters": [
+          {
+            "description": "记忆库 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.ConflictsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "记忆库不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memory-stores/{id}/entries": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按路径排序分页返回该记忆库的全部条目（含已删除标记的条目）。",
+        "tags": [
+          "memory"
+        ],
+        "summary": "列出记忆条目",
+        "operationId": "memoryListEntries",
+        "parameters": [
+          {
+            "description": "记忆库 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.EntriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "记忆库不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按乐观锁写入指定路径的记忆条目；版本匹配才生效并产生新版本与修订记录，版本不匹配时保留冲突内容并返回 409。",
+        "tags": [
+          "memory"
+        ],
+        "summary": "写入记忆条目",
+        "operationId": "memoryWriteEntry",
+        "parameters": [
+          {
+            "description": "记忆库 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/memory.WriteEntryRequest"
+              }
+            }
+          },
+          "description": "目标路径、内容与期望版本",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.Entry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或路径不是相对路径",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "记忆库不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "版本冲突，冲突内容已被保留",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按乐观锁删除指定路径的记忆条目；版本不匹配时保留冲突内容并返回 409，产生一条删除修订记录。",
+        "tags": [
+          "memory"
+        ],
+        "summary": "删除记忆条目",
+        "operationId": "memoryDeleteEntry",
+        "parameters": [
+          {
+            "description": "记忆库 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/memory.DeleteEntryRequest"
+              }
+            }
+          },
+          "description": "目标路径与期望版本",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.Entry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或路径不是相对路径",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "记忆库不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "版本冲突，冲突内容已被保留",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memory-stores/{id}/revisions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按修订 ID 倒序分页返回该记忆库的所有修订（含写入与删除）。",
+        "tags": [
+          "memory"
+        ],
+        "summary": "记忆修订历史",
+        "operationId": "memoryListRevisions",
+        "parameters": [
+          {
+            "description": "记忆库 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.RevisionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "记忆库不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回当前所有者可见的会话，按 id 排序。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "列出会话",
+        "operationId": "executionListSessions",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.SessionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "创建一个执行会话。可选绑定环境，以及挂载文件（最多 100 个）和记忆库（最多 20 个）；挂载资源必须提供 environment_id，且环境不能已归档。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "创建会话",
+        "operationId": "executionCreateSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.CreateSessionRequest"
+              }
+            }
+          },
+          "description": "会话标题、环境与挂载资源",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Session"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON、环境已归档、挂载资源缺少环境或数量超限",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "环境、文件或记忆库不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按 ID 返回单个会话。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "获取会话",
+        "operationId": "executionGetSession",
+        "parameters": [
+          {
+            "description": "会话 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/archive": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "将会话标记为 archived。会话存在未结束任务或活动根任务时拒绝归档。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "归档会话",
+        "operationId": "executionArchiveSession",
+        "parameters": [
+          {
+            "description": "会话 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "已归档"
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "会话仍有未结束任务",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/events": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按 sequence 升序返回会话在 after 之后的事件（每批最多 200 条）。after 也可以通过 Last-Event-ID 请求头提供。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "会话事件列表",
+        "operationId": "executionListEvents",
+        "parameters": [
+          {
+            "description": "会话 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "从该事件序号之后读取，默认 0",
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "description": "事件序号的备用游标；after 非空时优先使用 after",
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.EventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "after/Last-Event-ID 不是非负整数",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/events/stream": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "以 SSE 持续推送会话事件。通过 after 查询参数或 Last-Event-ID 请求头从指定序号续读；游标超过事件历史时拒绝连接。连接期间每 15 秒发送 ping 注释保活。非空 after 优先于 Last-Event-ID；两者均未提供时从 0 续读。data 为完整 Event JSON，id 对应 sequence，event 对应 type。连接建立前的错误返回 JSON；开始推流后发生错误会断开连接，客户端应保存最后收到的序号再重连。\n\n示例（每条消息由空行结束）：\n```text\nid: 1\nevent: task.created\ndata: {\"session_id\":\"session_example\",\"sequence\":1,\"task_id\":\"task_example\",\"type\":\"task.created\",\"data\":{\"task_id\":\"task_example\"},\"created_at\":\"2026-09-13T00:00:00Z\"}\n\n: ping\n```",
+        "tags": [
+          "execution"
+        ],
+        "summary": "订阅会话事件流",
+        "operationId": "executionStreamEvents",
+        "parameters": [
+          {
+            "description": "会话 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "从该事件序号之后开始，默认 0",
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "description": "断线续读：最后收到的事件序号；after 非空时优先使用 after",
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE 事件流",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "游标不合法或超过事件历史",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/messages": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "返回会话的不可变消息历史，按会话序号升序分页，每页最多 200 条，通过 next_after 继续读取。可用 task_id 过滤单个任务的消息。模型预览和事件不在此历史中，只有确认完成的输出才会提交。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "会话消息历史",
+        "operationId": "executionMessages",
+        "parameters": [
+          {
+            "description": "会话 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "从该会话消息序号之后读取，默认 0",
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "description": "按任务 ID 过滤",
+            "name": "task_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "消息序号的备用游标；after 非空时优先使用 after",
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.MessagesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "after 序号不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/required_actions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "返回会话中未结束任务当前需要的动作：approve_tool（审批工具）、submit_tool_result（自定义工具返回结果）、confirm_tool_outcome（确认外部执行结果）、reconcile_task（环境准备或收尾结果未知，需先确认外部操作已停止再调用 reconcile）。该列表从当前任务与工具状态实时计算，重连后可直接查询。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "待处理的用户动作",
+        "operationId": "executionRequiredActions",
+        "parameters": [
+          {
+            "description": "会话 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.RequiredActionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/tasks": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回会话内的全部任务（含协调者与子任务），按 id 排序。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "列出会话任务",
+        "operationId": "executionListTasks",
+        "parameters": [
+          {
+            "description": "会话 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.TasksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "在会话中按 agent_id 创建根任务并提交初始输入，任务进入 queued 状态。快照固定 Agent 配置与专家名册；预算缺省值自动补齐。会话或 Agent 已归档、技能缺少环境、凭据目标不匹配等会拒绝创建。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "创建任务",
+        "operationId": "executionCreateTask",
+        "parameters": [
+          {
+            "description": "会话 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "最长 128 字节；作用域为当前身份和请求路径。同键同请求体返回首次结果，换请求体返回 409",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.TaskRequest"
+              }
+            }
+          },
+          "description": "Agent ID、输入文本与预算",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON、缺少输入或资源校验失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话、Agent、专家、技能或凭据不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency-Key 已与其他请求体一起使用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/skills": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "分页返回当前所有者可见的技能包元数据，按主键排序。",
+        "tags": [
+          "skills"
+        ],
+        "summary": "列出技能包",
+        "operationId": "skillsList",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/skills.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "通过 multipart/form-data 上传技能 ZIP 包（请求体上限 24 MiB）。ZIP 根目录必须包含带 YAML frontmatter（name 和 description）的 SKILL.md，最多 200 个文件且路径必须安全；包内容解压后上限 20 MiB。技能 ID 不可变，创建后不可更换。",
+        "tags": [
+          "skills"
+        ],
+        "summary": "上传技能包",
+        "operationId": "skillsUpload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "包含根目录 SKILL.md 的 ZIP 技能包",
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/skills.Skill"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "缺少 file 字段、ZIP 非法或超出大小/文件数限制、SKILL.md 缺失或元数据不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/skills/{id}/content": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按 ID 读取技能 ZIP 原包，经身份和归属校验后由服务端流式返回，文件名为 `<name>.zip`，按附件发送，支持 Range 请求。",
+        "tags": [
+          "skills"
+        ],
+        "summary": "下载技能包",
+        "operationId": "skillsContent",
+        "parameters": [
+          {
+            "description": "技能 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "字节范围，如 bytes=0-1023",
+            "name": "Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "仅当 Last-Modified 日期匹配时返回范围，否则返回完整文件",
+            "name": "If-Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "未修改时返回 304（HTTP 日期）",
+            "name": "If-Modified-Since",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "此日期后有修改时返回 412（HTTP 日期）",
+            "name": "If-Unmodified-Since",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "技能 ZIP 包二进制内容",
+            "headers": {
+              "Accept-Ranges": {
+                "description": "bytes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=...",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP 日期",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "部分内容；多个范围返回 multipart/byteranges",
+            "headers": {
+              "Accept-Ranges": {
+                "description": "bytes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=...",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Range": {
+                "description": "单范围响应：bytes start-end/total",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP 日期",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "multipart/byteranges": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "未修改，无响应体"
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "技能不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "条件请求失败，无响应体"
+          },
+          "416": {
+            "description": "Range 无效或越界；底层下载错误为 text/plain",
+            "headers": {
+              "Content-Range": {
+                "description": "范围越界时：bytes */total",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按 ID 返回单个任务，包括状态、预算与用量、协调快照与结果。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "获取任务",
+        "operationId": "executionGetTask",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Task"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/agents": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "由父任务向其固定的专家名册中的 Agent 委派子任务，子预算只能收窄父预算。父任务自身是子任务、已终态、已请求取消或正在收尾时不能委派；累计代理预算（max_agents）耗尽时同样拒绝。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "委派子任务",
+        "operationId": "executionDelegateTask",
+        "parameters": [
+          {
+            "description": "父任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "最长 128 字节；作用域为当前身份和请求路径。同键同请求体返回首次结果，换请求体返回 409",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.TaskRequest"
+              }
+            }
+          },
+          "description": "专家 Agent ID、输入文本与预算",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求体不是合法 JSON、Agent 不在专家名册或缺少输入",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "父任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "父任务不能委派、代理预算耗尽，或 Idempotency-Key 已与其他请求体一起使用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/cancel": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "请求取消任务；根任务会级联标记全部未结束子任务。取消请求与最终停止分开记录，终态在收尾完成后发布。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "取消任务",
+        "operationId": "executionCancelTask",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "已接受"
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/generations": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按任务返回每次模型调用的记录，包括压缩与重试，涵盖耗时、首个增量时间与供应商 token 用量。缺失的用量保持 null，中断调用标记 interrupted，不按零消耗计算。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "任务模型调用记录",
+        "operationId": "executionGenerations",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.GenerationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/inputs": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按提交顺序返回任务收到的全部输入（用户输入、委派输入等）。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "列出任务输入",
+        "operationId": "executionListInputs",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.InputsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "分页参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "向运行中的任务追加用户输入。任务在等待输入或等待工具时会被重新排队；已终态、已请求取消或正在收尾的任务拒绝接收。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "任务转向输入",
+        "operationId": "executionAddInput",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "最长 128 字节；作用域为当前身份和请求路径。同键同请求体返回首次结果，换请求体返回 409",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.TextRequest"
+              }
+            }
+          },
+          "description": "输入文本",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "已接受"
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或文本为空",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "任务不再接受输入，或 Idempotency-Key 已与其他请求体一起使用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/reconcile": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "任务状态未知（unknown）时，操作者显式确认外部操作已停止（confirm_stopped=true）后，把任务重新排队。请求体必须显式确认；任务仍有未决工具结果时须先逐个提交结果。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "确认任务恢复",
+        "operationId": "executionReconcile",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.ReconcileRequest"
+              }
+            }
+          },
+          "description": "确认外部操作已停止",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "已接受，任务重新排队"
+          },
+          "400": {
+            "description": "请求体不是合法 JSON 或未显式确认",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "任务不是未知状态，或仍有未决的工具结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/resume": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "在协调者仍持有会话时，用新输入恢复一个已终态的子任务；上下文与累计预算保持挂载在同一子任务上。协调者已终态或正在收尾时拒绝恢复。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "恢复已完成的子任务",
+        "operationId": "executionResumeTask",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.TextRequest"
+              }
+            }
+          },
+          "description": "续跑输入文本",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "已接受"
+          },
+          "400": {
+            "description": "请求体不是合法 JSON、文本为空、不是已完成的子任务或协调者不再接受协作",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/tools": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "按创建时间返回任务的工具调用，包括参数、状态（ready、approval、custom、running、waiting_children、unknown、completed）、结果与起止时间。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "列出任务工具调用",
+        "operationId": "executionListTools",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.ToolCallsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务不存在或不在当前所有者范围内",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/tools/{call}/result": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "批准示例：`{\"approve\":true}`；拒绝示例：`{\"approve\":false}`。\n成功结果示例：`{\"result\":\"tool response\",\"is_error\":false}`；失败结果示例：`{\"result\":\"confirmed failure\",\"is_error\":true,\"error_code\":\"remote_failure\"}`。\n请选用上述示例之一；Swagger 2.0 无法表达字段互斥，不要同时发送自动生成示例中的所有字段。\n提交以下三种互斥形式之一：审批 {\"approve\": true|false}；确认结果 {\"result\": \"...\", \"is_error\": false}；明确失败 {\"result\": \"...\", \"is_error\": true, \"error_code\": \"...\"}。审批与结果不能混在一个请求中，error_code 要求 is_error=true，空字符串也是有效结果。相同审批或相同完整结果可重复提交（包括任务完成后）；更改已有决定返回 409。任务等待中会因此重新排队。",
+        "tags": [
+          "execution"
+        ],
+        "summary": "提交工具审批或结果",
+        "operationId": "executionResolveToolResult",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "工具调用 ID",
+            "name": "call",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.ToolResultRequest"
+              }
+            }
+          },
+          "description": "审批或工具结果（三选一）",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "已接受"
+          },
+          "400": {
+            "description": "请求体不是合法 JSON、同时提交 result 与 approve 或 error_code 缺少 is_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "缺少或无效的 Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key 不具备 API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "任务或工具调用不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "工具不在等待审批或结果状态，或审批/结果与已有决定不一致",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "agents.Agent": {
+        "type": "object",
+        "required": [
+          "archived",
+          "config",
+          "created_at",
+          "id",
+          "updated_at",
+          "version"
+        ],
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "config": {
+            "$ref": "#/components/schemas/agents.Config"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "agents.Config": {
+        "type": "object",
+        "required": [
+          "model",
+          "name"
+        ],
+        "properties": {
+          "effort": {
+            "type": "string"
+          },
+          "expert_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "instructions": {
+            "type": "string",
+            "example": "Answer clearly and cite your sources."
+          },
+          "model": {
+            "type": "string",
+            "example": "your-model-id"
+          },
+          "name": {
+            "type": "string",
+            "example": "Research assistant"
+          },
+          "skill_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/agents.Tool"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "agents.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/agents.Agent"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "agents.Tool": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "approval": {
+            "type": "boolean"
+          },
+          "credential_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "kind": {
+            "description": "builtin, mcp, custom",
+            "type": "string",
+            "enum": [
+              "builtin",
+              "mcp",
+              "custom"
+            ],
+            "example": "custom"
+          },
+          "name": {
+            "type": "string",
+            "example": "lookup"
+          },
+          "parameters": {
+            "description": "工具参数的 JSON Schema；kind=custom 时必须提供非 null 对象。",
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          },
+          "remote_name": {
+            "type": "string"
+          },
+          "server_url": {
+            "description": "kind=mcp 时必须提供 HTTPS URL，禁止内嵌用户名和密码。",
+            "type": "string"
+          }
+        }
+      },
+      "agents.UpdateRequest": {
+        "type": "object",
+        "required": [
+          "config",
+          "version"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/agents.Config"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 1
+          }
+        }
+      },
+      "agents.Version": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "config",
+          "created_at",
+          "version"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/agents.Config"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "agents.VersionsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/agents.Version"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "apierr.Envelope": {
+        "type": "object",
+        "required": [
+          "error",
+          "request_id",
+          "type"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/apierr.EnvelopeEr"
+          },
+          "request_id": {
+            "type": "string",
+            "example": "req_example"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "example": "error"
+          }
+        }
+      },
+      "apierr.EnvelopeEr": {
+        "type": "object",
+        "required": [
+          "message",
+          "type"
+        ],
+        "properties": {
+          "details": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "message": {
+            "type": "string",
+            "example": "input is required"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "invalid_request_error",
+              "authentication_error",
+              "permission_error",
+              "not_found_error",
+              "request_too_large",
+              "rate_limit_error",
+              "api_error",
+              "timeout_error",
+              "overloaded_error"
+            ],
+            "example": "invalid_request_error"
+          }
+        }
+      },
+      "deployments.CreateRequest": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "input",
+          "name"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "cron": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "input": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "deployments.Deployment": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "created_at",
+          "id",
+          "input",
+          "name",
+          "paused"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cron": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "input": {
+            "type": "string"
+          },
+          "last_task_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "next_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paused": {
+            "type": "boolean"
+          }
+        }
+      },
+      "deployments.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/deployments.Deployment"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "deployments.PauseRequest": {
+        "type": "object",
+        "required": [
+          "paused"
+        ],
+        "properties": {
+          "paused": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "deployments.Run": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "deployment_id",
+          "id"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deployment_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "deployments.RunsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/deployments.Run"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "environments.CreateRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "packages": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          }
+        }
+      },
+      "environments.Environment": {
+        "type": "object",
+        "required": [
+          "archived",
+          "created_at",
+          "id",
+          "name",
+          "packages"
+        ],
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "packages": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          }
+        }
+      },
+      "environments.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/environments.Environment"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.Budget": {
+        "type": "object",
+        "properties": {
+          "max_agents": {
+            "description": "根任务：<=0 使用 6（含协调者）；子任务固定为 0。",
+            "type": "integer"
+          },
+          "max_concurrent_agents": {
+            "description": "根任务：<=0 使用 3；子任务固定为 0，不能再委派。",
+            "type": "integer"
+          },
+          "max_seconds": {
+            "description": "根任务：<=0 使用 1800；子任务：<=0 继承父限制，正数仅可收窄。",
+            "type": "integer"
+          },
+          "max_tokens": {
+            "description": "根任务：<=0 使用 200000；子任务：<=0 继承父限制，正数仅可收窄。",
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_tool_calls": {
+            "description": "根任务：<=0 使用 200；子任务：<=0 继承父限制，正数仅可收窄。",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.CreateSessionRequest": {
+        "type": "object",
+        "properties": {
+          "environment_id": {
+            "type": "string"
+          },
+          "file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "memory_store_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "execution.Event": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "data",
+          "sequence",
+          "session_id",
+          "type"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "execution.EventsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Event"
+            }
+          }
+        }
+      },
+      "execution.Generation": {
+        "type": "object",
+        "required": [
+          "attempt",
+          "duration_ms",
+          "first_delta_ms",
+          "id",
+          "model",
+          "purpose",
+          "started_at",
+          "state",
+          "task_id",
+          "usage"
+        ],
+        "properties": {
+          "attempt": {
+            "type": "integer"
+          },
+          "duration_ms": {
+            "description": "耗时，单位毫秒；未知时为 null。",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "error": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "first_delta_ms": {
+            "description": "首个增量的延迟，单位毫秒；尚未收到或未知时为 null。",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "interrupted"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/modelclient.Usage"
+          }
+        }
+      },
+      "execution.GenerationsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Generation"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.Input": {
+        "type": "object",
+        "required": [
+          "consumed",
+          "created_at",
+          "id",
+          "task_id",
+          "text"
+        ],
+        "properties": {
+          "consumed": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "execution.InputsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Input"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.Message": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "role",
+          "root_id",
+          "sequence",
+          "session_id",
+          "source",
+          "task_id",
+          "text"
+        ],
+        "properties": {
+          "call_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_code": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_error": {
+            "type": "boolean"
+          },
+          "role": {
+            "type": "string"
+          },
+          "root_id": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_task_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "tool_calls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/modelclient.ToolCall"
+            }
+          }
+        }
+      },
+      "execution.MessagesResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "next_after"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Message"
+            }
+          },
+          "next_after": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "execution.ReconcileRequest": {
+        "type": "object",
+        "required": [
+          "confirm_stopped"
+        ],
+        "properties": {
+          "confirm_stopped": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "example": true
+          }
+        }
+      },
+      "execution.RequiredAction": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "type"
+        ],
+        "properties": {
+          "call_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "tool": {
+            "$ref": "#/components/schemas/execution.ToolCall"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "approve_tool",
+              "submit_tool_result",
+              "confirm_tool_outcome",
+              "reconcile_task"
+            ]
+          }
+        }
+      },
+      "execution.RequiredActionsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.RequiredAction"
+            }
+          }
+        }
+      },
+      "execution.Session": {
+        "type": "object",
+        "required": [
+          "archived",
+          "created_at",
+          "event_sequence",
+          "file_ids",
+          "id",
+          "memory_store_ids",
+          "message_sequence",
+          "title"
+        ],
+        "properties": {
+          "active_task_id": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "event_sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "memory_store_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "message_sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "execution.SessionsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Session"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.Task": {
+        "type": "object",
+        "required": [
+          "agent",
+          "agent_count",
+          "agent_id",
+          "agent_version",
+          "attempts",
+          "budget",
+          "cancel_requested",
+          "created_at",
+          "id",
+          "root_id",
+          "session_id",
+          "state",
+          "tool_calls",
+          "updated_at",
+          "usage_known",
+          "used_tokens"
+        ],
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/agents.Config"
+          },
+          "agent_count": {
+            "type": "integer"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "agent_version": {
+            "type": "integer"
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/execution.Budget"
+          },
+          "cancel_requested": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error": {
+            "type": "string"
+          },
+          "experts": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/agents.Agent"
+            }
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "root_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "waiting",
+              "unknown",
+              "succeeded",
+              "partial",
+              "failed",
+              "canceled"
+            ],
+            "example": "queued"
+          },
+          "tool_calls": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usage_known": {
+            "type": "boolean"
+          },
+          "used_tokens": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "execution.TaskRequest": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "input"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "example": "agent_example"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/execution.Budget"
+          },
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Summarize the uploaded report."
+          }
+        }
+      },
+      "execution.TasksResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Task"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.TextRequest": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Focus on the deployment risks."
+          }
+        }
+      },
+      "execution.ToolCall": {
+        "type": "object",
+        "required": [
+          "arguments",
+          "created_at",
+          "delivered",
+          "id",
+          "is_error",
+          "model_call_id",
+          "status",
+          "task_id",
+          "tool",
+          "updated_at"
+        ],
+        "properties": {
+          "approval": {
+            "type": "boolean"
+          },
+          "arguments": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "delivered": {
+            "type": "boolean"
+          },
+          "error_code": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_error": {
+            "type": "boolean"
+          },
+          "model_call_id": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "description": "waiting_children 表示协调者工具正在等待子任务。",
+            "type": "string",
+            "enum": [
+              "ready",
+              "approval",
+              "custom",
+              "running",
+              "waiting_children",
+              "unknown",
+              "completed"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "tool": {
+            "$ref": "#/components/schemas/agents.Tool"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "execution.ToolCallsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.ToolCall"
+            }
+          }
+        }
+      },
+      "execution.ToolResultRequest": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "description": "与 result 互斥；false 表示拒绝，null 等同未提供。",
+            "type": "boolean",
+            "nullable": true
+          },
+          "error_code": {
+            "description": "仅在 is_error=true 时允许非空。",
+            "type": "string"
+          },
+          "is_error": {
+            "type": "boolean"
+          },
+          "result": {
+            "description": "与 approve 互斥；空字符串是有效结果，null 等同未提供。",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "x-wave-validation": "approval-or-result"
+      },
+      "files.File": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "deleted",
+          "id",
+          "mime_type",
+          "name",
+          "size"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "files.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/files.File"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.Conflict": {
+        "type": "object",
+        "required": [
+          "actual_version",
+          "content",
+          "created_at",
+          "expected_version",
+          "id",
+          "path",
+          "store_id"
+        ],
+        "properties": {
+          "actual_version": {
+            "type": "integer"
+          },
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expected_version": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          }
+        }
+      },
+      "memory.ConflictsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/memory.Conflict"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.CreateStoreRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "memory.DeleteEntryRequest": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "example": "notes/project.md"
+          },
+          "version": {
+            "description": "期望版本；不匹配返回 409。",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.EntriesResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/memory.Entry"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.Entry": {
+        "type": "object",
+        "required": [
+          "content",
+          "deleted",
+          "path",
+          "sha256",
+          "store_id",
+          "updated_at",
+          "version"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "memory.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/memory.Store"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.Revision": {
+        "type": "object",
+        "required": [
+          "content",
+          "created_at",
+          "deleted",
+          "id",
+          "path",
+          "store_id",
+          "version"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "memory.RevisionsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/memory.Revision"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.Store": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "name"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "memory.WriteEntryRequest": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "example": "notes/project.md"
+          },
+          "version": {
+            "description": "期望版本；新条目使用 0，更新使用当前版本，不匹配返回 409。",
+            "type": "integer"
+          }
+        }
+      },
+      "modelclient.FuncCallSpec": {
+        "type": "object",
+        "required": [
+          "arguments",
+          "name"
+        ],
+        "properties": {
+          "arguments": {
+            "description": "JSON string",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "modelclient.ToolCall": {
+        "type": "object",
+        "required": [
+          "function",
+          "id",
+          "type"
+        ],
+        "properties": {
+          "function": {
+            "$ref": "#/components/schemas/modelclient.FuncCallSpec"
+          },
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "description": "function",
+            "type": "string"
+          }
+        }
+      },
+      "modelclient.Usage": {
+        "type": "object",
+        "required": [
+          "cache_read_input_tokens",
+          "completion_tokens",
+          "prompt_tokens"
+        ],
+        "properties": {
+          "cache_read_input_tokens": {
+            "description": "供应商报告的缓存读取 token 数；未知时为 null。",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "completion_tokens": {
+            "description": "供应商报告的输出 token 数；未知时为 null。",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "prompt_tokens": {
+            "description": "供应商报告的输入 token 数；未知时为 null，不能按 0 计费。",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        }
+      },
+      "skills.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/skills.Skill"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "skills.Skill": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "description",
+          "id",
+          "name"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "vault.CreateRequest": {
+        "type": "object",
+        "required": [
+          "host",
+          "name",
+          "token"
+        ],
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "vault.Credential": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "host",
+          "id",
+          "name",
+          "revoked"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "host": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "revoked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "vault.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/vault.Credential"
+            }
+          },
+          "next_offset": {
+            "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ]
+}

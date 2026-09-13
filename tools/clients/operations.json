@@ -1,0 +1,244 @@
+{
+  "health": {
+    "command": "health"
+  },
+  "agentsList": {
+    "command": "agents list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "agentsCreate": {
+    "command": "agents create"
+  },
+  "agentsGet": {
+    "command": "agents get"
+  },
+  "agentsUpdate": {
+    "command": "agents update"
+  },
+  "agentsArchive": {
+    "command": "agents archive"
+  },
+  "agentsVersions": {
+    "command": "agents versions",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "vaultList": {
+    "command": "credentials list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "vaultCreate": {
+    "command": "credentials create"
+  },
+  "vaultRevoke": {
+    "command": "credentials revoke"
+  },
+  "deploymentsList": {
+    "command": "deployments list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "deploymentsCreate": {
+    "command": "deployments create"
+  },
+  "deploymentsPause": {
+    "command": "deployments pause"
+  },
+  "deploymentsRun": {
+    "command": "deployments run"
+  },
+  "deploymentsRuns": {
+    "command": "deployments runs",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "environmentsList": {
+    "command": "environments list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "environmentsCreate": {
+    "command": "environments create"
+  },
+  "environmentsGet": {
+    "command": "environments get"
+  },
+  "environmentsArchive": {
+    "command": "environments archive"
+  },
+  "filesList": {
+    "command": "files list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "filesUpload": {
+    "command": "files upload",
+    "transport": "upload"
+  },
+  "filesGet": {
+    "command": "files get"
+  },
+  "filesDelete": {
+    "command": "files delete"
+  },
+  "filesContent": {
+    "command": "files download",
+    "transport": "download"
+  },
+  "memoryListStores": {
+    "command": "memory list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "memoryCreateStore": {
+    "command": "memory create"
+  },
+  "memoryListConflicts": {
+    "command": "memory conflicts",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "memoryListEntries": {
+    "command": "memory entries",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "memoryWriteEntry": {
+    "command": "memory write"
+  },
+  "memoryDeleteEntry": {
+    "command": "memory delete"
+  },
+  "memoryListRevisions": {
+    "command": "memory revisions",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "executionListSessions": {
+    "command": "sessions list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "executionCreateSession": {
+    "command": "sessions create"
+  },
+  "executionGetSession": {
+    "command": "sessions get"
+  },
+  "executionArchiveSession": {
+    "command": "sessions archive"
+  },
+  "executionListEvents": {
+    "command": "events list",
+    "pagination": {
+      "request": "after",
+      "itemCursor": "sequence"
+    }
+  },
+  "executionStreamEvents": {
+    "command": "events watch",
+    "transport": "sse"
+  },
+  "executionMessages": {
+    "command": "sessions messages",
+    "pagination": {
+      "request": "after",
+      "next": "next_after"
+    }
+  },
+  "executionRequiredActions": {
+    "command": "sessions actions"
+  },
+  "executionListTasks": {
+    "command": "tasks list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "executionCreateTask": {
+    "command": "tasks create",
+    "idempotent": true
+  },
+  "skillsList": {
+    "command": "skills list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "skillsUpload": {
+    "command": "skills upload",
+    "transport": "upload"
+  },
+  "skillsContent": {
+    "command": "skills download",
+    "transport": "download"
+  },
+  "executionGetTask": {
+    "command": "tasks get"
+  },
+  "executionDelegateTask": {
+    "command": "tasks delegate",
+    "idempotent": true
+  },
+  "executionCancelTask": {
+    "command": "tasks cancel"
+  },
+  "executionGenerations": {
+    "command": "tasks generations",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "executionListInputs": {
+    "command": "tasks inputs",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "executionAddInput": {
+    "command": "tasks input",
+    "idempotent": true
+  },
+  "executionReconcile": {
+    "command": "tasks reconcile"
+  },
+  "executionResumeTask": {
+    "command": "tasks resume"
+  },
+  "executionListTools": {
+    "command": "tools list"
+  },
+  "executionResolveToolResult": {
+    "command": "tools resolve"
+  }
+}

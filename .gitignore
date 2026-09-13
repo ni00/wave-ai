@@ -1,0 +1,46 @@
+# Local credentials and deployment configuration (keep examples versioned).
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+!*.local.example
+
+# Language dependencies and caches.
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+*.tsbuildinfo
+
+# Build, release and test output. Generated API/SDK sources remain versioned.
+/dist/
+/bin/
+/build/
+/cli/wavectl
+/cli/wavectl.exe
+/sdks/python/dist/
+/sdks/python/build/
+/sdks/typescript/dist/
+coverage.out
+coverage.html
+*.test
+*.prof
+*.log
+
+# Local runtime data and editor/OS files.
+/.wave/
+/data/
+/.cache/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

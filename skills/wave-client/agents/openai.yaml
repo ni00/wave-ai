@@ -1,0 +1,4 @@
+interface:
+  display_name: "Wave Client"
+  short_description: "Run tasks, resolve tool actions and retrieve artifacts"
+  default_prompt: "Use $wave-client to connect to my Wave service, complete the task and track required actions and artifacts."

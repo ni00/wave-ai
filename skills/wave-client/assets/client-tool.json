@@ -1,0 +1,13 @@
+[
+  {
+    "name": "client_echo",
+    "kind": "custom",
+    "description": "Return a message through an explicitly authorized client tool",
+    "approval": true,
+    "parameters": {
+      "type": "object",
+      "properties": {"message": {"type": "string"}},
+      "required": ["message"]
+    }
+  }
+]

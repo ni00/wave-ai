@@ -1,0 +1,10 @@
+{
+  "agent": {
+    "name": "SDK contract agent",
+    "model": "test-model",
+    "tools": [{"name":"client_echo", "kind":"custom", "description":"Return a client result", "approval":true, "parameters":{"type":"object","properties":{"message":{"type":"string"}},"required":["message"]}}]
+  },
+  "session": {"title":"SDK integration"},
+  "input": "Exercise the client tool",
+  "file": "Wave artifact\n中文内容\n"
+}

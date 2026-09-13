@@ -1,0 +1,7 @@
+{
+  "version": "0.1.0",
+  "generatorImage": "openapitools/openapi-generator-cli@sha256:2ab0a9680222de65dc9d3baf861aa02b99e1b80c211d8221ebf3ae8f8a102524",
+  "goModule": "github.com/ni00/wave-ai/sdks/go",
+  "pythonPackage": "wave-ai-client",
+  "npmPackage": "@wave-ai/client"
+}

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wave-ai-client"
+version = "0.1.0"
+description = "Wave AI typed API and streaming workflow client"
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = ["httpx>=0.28,<1", "pydantic>=2,<3", "urllib3>=2.7,<3", "python-dateutil>=2.8.2", "typing-extensions>=4.7.1"]
+
+[project.urls]
+Repository = "https://github.com/ni00/wave-ai"
+
+[tool.hatch.build.targets.wheel]
+packages = ["wave_ai", "wave_ai_generated"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10"]

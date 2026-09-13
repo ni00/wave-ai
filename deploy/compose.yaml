@@ -1,0 +1,99 @@
+name: wave-ai
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.46
+    command:
+      - mini
+      - -dir=/data
+      - -ip=127.0.0.1
+      - -master.telemetry=false
+      - -admin.ui=false
+      - -webdav=false
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+      - -s3.autoCreateBucket=false
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?Run make setup and configure deploy/.env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?Run make setup and configure deploy/.env}
+      S3_BUCKET: ${WAVE_S3_BUCKET:-wave}
+    volumes:
+      - seaweed_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent --head --max-time 3 --aws-sigv4 aws:amz:us-east-1:s3 --user \"$$AWS_ACCESS_KEY_ID:$$AWS_SECRET_ACCESS_KEY\" http://127.0.0.1:8333/$$S3_BUCKET >/dev/null"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+      start_period: 10s
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wave
+      POSTGRES_PASSWORD: ${WAVE_DB_PASSWORD:-wave}
+      POSTGRES_DB: wave
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wave"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  init-db:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["init-db"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      WAVE_DATABASE_URL: postgres://wave:${WAVE_DB_PASSWORD:-wave}@postgres:5432/wave?sslmode=disable
+  wave:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
+    environment:
+      WAVE_ROLE: all
+      WAVE_HTTP_ADDR: ':8080'
+      WAVE_DATABASE_URL: postgres://wave:${WAVE_DB_PASSWORD:-wave}@postgres:5432/wave?sslmode=disable
+      WAVE_DATA_DIR: /var/lib/wave
+      WAVE_STORAGE_BACKEND: ${WAVE_STORAGE_BACKEND:-s3}
+      WAVE_S3_BUCKET: ${WAVE_S3_BUCKET:-wave}
+      WAVE_S3_REGION: ${WAVE_S3_REGION:-us-east-1}
+      WAVE_S3_ENDPOINT: ${WAVE_S3_ENDPOINT-http://seaweedfs:8333}
+      WAVE_S3_PREFIX: ${WAVE_S3_PREFIX:-wave}
+      WAVE_S3_PATH_STYLE: ${WAVE_S3_PATH_STYLE:-true}
+      WAVE_S3_ALLOW_HTTP: ${WAVE_S3_ALLOW_HTTP:-true}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      WAVE_MODEL_BASE_URL: ${WAVE_MODEL_BASE_URL:-https://api.openai.com/v1}
+      WAVE_MODEL_API_KEY: ${WAVE_MODEL_API_KEY:-}
+      WAVE_MODEL_TIMEOUT_SEC: ${WAVE_MODEL_TIMEOUT_SEC:-300}
+      WAVE_CONTEXT_TOKENS: ${WAVE_CONTEXT_TOKENS:-32000}
+      WAVE_WORKER_CONCURRENCY: ${WAVE_WORKER_CONCURRENCY:-10}
+      WAVE_LEASE_SECONDS: ${WAVE_LEASE_SECONDS:-30}
+      WAVE_SANDBOX_BACKEND: ${WAVE_SANDBOX_BACKEND:-sbx}
+      WAVE_SANDBOX_ALLOW_LOCAL: ${WAVE_SANDBOX_ALLOW_LOCAL:-false}
+      WAVE_SANDBOX_LOCAL_ROOT: /var/lib/wave/sandboxes
+      WAVE_SBX_URL: ${WAVE_SBX_URL:-http://host.docker.internal:6060}
+      WAVE_SBX_TOKEN: ${WAVE_SBX_TOKEN:-}
+      WAVE_SBX_IMAGE: ${WAVE_SBX_IMAGE:-docker.io/docker/sandbox-ubuntu-24.04:latest}
+      WAVE_SBX_CPUS: ${WAVE_SBX_CPUS:-2}
+      WAVE_SBX_MEMORY_MIB: ${WAVE_SBX_MEMORY_MIB:-2048}
+      WAVE_MASTER_KEY: ${WAVE_MASTER_KEY:?Run make setup and keep deploy/.env safe}
+      WAVE_GUARDRAIL_INPUT_BLOCK: ${WAVE_GUARDRAIL_INPUT_BLOCK:-}
+      WAVE_GUARDRAIL_OUTPUT_REDACT: ${WAVE_GUARDRAIL_OUTPUT_REDACT:-}
+      WAVE_EGRESS_ALLOW_PRIVATE: ${WAVE_EGRESS_ALLOW_PRIVATE:-false}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - '${WAVE_HTTP_PORT:-8080}:8080'
+volumes:
+  postgres_data:
+  seaweed_data:

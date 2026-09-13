@@ -1,0 +1,6846 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "Managed Agents service. All /v1 endpoints require a Bearer Wave API Key;\nissue it with `wave bootstrap`. Enter the raw Wave API Key in the SDK and Swagger UI bearer configuration.\nOffset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence.\nJSON errors return {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses.\nJSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use nullable; omission is not equivalent to null.\nInteractive documentation: /swagger/index.html. OpenAPI 3 spec: /swagger/openapi.json; legacy Swagger 2: /swagger/doc.json.\n\n[English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)",
+    "title": "Wave AI API",
+    "contact": {},
+    "version": "1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "No authentication required. Check database connectivity with a one-second timeout. All responses have empty bodies.",
+        "tags": [
+          "system"
+        ],
+        "summary": "Health check",
+        "operationId": "health",
+        "responses": {
+          "204": {
+            "description": "Database available"
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        }
+      }
+    },
+    "/v1/agents": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return Agents visible to the current owner, paginated and ordered by id.",
+        "tags": [
+          "agents"
+        ],
+        "summary": "List Agents",
+        "operationId": "agentsList",
+        "parameters": [
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Create an Agent with an initial configuration (version 1). Update mutable configuration fields through PUT /v1/agents/:id to create a new version.",
+        "tags": [
+          "agents"
+        ],
+        "summary": "Create an Agent",
+        "operationId": "agentsCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/agents.Config"
+              }
+            }
+          },
+          "description": "Agent configuration",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.Agent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return an Agent by ID.",
+        "tags": [
+          "agents"
+        ],
+        "summary": "Get an Agent",
+        "operationId": "agentsGet",
+        "parameters": [
+          {
+            "description": "Agent ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.Agent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Submit the expected version and new configuration. A matching version creates a new configuration at version+1.",
+        "tags": [
+          "agents"
+        ],
+        "summary": "Update an Agent",
+        "operationId": "agentsUpdate",
+        "parameters": [
+          {
+            "description": "Agent ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/agents.UpdateRequest"
+              }
+            }
+          },
+          "description": "Expected version and new configuration",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.Agent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/archive": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Mark the Agent as archived so it no longer appears in default lists.",
+        "tags": [
+          "agents"
+        ],
+        "summary": "Archive an Agent",
+        "operationId": "agentsArchive",
+        "parameters": [
+          {
+            "description": "Agent ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Archived"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/agents/{id}/versions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return the Agent's historical configurations by version descending.",
+        "tags": [
+          "agents"
+        ],
+        "summary": "Agent version history",
+        "operationId": "agentsVersions",
+        "parameters": [
+          {
+            "description": "Agent ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agents.VersionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credentials": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return credential metadata visible to the current owner, with pagination. Tokens are write-only; responses never contain plaintext or ciphertext.",
+        "tags": [
+          "vault"
+        ],
+        "summary": "List credentials",
+        "operationId": "vaultList",
+        "parameters": [
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Store a host credential for the current owner. The token is encrypted on write; the API never exposes plaintext and returns metadata only.",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Store a credential",
+        "operationId": "vaultCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/vault.CreateRequest"
+              }
+            }
+          },
+          "description": "Credential name, host and token",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.Credential"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body, or host is not an exact authority without a path or user information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credentials/{id}": {
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Mark the credential as revoked so it can no longer be used for task execution. Its record and ciphertext are retained for auditing; plaintext cannot be read.",
+        "tags": [
+          "vault"
+        ],
+        "summary": "Revoke a credential",
+        "operationId": "vaultRevoke",
+        "parameters": [
+          {
+            "description": "Credential ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credential not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return deployments visible to the current owner, with pagination.",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "List deployments",
+        "operationId": "deploymentsList",
+        "parameters": [
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Create a deployment that binds an Agent to an optional environment and runs the supplied input. cron uses the standard five-field syntax; when set, the next run is calculated, otherwise runs are manual only.",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "Create a deployment",
+        "operationId": "deploymentsCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deployments.CreateRequest"
+              }
+            }
+          },
+          "description": "Deployment name, Agent ID, optional environment ID, input and cron",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body or cron expression",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent or environment not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}": {
+      "patch": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Set the deployment's paused state; resuming recalculates the next cron run.",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "Pause or resume a deployment",
+        "operationId": "deploymentsPause",
+        "parameters": [
+          {
+            "description": "Deployment ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deployments.PauseRequest"
+              }
+            }
+          },
+          "description": "Desired paused state",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body or missing paused field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deployment not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}/run": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Trigger a deployment immediately, creating a session and task for asynchronous execution. A paused deployment returns 409.",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "Trigger a deployment manually",
+        "operationId": "deploymentsRun",
+        "parameters": [
+          {
+            "description": "Deployment ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Environment or Agent is archived, or task resource validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deployment not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Deployment is paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}/runs": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return run records for the deployment, with pagination, including the associated task and session IDs.",
+        "tags": [
+          "deployments"
+        ],
+        "summary": "Deployment run records",
+        "operationId": "deploymentsRuns",
+        "parameters": [
+          {
+            "description": "Deployment ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.RunsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deployment not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/environments": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return environment configurations visible to the current owner, with pagination.",
+        "tags": [
+          "environments"
+        ],
+        "summary": "List environments",
+        "operationId": "environmentsList",
+        "parameters": [
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/environments.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Create an environment configuration for the current owner, declaring packages to install with apt, npm, pip, go, cargo and gem.",
+        "tags": [
+          "environments"
+        ],
+        "summary": "Create an environment",
+        "operationId": "environmentsCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/environments.CreateRequest"
+              }
+            }
+          },
+          "description": "Environment name and package list",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/environments.Environment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body, unsupported package manager or empty package name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/environments/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return an environment configuration by ID.",
+        "tags": [
+          "environments"
+        ],
+        "summary": "Get an environment",
+        "operationId": "environmentsGet",
+        "parameters": [
+          {
+            "description": "Environment ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/environments.Environment"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Environment not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/environments/{id}/archive": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Mark the environment as archived; deployments can no longer reference it.",
+        "tags": [
+          "environments"
+        ],
+        "summary": "Archive an environment",
+        "operationId": "environmentsArchive",
+        "parameters": [
+          {
+            "description": "Environment ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Archived"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Environment not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return metadata for files that are not deleted, paginated and ordered by id; filter by session_id or task_id.",
+        "tags": [
+          "files"
+        ],
+        "summary": "List files",
+        "operationId": "filesList",
+        "parameters": [
+          {
+            "description": "Filter by session ID",
+            "name": "session_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by task ID",
+            "name": "task_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/files.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Upload one file using multipart/form-data. The entire multipart request is limited to 32 MiB, including boundaries and field overhead. Content is stored under owner-scoped SHA-256 object keys; identical content is reused within the same owner. Return metadata for the newly created file.",
+        "tags": [
+          "files"
+        ],
+        "summary": "Upload a file",
+        "operationId": "filesUpload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "File to upload",
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/files.File"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing file field, invalid filename or exceeded 32 MiB limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return metadata for a non-deleted file by ID, without its content.",
+        "tags": [
+          "files"
+        ],
+        "summary": "Get file metadata",
+        "operationId": "filesGet",
+        "parameters": [
+          {
+            "description": "File ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/files.File"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found, deleted or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Soft-delete the file by marking it deleted. It is hidden from ordinary APIs and new references, while existing session references remain usable; object-store content is not immediately erased.",
+        "tags": [
+          "files"
+        ],
+        "summary": "Delete a file",
+        "operationId": "filesDelete",
+        "parameters": [
+          {
+            "description": "File ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found, deleted or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{id}/content": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Download file content by ID after authentication and ownership checks. The server streams it with Content-Disposition: attachment and Range support; browser caching is disabled.",
+        "tags": [
+          "files"
+        ],
+        "summary": "Download file content",
+        "operationId": "filesContent",
+        "parameters": [
+          {
+            "description": "File ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Byte range, for example bytes=0-1023",
+            "name": "Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return the range only if the Last-Modified date matches; otherwise return the full file",
+            "name": "If-Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return 304 if unmodified (HTTP date)",
+            "name": "If-Modified-Since",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return 412 if modified after this date (HTTP date)",
+            "name": "If-Unmodified-Since",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File bytes",
+            "headers": {
+              "Accept-Ranges": {
+                "description": "bytes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=...",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP date",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial content; multiple ranges return multipart/byteranges",
+            "headers": {
+              "Accept-Ranges": {
+                "description": "bytes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=...",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Range": {
+                "description": "Single-range response: bytes start-end/total",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP date",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "multipart/byteranges": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified; empty body"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found, deleted or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition failed; empty body"
+          },
+          "416": {
+            "description": "Invalid or unsatisfiable Range; underlying download errors use text/plain",
+            "headers": {
+              "Content-Range": {
+                "description": "For an unsatisfiable range: bytes */total",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memory-stores": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return memory stores visible to the current owner, with pagination.",
+        "tags": [
+          "memory"
+        ],
+        "summary": "List memory stores",
+        "operationId": "memoryListStores",
+        "parameters": [
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Create a named memory store for the current owner.",
+        "tags": [
+          "memory"
+        ],
+        "summary": "Create a memory store",
+        "operationId": "memoryCreateStore",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/memory.CreateStoreRequest"
+              }
+            }
+          },
+          "description": "Memory store name",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.Store"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memory-stores/{id}/conflicts": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return retained version-conflict records for the memory store, with pagination, including expected and actual versions and conflicting content.",
+        "tags": [
+          "memory"
+        ],
+        "summary": "List memory conflicts",
+        "operationId": "memoryListConflicts",
+        "parameters": [
+          {
+            "description": "Memory store ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.ConflictsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Memory store not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memory-stores/{id}/entries": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return all entries in the memory store, including entries marked deleted, paginated and ordered by path.",
+        "tags": [
+          "memory"
+        ],
+        "summary": "List memory entries",
+        "operationId": "memoryListEntries",
+        "parameters": [
+          {
+            "description": "Memory store ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.EntriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Memory store not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Write a memory entry at the specified path using optimistic locking. A matching version creates a new version and revision; a mismatch retains the conflicting content and returns 409.",
+        "tags": [
+          "memory"
+        ],
+        "summary": "Write a memory entry",
+        "operationId": "memoryWriteEntry",
+        "parameters": [
+          {
+            "description": "Memory store ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/memory.WriteEntryRequest"
+              }
+            }
+          },
+          "description": "Target path, content and expected version",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.Entry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body or non-relative path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Memory store not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict; conflicting content retained",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Delete a memory entry at the specified path using optimistic locking. A version mismatch retains the conflict and returns 409; a successful deletion creates a deletion revision.",
+        "tags": [
+          "memory"
+        ],
+        "summary": "Delete a memory entry",
+        "operationId": "memoryDeleteEntry",
+        "parameters": [
+          {
+            "description": "Memory store ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/memory.DeleteEntryRequest"
+              }
+            }
+          },
+          "description": "Target path and expected version",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.Entry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body or non-relative path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Memory store not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict; conflicting content retained",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/memory-stores/{id}/revisions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return all revisions of the memory store, including writes and deletions, paginated by revision ID descending.",
+        "tags": [
+          "memory"
+        ],
+        "summary": "Memory revision history",
+        "operationId": "memoryListRevisions",
+        "parameters": [
+          {
+            "description": "Memory store ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/memory.RevisionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Memory store not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return sessions visible to the current owner, paginated and ordered by id.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "List sessions",
+        "operationId": "executionListSessions",
+        "parameters": [
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.SessionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Create an execution session, optionally binding an environment and mounting files (up to 100) and memory stores (up to 20). Mounting resources requires environment_id, and the environment must not be archived.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Create a session",
+        "operationId": "executionCreateSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.CreateSessionRequest"
+              }
+            }
+          },
+          "description": "Session title, environment and mounted resources",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Session"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body, archived environment, mounted resources without an environment, or exceeded resource-count limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Environment, file or memory store not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return a session by ID.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Get a session",
+        "operationId": "executionGetSession",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/archive": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Mark the session as archived. Archiving is rejected if unfinished tasks or an active root task remain.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Archive a session",
+        "operationId": "executionArchiveSession",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Archived"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Session still has unfinished tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/events": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return session events after the cursor, ordered by sequence ascending, up to 200 per batch. The cursor may also be supplied through the Last-Event-ID header.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "List session events",
+        "operationId": "executionListEvents",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Read after this event sequence; defaults to 0",
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "description": "Fallback event-sequence cursor; a nonempty after takes precedence",
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.EventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "after/Last-Event-ID must be a nonnegative integer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/events/stream": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Stream session events over SSE. Resume from the after query parameter or Last-Event-ID header; a cursor beyond event history is rejected. A ping comment is sent every 15 seconds. A nonempty after takes precedence over Last-Event-ID; when neither is provided, resume from 0. data contains the full Event JSON, id is sequence, and event is type. Errors before streaming return JSON; errors during streaming close the connection. Save the last received sequence before reconnecting.\n\nExample (each message ends with a blank line):\n```text\nid: 1\nevent: task.created\ndata: {\"session_id\":\"session_example\",\"sequence\":1,\"task_id\":\"task_example\",\"type\":\"task.created\",\"data\":{\"task_id\":\"task_example\"},\"created_at\":\"2026-09-13T00:00:00Z\"}\n\n: ping\n```",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Subscribe to session events",
+        "operationId": "executionStreamEvents",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start after this event sequence; defaults to 0",
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "description": "Resume after the last received event sequence; a nonempty after takes precedence",
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cursor is invalid or beyond event history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/messages": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return immutable session message history, paginated by session sequence ascending, up to 200 messages per page. Continue with next_after and filter a task with task_id. Model previews and events are excluded; only confirmed completed output is committed.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Session message history",
+        "operationId": "executionMessages",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Read after this session message sequence; defaults to 0",
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "description": "Filter by task ID",
+            "name": "task_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Fallback message-sequence cursor; a nonempty after takes precedence",
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.MessagesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid after sequence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/required_actions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return actions currently required by unfinished tasks in the session: approve_tool (tool approval), submit_tool_result (custom-tool result), confirm_tool_outcome (confirm an external execution outcome), and reconcile_task (unknown environment preparation or finalization outcome; confirm external operations have stopped before calling reconcile). The list is computed from current task and tool states and can be queried after reconnecting.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Required user actions",
+        "operationId": "executionRequiredActions",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.RequiredActionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}/tasks": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return all tasks in the session, including coordinator and child tasks, paginated and ordered by id.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "List session tasks",
+        "operationId": "executionListTasks",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.TasksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Create a root task in the session using agent_id and initial input; its state starts as queued. The snapshot fixes the Agent configuration and expert roster, and budget defaults are filled in. Creation is rejected for archived sessions or Agents, skills without an environment, mismatched credential targets, and other invalid resources.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Create a task",
+        "operationId": "executionCreateTask",
+        "parameters": [
+          {
+            "description": "Session ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most 128 bytes; scoped to the current identity and request path. The same key and body return the original result; a different body returns 409",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.TaskRequest"
+              }
+            }
+          },
+          "description": "Agent ID, input text and budget",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body, missing input or resource validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session, Agent, expert, skill or credential not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency-Key has already been used with a different request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/skills": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return skill-package metadata visible to the current owner, paginated and ordered by primary key.",
+        "tags": [
+          "skills"
+        ],
+        "summary": "List skill packages",
+        "operationId": "skillsList",
+        "parameters": [
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/skills.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Upload a skill ZIP using multipart/form-data, with a 24 MiB request limit. The ZIP root must contain SKILL.md with YAML frontmatter (name and description). At most 200 files with safe paths are allowed; extracted content is limited to 20 MiB. Skill IDs are immutable and packages cannot be replaced after creation.",
+        "tags": [
+          "skills"
+        ],
+        "summary": "Upload a skill package",
+        "operationId": "skillsUpload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "ZIP skill package containing SKILL.md at its root",
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/skills.Skill"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing file field, invalid ZIP, exceeded size or file-count limits, missing SKILL.md or invalid metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/skills/{id}/content": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Download the original skill ZIP by ID after authentication and ownership checks. The server streams it as an attachment named `<name>.zip`, with Range support.",
+        "tags": [
+          "skills"
+        ],
+        "summary": "Download a skill package",
+        "operationId": "skillsContent",
+        "parameters": [
+          {
+            "description": "Skill ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Byte range, for example bytes=0-1023",
+            "name": "Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return the range only if the Last-Modified date matches; otherwise return the full file",
+            "name": "If-Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return 304 if unmodified (HTTP date)",
+            "name": "If-Modified-Since",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return 412 if modified after this date (HTTP date)",
+            "name": "If-Unmodified-Since",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Skill ZIP package bytes",
+            "headers": {
+              "Accept-Ranges": {
+                "description": "bytes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=...",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP date",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial content; multiple ranges return multipart/byteranges",
+            "headers": {
+              "Accept-Ranges": {
+                "description": "bytes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "attachment; filename=...",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Range": {
+                "description": "Single-range response: bytes start-end/total",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP date",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "multipart/byteranges": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified; empty body"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Skill not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition failed; empty body"
+          },
+          "416": {
+            "description": "Invalid or unsatisfiable Range; underlying download errors use text/plain",
+            "headers": {
+              "Content-Range": {
+                "description": "For an unsatisfiable range: bytes */total",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return a task by ID, including its state, budget and usage, coordination snapshot and result.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Get a task",
+        "operationId": "executionGetTask",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Task"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/agents": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Delegate a child task to an Agent in the parent's fixed expert roster. Child budgets may only narrow the parent budget. Delegation is rejected if the parent is itself a child task, terminal, cancellation-requested or being finalized, or if its cumulative agent budget (max_agents) is exhausted.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Delegate a child task",
+        "operationId": "executionDelegateTask",
+        "parameters": [
+          {
+            "description": "Parent task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most 128 bytes; scoped to the current identity and request path. The same key and body return the original result; a different body returns 409",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.TaskRequest"
+              }
+            }
+          },
+          "description": "Expert Agent ID, input text and budget",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body, Agent not in the expert roster or missing input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Parent task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Parent task cannot delegate, the agent budget is exhausted, or Idempotency-Key was used with a different body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/cancel": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Request task cancellation; root tasks also mark all unfinished child tasks. Cancellation requests and final stoppage are recorded separately; the terminal state is published after finalization.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Cancel a task",
+        "operationId": "executionCancelTask",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/generations": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return model-call records for the task, including compaction and retries, with duration, first-delta latency and provider token usage. Missing usage remains null; interrupted calls are marked interrupted and are not counted as zero usage.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Task model-call records",
+        "operationId": "executionGenerations",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.GenerationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/inputs": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return all inputs received by the task, including user and delegation inputs, in submission order.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "List task inputs",
+        "operationId": "executionListInputs",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Items per page",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "Offset",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.InputsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Append user input to a running task. Tasks waiting for input or tools are requeued; terminal tasks, tasks with cancellation requested, and tasks being finalized reject input.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Steer a task with additional input",
+        "operationId": "executionAddInput",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "At most 128 bytes; scoped to the current identity and request path. The same key and body return the original result; a different body returns 409",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.TextRequest"
+              }
+            }
+          },
+          "description": "Input text",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Invalid JSON body or empty text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Task no longer accepts input, or Idempotency-Key has been used with a different request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/reconcile": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Requeue an unknown task after the operator explicitly confirms that external operations have stopped (confirm_stopped=true). The request body must include this confirmation; submit each unresolved tool result first.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Reconcile a task",
+        "operationId": "executionReconcile",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.ReconcileRequest"
+              }
+            }
+          },
+          "description": "Confirm that external operations have stopped",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted; task requeued"
+          },
+          "400": {
+            "description": "Invalid JSON body or missing explicit confirmation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Task is not unknown, or tool results are still unresolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/resume": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Resume a terminal child task with new input while its coordinator still holds the session. Context and cumulative budget remain attached to the same child task. Resuming is rejected if the coordinator is terminal or being finalized.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Resume a terminal child task",
+        "operationId": "executionResumeTask",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.TextRequest"
+              }
+            }
+          },
+          "description": "Input text for resuming",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Invalid JSON body, empty text, task not a terminal child task, or coordinator no longer accepting collaboration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/tools": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return task tool calls by creation time, including arguments, status (ready, approval, custom, running, waiting_children, unknown, completed), results, and start and finish times.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "List task tool calls",
+        "operationId": "executionListTools",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.ToolCallsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{id}/tools/{call}/result": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Approval example: `{\"approve\":true}`; rejection example: `{\"approve\":false}`.\nSuccess example: `{\"result\":\"tool response\",\"is_error\":false}`; failure example: `{\"result\":\"confirmed failure\",\"is_error\":true,\"error_code\":\"remote_failure\"}`.\nChoose one example above. Swagger 2.0 cannot express mutually exclusive fields; do not send all fields from its automatically generated example together.\nSubmit exactly one of three forms: approval {\"approve\": true|false}; confirmed result {\"result\": \"...\", \"is_error\": false}; confirmed failure {\"result\": \"...\", \"is_error\": true, \"error_code\": \"...\"}. Do not combine approval and result; error_code requires is_error=true, and an empty string is a valid result. Identical approvals or complete results may be resubmitted, including after task completion; changing an existing decision returns 409. Waiting tasks are requeued.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Submit tool approval or result",
+        "operationId": "executionResolveToolResult",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Tool-call ID",
+            "name": "call",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/execution.ToolResultRequest"
+              }
+            }
+          },
+          "description": "Approval or tool result (choose one of three forms)",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Invalid JSON body, both result and approve submitted, or error_code without is_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task or tool call not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Tool is not waiting for approval or a result, or the submission conflicts with an existing decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error; use request_id for troubleshooting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "agents.Agent": {
+        "type": "object",
+        "required": [
+          "archived",
+          "config",
+          "created_at",
+          "id",
+          "updated_at",
+          "version"
+        ],
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "config": {
+            "$ref": "#/components/schemas/agents.Config"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "agents.Config": {
+        "type": "object",
+        "required": [
+          "model",
+          "name"
+        ],
+        "properties": {
+          "effort": {
+            "type": "string"
+          },
+          "expert_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "instructions": {
+            "type": "string",
+            "example": "Answer clearly and cite your sources."
+          },
+          "model": {
+            "type": "string",
+            "example": "your-model-id"
+          },
+          "name": {
+            "type": "string",
+            "example": "Research assistant"
+          },
+          "skill_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/agents.Tool"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "agents.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/agents.Agent"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "agents.Tool": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "approval": {
+            "type": "boolean"
+          },
+          "credential_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "kind": {
+            "description": "builtin, mcp, custom",
+            "type": "string",
+            "enum": [
+              "builtin",
+              "mcp",
+              "custom"
+            ],
+            "example": "custom"
+          },
+          "name": {
+            "type": "string",
+            "example": "lookup"
+          },
+          "parameters": {
+            "description": "JSON Schema for tool parameters; kind=custom requires a non-null object.",
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true
+          },
+          "remote_name": {
+            "type": "string"
+          },
+          "server_url": {
+            "description": "When kind=mcp, an HTTPS URL is required; embedded usernames and passwords are forbidden.",
+            "type": "string"
+          }
+        }
+      },
+      "agents.UpdateRequest": {
+        "type": "object",
+        "required": [
+          "config",
+          "version"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/agents.Config"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 1
+          }
+        }
+      },
+      "agents.Version": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "config",
+          "created_at",
+          "version"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/agents.Config"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "agents.VersionsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/agents.Version"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "apierr.Envelope": {
+        "type": "object",
+        "required": [
+          "error",
+          "request_id",
+          "type"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/apierr.EnvelopeEr"
+          },
+          "request_id": {
+            "type": "string",
+            "example": "req_example"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "example": "error"
+          }
+        }
+      },
+      "apierr.EnvelopeEr": {
+        "type": "object",
+        "required": [
+          "message",
+          "type"
+        ],
+        "properties": {
+          "details": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "message": {
+            "type": "string",
+            "example": "input is required"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "invalid_request_error",
+              "authentication_error",
+              "permission_error",
+              "not_found_error",
+              "request_too_large",
+              "rate_limit_error",
+              "api_error",
+              "timeout_error",
+              "overloaded_error"
+            ],
+            "example": "invalid_request_error"
+          }
+        }
+      },
+      "deployments.CreateRequest": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "input",
+          "name"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "cron": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "input": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "deployments.Deployment": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "created_at",
+          "id",
+          "input",
+          "name",
+          "paused"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cron": {
+            "type": "string"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "input": {
+            "type": "string"
+          },
+          "last_task_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "next_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paused": {
+            "type": "boolean"
+          }
+        }
+      },
+      "deployments.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/deployments.Deployment"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "deployments.PauseRequest": {
+        "type": "object",
+        "required": [
+          "paused"
+        ],
+        "properties": {
+          "paused": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "deployments.Run": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "deployment_id",
+          "id"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deployment_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "deployments.RunsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/deployments.Run"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "environments.CreateRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "packages": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          }
+        }
+      },
+      "environments.Environment": {
+        "type": "object",
+        "required": [
+          "archived",
+          "created_at",
+          "id",
+          "name",
+          "packages"
+        ],
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "packages": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          }
+        }
+      },
+      "environments.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/environments.Environment"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.Budget": {
+        "type": "object",
+        "properties": {
+          "max_agents": {
+            "description": "Root tasks: <=0 uses 6, including the coordinator. Child tasks: fixed at 0.",
+            "type": "integer"
+          },
+          "max_concurrent_agents": {
+            "description": "Root tasks: <=0 uses 3. Child tasks: fixed at 0, with no further delegation.",
+            "type": "integer"
+          },
+          "max_seconds": {
+            "description": "Root tasks: <=0 uses 1800. Child tasks: <=0 inherits the parent limit; positive values may only narrow it.",
+            "type": "integer"
+          },
+          "max_tokens": {
+            "description": "Root tasks: <=0 uses 200000. Child tasks: <=0 inherits the parent limit; positive values may only narrow it.",
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_tool_calls": {
+            "description": "Root tasks: <=0 uses 200. Child tasks: <=0 inherits the parent limit; positive values may only narrow it.",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.CreateSessionRequest": {
+        "type": "object",
+        "properties": {
+          "environment_id": {
+            "type": "string"
+          },
+          "file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "memory_store_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "execution.Event": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "data",
+          "sequence",
+          "session_id",
+          "type"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "execution.EventsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Event"
+            }
+          }
+        }
+      },
+      "execution.Generation": {
+        "type": "object",
+        "required": [
+          "attempt",
+          "duration_ms",
+          "first_delta_ms",
+          "id",
+          "model",
+          "purpose",
+          "started_at",
+          "state",
+          "task_id",
+          "usage"
+        ],
+        "properties": {
+          "attempt": {
+            "type": "integer"
+          },
+          "duration_ms": {
+            "description": "Duration in milliseconds; null when unknown.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "error": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "first_delta_ms": {
+            "description": "First-delta latency in milliseconds; null if no delta has arrived or the value is unknown.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "interrupted"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/modelclient.Usage"
+          }
+        }
+      },
+      "execution.GenerationsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Generation"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.Input": {
+        "type": "object",
+        "required": [
+          "consumed",
+          "created_at",
+          "id",
+          "task_id",
+          "text"
+        ],
+        "properties": {
+          "consumed": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "execution.InputsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Input"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.Message": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "role",
+          "root_id",
+          "sequence",
+          "session_id",
+          "source",
+          "task_id",
+          "text"
+        ],
+        "properties": {
+          "call_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_code": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_error": {
+            "type": "boolean"
+          },
+          "role": {
+            "type": "string"
+          },
+          "root_id": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_task_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "tool_calls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/modelclient.ToolCall"
+            }
+          }
+        }
+      },
+      "execution.MessagesResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "next_after"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Message"
+            }
+          },
+          "next_after": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "execution.ReconcileRequest": {
+        "type": "object",
+        "required": [
+          "confirm_stopped"
+        ],
+        "properties": {
+          "confirm_stopped": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "example": true
+          }
+        }
+      },
+      "execution.RequiredAction": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "type"
+        ],
+        "properties": {
+          "call_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "tool": {
+            "$ref": "#/components/schemas/execution.ToolCall"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "approve_tool",
+              "submit_tool_result",
+              "confirm_tool_outcome",
+              "reconcile_task"
+            ]
+          }
+        }
+      },
+      "execution.RequiredActionsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.RequiredAction"
+            }
+          }
+        }
+      },
+      "execution.Session": {
+        "type": "object",
+        "required": [
+          "archived",
+          "created_at",
+          "event_sequence",
+          "file_ids",
+          "id",
+          "memory_store_ids",
+          "message_sequence",
+          "title"
+        ],
+        "properties": {
+          "active_task_id": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "environment_id": {
+            "type": "string"
+          },
+          "event_sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "memory_store_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "message_sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "execution.SessionsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Session"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.Task": {
+        "type": "object",
+        "required": [
+          "agent",
+          "agent_count",
+          "agent_id",
+          "agent_version",
+          "attempts",
+          "budget",
+          "cancel_requested",
+          "created_at",
+          "id",
+          "root_id",
+          "session_id",
+          "state",
+          "tool_calls",
+          "updated_at",
+          "usage_known",
+          "used_tokens"
+        ],
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/agents.Config"
+          },
+          "agent_count": {
+            "type": "integer"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "agent_version": {
+            "type": "integer"
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/execution.Budget"
+          },
+          "cancel_requested": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error": {
+            "type": "string"
+          },
+          "experts": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/agents.Agent"
+            }
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "root_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "waiting",
+              "unknown",
+              "succeeded",
+              "partial",
+              "failed",
+              "canceled"
+            ],
+            "example": "queued"
+          },
+          "tool_calls": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usage_known": {
+            "type": "boolean"
+          },
+          "used_tokens": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "execution.TaskRequest": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "input"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "example": "agent_example"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/execution.Budget"
+          },
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Summarize the uploaded report."
+          }
+        }
+      },
+      "execution.TasksResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.Task"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "execution.TextRequest": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Focus on the deployment risks."
+          }
+        }
+      },
+      "execution.ToolCall": {
+        "type": "object",
+        "required": [
+          "arguments",
+          "created_at",
+          "delivered",
+          "id",
+          "is_error",
+          "model_call_id",
+          "status",
+          "task_id",
+          "tool",
+          "updated_at"
+        ],
+        "properties": {
+          "approval": {
+            "type": "boolean"
+          },
+          "arguments": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "delivered": {
+            "type": "boolean"
+          },
+          "error_code": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_error": {
+            "type": "boolean"
+          },
+          "model_call_id": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "description": "waiting_children means the coordinator tool is waiting for child tasks.",
+            "type": "string",
+            "enum": [
+              "ready",
+              "approval",
+              "custom",
+              "running",
+              "waiting_children",
+              "unknown",
+              "completed"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "tool": {
+            "$ref": "#/components/schemas/agents.Tool"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "execution.ToolCallsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.ToolCall"
+            }
+          }
+        }
+      },
+      "execution.ToolResultRequest": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "description": "Mutually exclusive with result; false rejects the call, while null means not provided.",
+            "type": "boolean",
+            "nullable": true
+          },
+          "error_code": {
+            "description": "May be nonempty only when is_error=true.",
+            "type": "string"
+          },
+          "is_error": {
+            "type": "boolean"
+          },
+          "result": {
+            "description": "Mutually exclusive with approve; an empty string is a valid result, while null means not provided.",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "x-wave-validation": "approval-or-result"
+      },
+      "files.File": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "deleted",
+          "id",
+          "mime_type",
+          "name",
+          "size"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "files.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/files.File"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.Conflict": {
+        "type": "object",
+        "required": [
+          "actual_version",
+          "content",
+          "created_at",
+          "expected_version",
+          "id",
+          "path",
+          "store_id"
+        ],
+        "properties": {
+          "actual_version": {
+            "type": "integer"
+          },
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expected_version": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          }
+        }
+      },
+      "memory.ConflictsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/memory.Conflict"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.CreateStoreRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "memory.DeleteEntryRequest": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "example": "notes/project.md"
+          },
+          "version": {
+            "description": "Expected version; a mismatch returns 409.",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.EntriesResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/memory.Entry"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.Entry": {
+        "type": "object",
+        "required": [
+          "content",
+          "deleted",
+          "path",
+          "sha256",
+          "store_id",
+          "updated_at",
+          "version"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "memory.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/memory.Store"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.Revision": {
+        "type": "object",
+        "required": [
+          "content",
+          "created_at",
+          "deleted",
+          "id",
+          "path",
+          "store_id",
+          "version"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "memory.RevisionsResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/memory.Revision"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "memory.Store": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "name"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "memory.WriteEntryRequest": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "example": "notes/project.md"
+          },
+          "version": {
+            "description": "Expected version; use 0 for new entries and the current version for updates. A mismatch returns 409.",
+            "type": "integer"
+          }
+        }
+      },
+      "modelclient.FuncCallSpec": {
+        "type": "object",
+        "required": [
+          "arguments",
+          "name"
+        ],
+        "properties": {
+          "arguments": {
+            "description": "JSON string",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "modelclient.ToolCall": {
+        "type": "object",
+        "required": [
+          "function",
+          "id",
+          "type"
+        ],
+        "properties": {
+          "function": {
+            "$ref": "#/components/schemas/modelclient.FuncCallSpec"
+          },
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "description": "function",
+            "type": "string"
+          }
+        }
+      },
+      "modelclient.Usage": {
+        "type": "object",
+        "required": [
+          "cache_read_input_tokens",
+          "completion_tokens",
+          "prompt_tokens"
+        ],
+        "properties": {
+          "cache_read_input_tokens": {
+            "description": "Provider-reported cache-read token count; null when unknown.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "completion_tokens": {
+            "description": "Provider-reported output token count; null when unknown.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "prompt_tokens": {
+            "description": "Provider-reported input token count; null when unknown and must not be billed as zero.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        }
+      },
+      "skills.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/skills.Skill"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      },
+      "skills.Skill": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "description",
+          "id",
+          "name"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "vault.CreateRequest": {
+        "type": "object",
+        "required": [
+          "host",
+          "name",
+          "token"
+        ],
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "vault.Credential": {
+        "type": "object",
+        "required": [
+          "created_at",
+          "host",
+          "id",
+          "name",
+          "revoked"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "host": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "revoked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "vault.ListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/vault.Credential"
+            }
+          },
+          "next_offset": {
+            "description": "Returned only when another page exists; omitted on the last page.",
+            "type": "integer"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ]
+}

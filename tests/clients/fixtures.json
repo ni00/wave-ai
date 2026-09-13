@@ -1,0 +1,30 @@
+{
+  "key": "wave-test-key",
+  "error": {
+    "type": "error",
+    "error": {
+      "type": "permission_error",
+      "message": "not permitted"
+    },
+    "request_id": "req_contract"
+  },
+  "usage": {
+    "cache_read_input_tokens": null,
+    "completion_tokens": null,
+    "prompt_tokens": null
+  },
+  "binary": "Wave artifact\n中文内容\n",
+  "task": {
+    "id": "task_target",
+    "session_id": "session_test",
+    "state": "running"
+  },
+  "approval": {
+    "approve": false
+  },
+  "emptyResult": {
+    "result": "",
+    "is_error": false,
+    "error_code": ""
+  }
+}
