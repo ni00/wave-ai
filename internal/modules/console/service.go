@@ -37,12 +37,16 @@ type List struct {
 }
 type Query struct {
 	Kind, Search, State, SessionID, TaskID, Before, After, Cursor string
+	TraceID, SpanID, Module, TimeField                            string
 	Limit                                                         int
 }
 
 // Projection omits snapshots, prompts, tool arguments and event payloads from lists.
 func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List, error) {
 	out := List{Data: []Record{}}
+	if in.Kind == "logs" {
+		return browseLogs(ctx, db, p, in)
+	}
 	if in.Limit < 1 || in.Limit > 200 || len(in.Search) > 128 || len(in.Cursor) > 1024 {
 		return out, apierr.Invalid("invalid page size, search or cursor")
 	}
@@ -75,7 +79,7 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 		model = &memory.Store{}
 		q = owned(q)
 		searchColumns = []string{"id", "name"}
-	case "logs":
+	case "events":
 		model = &execution.Event{}
 		q = q.Where(inSubquery{column: "session_id", query: sessions}).Where(clause.Neq{Column: "type", Value: "message.delta"})
 		searchColumns = []string{"task_id", "type"}
@@ -95,10 +99,10 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 		}
 		q = q.Where(clause.Or(expr...))
 	}
-	if in.SessionID != "" && (in.Kind == "tasks" || in.Kind == "traces" || in.Kind == "logs" || in.Kind == "files") {
+	if in.SessionID != "" && (in.Kind == "tasks" || in.Kind == "traces" || in.Kind == "events" || in.Kind == "files") {
 		q = q.Where(clause.Eq{Column: "session_id", Value: in.SessionID})
 	}
-	if in.TaskID != "" && (in.Kind == "logs" || in.Kind == "files") {
+	if in.TaskID != "" && (in.Kind == "events" || in.Kind == "files") {
 		q = q.Where(clause.Eq{Column: "task_id", Value: in.TaskID})
 	}
 	if in.State != "" {
@@ -110,11 +114,18 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 				return out, apierr.Invalid("state must be active or archived")
 			}
 			q = q.Where(clause.Eq{Column: "archived", Value: in.State == "archived"})
-		case "logs":
+		case "events":
 			q = q.Where(clause.Eq{Column: "type", Value: in.State})
 		default:
 			return out, apierr.Invalid("state filter unsupported for this resource")
 		}
+	}
+	timeColumn := "created_at"
+	if in.TimeField != "" && in.TimeField != "created_at" {
+		if (in.Kind != "tasks" && in.Kind != "traces") || in.TimeField != "finished_at" {
+			return out, apierr.Invalid("invalid time field")
+		}
+		timeColumn = "finished_at"
 	}
 	for _, f := range []struct {
 		raw    string
@@ -128,12 +139,12 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 			return out, apierr.Invalid("time filters require RFC3339")
 		}
 		if f.before {
-			q = q.Where(clause.Lt{Column: "created_at", Value: value})
+			q = q.Where(clause.Lt{Column: timeColumn, Value: value})
 		} else {
-			q = q.Where(clause.Gte{Column: "created_at", Value: value})
+			q = q.Where(clause.Gte{Column: timeColumn, Value: value})
 		}
 	}
-	if in.Kind == "logs" {
+	if in.Kind == "events" {
 		if in.Cursor != "" {
 			var c logCursor
 			b, err := base64.RawURLEncoding.DecodeString(in.Cursor)

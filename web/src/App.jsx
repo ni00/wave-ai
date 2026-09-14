@@ -9,6 +9,8 @@ import React, {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconWaveSine,
+  IconActivity,
+  IconLayoutDashboard,
   IconListTree,
   IconTerminal2,
   IconBox,
@@ -35,6 +37,7 @@ import {
 import { Client } from "../../sdks/typescript/src/client.ts";
 import {
   APIContext,
+  routeFilters,
   readRoute,
   route,
   short,
@@ -45,9 +48,13 @@ import {
 import { IconButton, Badge, Copy, Load, Empty, DetailBoundary } from "./ui.jsx";
 const Trace = lazy(() => import("./Trace.jsx"));
 const Resource = lazy(() => import("./Resource.jsx"));
+const Monitor = lazy(() => import("./Monitor.jsx"));
+const Logs = lazy(() => import("./Logs.jsx"));
 const navigation = [
-  ["traces", "Traces", IconListTree, "调用链"],
-  ["logs", "Logs", IconTerminal2, "执行日志"],
+  ["overview", "Overview", IconLayoutDashboard, "Monitoring"],
+  ["metrics", "Metrics", IconActivity, "Monitoring"],
+  ["traces", "Traces", IconListTree, "Monitoring"],
+  ["logs", "Logs", IconTerminal2, "Monitoring"],
   ["environments", "Environments", IconBox, "运行环境"],
   ["files", "Files", IconFiles, "文件与产物"],
   ["memory", "Memory", IconBrain, "持久记忆"],
@@ -153,7 +160,7 @@ function Console({ api, logout }) {
   const [location, setLocation] = useState(readRoute),
     [search, setSearch] = useState(""),
     [debounced, setDebounced] = useState(""),
-    [state, setState] = useState(""),
+    [state, setState] = useState(location.state || ""),
     [period, setPeriod] = useState(""),
     [cursor, setCursor] = useState(""),
     [previous, setPrevious] = useState([]),
@@ -166,7 +173,8 @@ function Console({ api, logout }) {
     qc = useQueryClient();
   const nav = navigation.find((n) => n[0] === location.kind) || navigation[0],
     kind = nav[0],
-    NavIcon = nav[2];
+    NavIcon = nav[2],
+    monitoring = ["overview", "metrics", "logs"].includes(kind);
   useEffect(() => {
     const fn = () => setLocation(readRoute());
     window.addEventListener("hashchange", fn);
@@ -179,30 +187,52 @@ function Console({ api, logout }) {
   useEffect(() => {
     setCursor("");
     setPrevious([]);
-  }, [debounced, state, period, location.session, location.task]);
+  }, [
+    debounced,
+    state,
+    period,
+    location.session,
+    location.task,
+    location.after,
+    location.before,
+    location.state,
+  ]);
   useEffect(() => {
     setSearch("");
     setDebounced("");
-    setState("");
+    setState(location.state || "");
     setPeriod("");
     setCursor("");
     setPrevious([]);
     setUploadError("");
-  }, [kind]);
+  }, [kind, location.state]);
   const filters = useMemo(
     () => ({
       q: debounced || undefined,
       state: state || undefined,
       after: period
         ? new Date(Date.now() - Number(period) * 3600000).toISOString()
-        : undefined,
+        : location.after || undefined,
+      before: location.before || undefined,
+      time_field: location.time_field || undefined,
       session_id: location.session || undefined,
       task_id: location.task || undefined,
     }),
-    [debounced, state, period, location.session, location.task],
+    [
+      debounced,
+      state,
+      period,
+      location.session,
+      location.task,
+      location.after,
+      location.before,
+      location.state,
+      location.time_field,
+    ],
   );
   const list = useQuery({
     queryKey: ["browse", kind, filters, cursor],
+    enabled: !monitoring,
     queryFn: ({ signal }) =>
       api
         .call("consoleBrowse", {
@@ -223,10 +253,9 @@ function Console({ api, logout }) {
     };
   const index = rows.findIndex((r) => r.id === selected);
   function select(id) {
-    route(kind, id, {
-      ...(location.session ? { session: location.session } : {}),
-      ...(location.task ? { task: location.task } : {}),
-    });
+    const extra = routeFilters(location);
+    delete extra.span;
+    route(kind, id, extra);
   }
   useEffect(() => {
     const key = (e) => {
@@ -239,6 +268,7 @@ function Console({ api, logout }) {
         e.altKey
       )
         return;
+      if (monitoring) return;
       if (e.key === "/") {
         e.preventDefault();
         input.current?.focus();
@@ -255,7 +285,7 @@ function Console({ api, logout }) {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [rows, index, kind, location.session, location.task]);
+  }, [rows, index, kind, location, monitoring]);
   async function importFile(file) {
     if (!file) return;
     setUploadError("");
@@ -278,7 +308,7 @@ function Console({ api, logout }) {
   return (
     <div className={"shell " + (!side ? "collapsed" : "")}>
       <aside className="sidebar">
-        <a className="brand" href="#/traces">
+        <a className="brand" href="#/overview">
           <span className="brand-icon">
             <IconWaveSine size={25} />
           </span>
@@ -286,20 +316,30 @@ function Console({ api, logout }) {
             Wave<span className="brand-light"> AI</span>
           </span>
         </a>
-        <div className="nav-caption">WORKSPACE</div>
         <nav aria-label="主导航">
           {navigation.map(([id, label, Icon]) => (
-            <a
-              title={label}
-              key={id}
-              href={"#/" + id}
-              aria-current={kind === id ? "page" : undefined}
-              className={kind === id ? "active" : ""}
-            >
-              <Icon size={19} stroke={1.6} />
-              <span>{label}</span>
-              {kind === id && <span className="nav-indicator" />}
-            </a>
+            <React.Fragment key={id}>
+              {["overview", "environments", "benchmarks"].includes(id) && (
+                <div className="nav-caption">
+                  {id === "overview"
+                    ? "Monitoring"
+                    : id === "environments"
+                      ? "资源与执行"
+                      : "性能测试"}
+                </div>
+              )}
+              <a
+                title={label}
+                key={id}
+                href={"#/" + id}
+                aria-current={kind === id ? "page" : undefined}
+                className={kind === id ? "active" : ""}
+              >
+                <Icon size={19} stroke={1.6} />
+                <span>{label}</span>
+                {kind === id && <span className="nav-indicator" />}
+              </a>
+            </React.Fragment>
           ))}
         </nav>
         <div className="side-bottom">
@@ -349,244 +389,285 @@ function Console({ api, logout }) {
             </IconButton>
           </span>
         </header>
-        <div className={"workbody " + (location.id ? "has-selection" : "")}>
-          <section className="collection" aria-label={nav[1] + " 列表"}>
-            <div className="collection-title">
-              <NavIcon size={19} />
-              <h1>{nav[1]}</h1>
-              <span className="count">
-                {rows.length}
-                {list.data?.next_cursor ? "+" : ""}
-              </span>
-              {kind === "benchmarks" && (
-                <IconButton
-                  title="导入报告"
-                  disabled={uploading}
-                  onClick={() => upload.current.click()}
-                >
-                  <IconUpload size={18} />
-                </IconButton>
-              )}
-            </div>
-            <div className="list-tools">
-              <label className="search">
-                <IconSearch size={17} />
-                <input
-                  ref={input}
-                  aria-label="搜索资源"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="搜索名称或 ID…"
-                />
-                <kbd>/</kbd>
-              </label>
-              <div className="filter-row">
-                <select
-                  aria-label="时间范围"
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                >
-                  <option value="">全部时间</option>
-                  <option value="1">最近 1 小时</option>
-                  <option value="24">最近 24 小时</option>
-                  <option value="168">最近 7 天</option>
-                  <option value="720">最近 30 天</option>
-                </select>
-                {["tasks", "traces", "sessions", "environments"].includes(
-                  kind,
-                ) && (
-                  <select
-                    aria-label="状态筛选"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                  >
-                    <option value="">全部状态</option>
-                    {(["tasks", "traces"].includes(kind)
-                      ? [
-                          "queued",
-                          "running",
-                          "waiting",
-                          "unknown",
-                          "succeeded",
-                          "partial",
-                          "failed",
-                          "canceled",
-                        ]
-                      : ["active", "archived"]
-                    ).map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                )}
-                {kind === "logs" && (
-                  <input
-                    aria-label="事件类型"
-                    placeholder="事件类型…"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                  />
-                )}
-              </div>
-              {(location.session || location.task) && (
-                <button className="filter-chip" onClick={() => route(kind)}>
-                  关联 {short(location.task || location.session)}
-                  <IconX size={12} />
-                </button>
-              )}
-            </div>
-            {uploadError && (
-              <div className="error" role="alert">
-                {uploadError}
-              </div>
-            )}
-            {uploading && <div className="list-note">正在导入报告…</div>}
-            <input
-              className="hidden"
-              ref={upload}
-              type="file"
-              accept=".json,application/json"
-              onChange={(e) => importFile(e.target.files[0])}
-            />
-            <div className="list-column-labels">
-              <span>{kind === "logs" ? "Event" : "Name"}</span>
-              <span>
-                {["tasks", "traces"].includes(kind) ? "Latency" : "Status"}
-              </span>
-            </div>
-            <div className="record-list">
-              <Load query={list}>
-                {() =>
-                  rows.length ? (
-                    rows.map((r) => (
-                      <button
-                        key={r.id}
-                        className={
-                          "record " + (r.id === selected ? "selected" : "")
-                        }
-                        onClick={() => select(r.id)}
-                        aria-current={r.id === selected ? "true" : undefined}
-                      >
-                        <div className="record-top">
-                          <span className="record-name" title={r.name}>
-                            {r.name || short(r.id)}
-                          </span>
-                          {["tasks", "traces"].includes(kind) ? (
-                            <span className="duration">
-                              {duration(r.meta.duration_ms)}
-                            </span>
-                          ) : (
-                            <span className={"mini-status " + r.state}>
-                              {r.state}
-                            </span>
-                          )}
-                        </div>
-                        <div className="record-bottom">
-                          <time>{date(r.created_at)}</time>
-                          {["tasks", "traces"].includes(kind) ? (
-                            <span
-                              className={"state-dot " + r.state}
-                              title={r.state}
-                            />
-                          ) : (
-                            <span className="record-id">{r.id.slice(-7)}</span>
-                          )}
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <Empty
-                      title={
-                        debounced || state ? "没有匹配的记录" : "暂无" + nav[1]
-                      }
-                    >
-                      {kind === "benchmarks"
-                        ? "点击右上角导入 Wave bench JSON 报告。"
-                        : undefined}
-                    </Empty>
-                  )
-                }
-              </Load>
-            </div>
-            <footer className="pagination">
-              <span>每页 50 条</span>
-              <IconButton
-                title="上一页"
-                disabled={!previous.length || list.isFetching}
-                onClick={() => {
-                  setCursor(previous.at(-1));
-                  setPrevious(previous.slice(0, -1));
-                }}
-              >
-                <IconChevronLeft size={15} />
-              </IconButton>
-              <span>{previous.length + 1}</span>
-              <IconButton
-                title="下一页"
-                disabled={!list.data?.next_cursor || list.isFetching}
-                onClick={() => {
-                  setPrevious([...previous, cursor]);
-                  setCursor(list.data.next_cursor);
-                  route(kind, "", {
-                    ...(location.session ? { session: location.session } : {}),
-                    ...(location.task ? { task: location.task } : {}),
-                  });
-                }}
-              >
-                <IconChevronRight size={15} />
-              </IconButton>
-            </footer>
-          </section>
-          <section className="detail" aria-label="资源详情">
-            {selected ? (
-              <>
-                <header className="detail-header">
-                  <NavIcon size={17} />
-                  <strong>{kind === "traces" ? "Trace" : nav[1]}</strong>
-                  <span className="mono truncate" title={selected}>
-                    {selected}
-                  </span>
-                  <Copy text={selected} />
-                  <span className="header-spacer" />
-                  <IconButton
-                    title="上一条"
-                    disabled={index <= 0}
-                    onClick={() => select(rows[index - 1].id)}
-                  >
-                    <IconArrowUp size={16} />
-                  </IconButton>
-                  <IconButton
-                    title="下一条"
-                    disabled={index < 0 || index >= rows.length - 1}
-                    onClick={() => select(rows[index + 1].id)}
-                  >
-                    <IconArrowDown size={16} />
-                  </IconButton>
-                  <IconButton title="返回列表" onClick={() => route(kind)}>
-                    <IconX size={16} />
-                  </IconButton>
-                </header>
-                <DetailBoundary key={kind + selected}>
-                  <Suspense
-                    fallback={<div className="loading">正在加载详情…</div>}
-                  >
-                    {kind === "traces" ? (
-                      <Trace key={selected} id={selected} live={live} />
-                    ) : (
-                      <Resource
-                        key={kind + selected}
-                        kind={kind}
-                        record={record}
-                        id={selected}
-                      />
-                    )}
-                  </Suspense>
-                </DetailBoundary>
-              </>
+        {monitoring ? (
+          <Suspense fallback={<div className="loading">正在加载…</div>}>
+            {kind === "logs" ? (
+              <Logs location={location} live={live} />
             ) : (
-              <Empty title="选择一条记录" />
+              <Monitor key={kind} overview={kind === "overview"} live={live} />
             )}
-          </section>
-        </div>
+          </Suspense>
+        ) : (
+          <div className={"workbody " + (location.id ? "has-selection" : "")}>
+            <section className="collection" aria-label={nav[1] + " 列表"}>
+              <div className="collection-title">
+                <NavIcon size={19} />
+                <h1>{nav[1]}</h1>
+                <span className="count">
+                  {rows.length}
+                  {list.data?.next_cursor ? "+" : ""}
+                </span>
+                {kind === "benchmarks" && (
+                  <IconButton
+                    title="导入报告"
+                    disabled={uploading}
+                    onClick={() => upload.current.click()}
+                  >
+                    <IconUpload size={18} />
+                  </IconButton>
+                )}
+              </div>
+              <div className="list-tools">
+                {(location.after || location.before) && (
+                  <div className="range-filter">
+                    <span
+                      title={`${location.time_field === "finished_at" ? "完成时间：" : ""}${date(location.after)} — ${date(location.before)}`}
+                    >
+                      {date(location.after)} — {date(location.before)}
+                    </span>
+                    <button
+                      onClick={() => route(kind)}
+                      aria-label="清除时间范围"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                <label className="search">
+                  <IconSearch size={17} />
+                  <input
+                    ref={input}
+                    aria-label="搜索资源"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="搜索名称或 ID…"
+                  />
+                  <kbd>/</kbd>
+                </label>
+                <div className="filter-row">
+                  <select
+                    aria-label="时间范围"
+                    value={period}
+                    onChange={(e) => {
+                      setPeriod(e.target.value);
+                      const extra = routeFilters(location);
+                      delete extra.after;
+                      delete extra.before;
+                      route(kind, "", extra);
+                    }}
+                  >
+                    <option value="">
+                      {location.after ? "指定时段" : "全部时间"}
+                    </option>
+                    <option value="1">最近 1 小时</option>
+                    <option value="24">最近 24 小时</option>
+                    <option value="168">最近 7 天</option>
+                    <option value="720">最近 30 天</option>
+                  </select>
+                  {["tasks", "traces", "sessions", "environments"].includes(
+                    kind,
+                  ) && (
+                    <select
+                      aria-label="状态筛选"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                    >
+                      <option value="">全部状态</option>
+                      {(["tasks", "traces"].includes(kind)
+                        ? [
+                            "queued",
+                            "running",
+                            "waiting",
+                            "unknown",
+                            "succeeded",
+                            "partial",
+                            "failed",
+                            "canceled",
+                          ]
+                        : ["active", "archived"]
+                      ).map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                  )}
+                  {kind === "logs" && (
+                    <input
+                      aria-label="事件类型"
+                      placeholder="事件类型…"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                    />
+                  )}
+                </div>
+                {(location.session || location.task) && (
+                  <button className="filter-chip" onClick={() => route(kind)}>
+                    关联 {short(location.task || location.session)}
+                    <IconX size={12} />
+                  </button>
+                )}
+              </div>
+              {uploadError && (
+                <div className="error" role="alert">
+                  {uploadError}
+                </div>
+              )}
+              {uploading && <div className="list-note">正在导入报告…</div>}
+              <input
+                className="hidden"
+                ref={upload}
+                type="file"
+                accept=".json,application/json"
+                onChange={(e) => importFile(e.target.files[0])}
+              />
+              <div className="list-column-labels">
+                <span>{kind === "logs" ? "Event" : "Name"}</span>
+                <span>
+                  {["tasks", "traces"].includes(kind) ? "Latency" : "Status"}
+                </span>
+              </div>
+              <div className="record-list">
+                <Load query={list}>
+                  {() =>
+                    rows.length ? (
+                      rows.map((r) => (
+                        <button
+                          key={r.id}
+                          className={
+                            "record " + (r.id === selected ? "selected" : "")
+                          }
+                          onClick={() => select(r.id)}
+                          aria-current={r.id === selected ? "true" : undefined}
+                        >
+                          <div className="record-top">
+                            <span className="record-name" title={r.name}>
+                              {r.name || short(r.id)}
+                            </span>
+                            {["tasks", "traces"].includes(kind) ? (
+                              <span className="duration">
+                                {duration(r.meta.duration_ms)}
+                              </span>
+                            ) : (
+                              <span className={"mini-status " + r.state}>
+                                {r.state}
+                              </span>
+                            )}
+                          </div>
+                          <div className="record-bottom">
+                            <time>{date(r.created_at)}</time>
+                            {["tasks", "traces"].includes(kind) ? (
+                              <span
+                                className={"state-dot " + r.state}
+                                title={r.state}
+                              />
+                            ) : (
+                              <span className="record-id">
+                                {r.id.slice(-7)}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <Empty
+                        title={
+                          debounced || state
+                            ? "没有匹配的记录"
+                            : "暂无" + nav[1]
+                        }
+                      >
+                        {kind === "benchmarks"
+                          ? "点击右上角导入 Wave bench JSON 报告。"
+                          : undefined}
+                      </Empty>
+                    )
+                  }
+                </Load>
+              </div>
+              <footer className="pagination">
+                <span>每页 50 条</span>
+                <IconButton
+                  title="上一页"
+                  disabled={!previous.length || list.isFetching}
+                  onClick={() => {
+                    setCursor(previous.at(-1));
+                    setPrevious(previous.slice(0, -1));
+                  }}
+                >
+                  <IconChevronLeft size={15} />
+                </IconButton>
+                <span>{previous.length + 1}</span>
+                <IconButton
+                  title="下一页"
+                  disabled={!list.data?.next_cursor || list.isFetching}
+                  onClick={() => {
+                    setPrevious([...previous, cursor]);
+                    setCursor(list.data.next_cursor);
+                    route(kind, "", {
+                      ...routeFilters(location),
+                    });
+                  }}
+                >
+                  <IconChevronRight size={15} />
+                </IconButton>
+              </footer>
+            </section>
+            <section className="detail" aria-label="资源详情">
+              {selected ? (
+                <>
+                  <header className="detail-header">
+                    <NavIcon size={17} />
+                    <strong>{kind === "traces" ? "Trace" : nav[1]}</strong>
+                    <span className="mono truncate" title={selected}>
+                      {selected}
+                    </span>
+                    <Copy text={selected} />
+                    <span className="header-spacer" />
+                    <IconButton
+                      title="上一条"
+                      disabled={index <= 0}
+                      onClick={() => select(rows[index - 1].id)}
+                    >
+                      <IconArrowUp size={16} />
+                    </IconButton>
+                    <IconButton
+                      title="下一条"
+                      disabled={index < 0 || index >= rows.length - 1}
+                      onClick={() => select(rows[index + 1].id)}
+                    >
+                      <IconArrowDown size={16} />
+                    </IconButton>
+                    <IconButton title="返回列表" onClick={() => route(kind)}>
+                      <IconX size={16} />
+                    </IconButton>
+                  </header>
+                  <DetailBoundary key={kind + selected}>
+                    <Suspense
+                      fallback={<div className="loading">正在加载详情…</div>}
+                    >
+                      {kind === "traces" ? (
+                        <Trace
+                          key={selected + location.span}
+                          id={selected}
+                          live={live}
+                          initialSpan={location.span}
+                        />
+                      ) : (
+                        <Resource
+                          key={kind + selected}
+                          kind={kind}
+                          record={record}
+                          id={selected}
+                        />
+                      )}
+                    </Suspense>
+                  </DetailBoundary>
+                </>
+              ) : (
+                <Empty title="选择一条记录" />
+              )}
+            </section>
+          </div>
+        )}
       </main>
     </div>
   );

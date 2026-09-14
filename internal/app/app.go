@@ -36,11 +36,14 @@ import (
 	"wave-ai.local/wave/internal/platform/config"
 	"wave-ai.local/wave/internal/platform/database"
 	"wave-ai.local/wave/internal/platform/httpx"
+	"wave-ai.local/wave/internal/platform/observe"
 	"wave-ai.local/wave/internal/platform/secrets"
+	"wave-ai.local/wave/internal/platform/telemetry"
 	"wave-ai.local/wave/internal/platform/webui"
 )
 
 type App struct {
+	Logs    *telemetry.LogSink
 	MCP     mcpclient.Pool
 	Guard   *guardrails.Set
 	Config  *config.Config
@@ -128,9 +131,12 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		return nil, e
 	}
 	ok = true
-	return &App{Guard: guard, Config: cfg, DB: db, Blobs: b, Box: box, Sandbox: provider}, nil
+	return &App{Logs: telemetry.NewLogSink(db), Guard: guard, Config: cfg, DB: db, Blobs: b, Box: box, Sandbox: provider}, nil
 }
 func (a *App) Close() {
+	if a.Logs != nil {
+		a.Logs.Close()
+	}
 	a.MCP.Close()
 	if c, ok := a.Sandbox.(interface{ Close() error }); ok {
 		_ = c.Close()
@@ -180,6 +186,12 @@ func (a *App) Handler() http.Handler {
 	r.GET("/health", a.health)
 	v := r.Group("/v1", httpx.Authenticate(a.DB))
 	v.Use(func(c *gin.Context) {
+		if a.Logs != nil {
+			p := c.MustGet("principal").(*auth.Principal)
+			s := observe.From(c.Request.Context())
+			s.OrgID, s.OwnerID, s.WriteLog = p.OrgID, p.PrincipalID, a.Logs.Write
+			c.Request = c.Request.WithContext(observe.With(c.Request.Context(), s))
+		}
 		if c.ContentType() != "multipart/form-data" {
 			c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2<<20)
 		}
@@ -217,6 +229,7 @@ func (a *App) health(c *gin.Context) {
 }
 func (a *App) Run(ctx context.Context) error {
 	group, ctx := errgroup.WithContext(ctx)
+	group.Go(func() error { telemetry.Run(ctx, a.DB); return nil })
 	role := a.Config.Role
 	if role == "all" || role == "api" {
 		group.Go(func() error { return a.serve(ctx) })
@@ -229,6 +242,7 @@ func (a *App) Run(ctx context.Context) error {
 		for range a.Config.WorkerConcurrency {
 			group.Go(func() error {
 				worker := &execution.Worker{
+					WriteLog:      a.Logs.Write,
 					DB:            a.DB,
 					Guard:         a.Guard,
 					ContextTokens: a.Config.ContextTokens,

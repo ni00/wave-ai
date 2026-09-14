@@ -33,6 +33,16 @@ import {
     FilesFileFromJSON,
     FilesFileToJSON,
 } from '../models/FilesFile.js';
+import {
+    type ObserveLog,
+    ObserveLogFromJSON,
+    ObserveLogToJSON,
+} from '../models/ObserveLog.js';
+import {
+    type TelemetryMetrics,
+    TelemetryMetricsFromJSON,
+    TelemetryMetricsToJSON,
+} from '../models/TelemetryMetrics.js';
 
 export interface ConsoleBrowseRequest {
     /**
@@ -44,9 +54,25 @@ export interface ConsoleBrowseRequest {
      */
     q?: string;
     /**
-     * State; event type for logs
+     * State, log level, or event type
      */
     state?: string;
+    /**
+     * Log module
+     */
+    module?: string;
+    /**
+     * Trace ID
+     */
+    traceId?: string;
+    /**
+     * Span ID
+     */
+    spanId?: string;
+    /**
+     * Time field
+     */
+    timeField?: ConsoleBrowseTimeFieldEnum;
     /**
      * Session ID
      */
@@ -73,6 +99,17 @@ export interface ConsoleBrowseRequest {
     limit?: number;
 }
 
+export interface ConsoleEventRequest {
+    /**
+     * Session ID
+     */
+    session: string;
+    /**
+     * Event sequence
+     */
+    sequence: number;
+}
+
 export interface ConsoleImportBenchRequest {
     /**
      * Wave bench v2 JSON report, maximum 16 MiB
@@ -82,13 +119,20 @@ export interface ConsoleImportBenchRequest {
 
 export interface ConsoleLogRequest {
     /**
-     * Session ID
+     * Log ID
      */
-    session: string;
+    id: string;
+}
+
+export interface ConsoleMetricsRequest {
     /**
-     * Event sequence
+     * Start RFC3339 (defaults to last hour)
      */
-    sequence: number;
+    from?: string;
+    /**
+     * End RFC3339 (defaults to now)
+     */
+    to?: string;
 }
 
 /**
@@ -115,6 +159,22 @@ export class ConsoleApi extends runtime.BaseAPI {
 
         if (requestParameters['state'] != null) {
             queryParameters['state'] = requestParameters['state'];
+        }
+
+        if (requestParameters['module'] != null) {
+            queryParameters['module'] = requestParameters['module'];
+        }
+
+        if (requestParameters['traceId'] != null) {
+            queryParameters['trace_id'] = requestParameters['traceId'];
+        }
+
+        if (requestParameters['spanId'] != null) {
+            queryParameters['span_id'] = requestParameters['spanId'];
+        }
+
+        if (requestParameters['timeField'] != null) {
+            queryParameters['time_field'] = requestParameters['timeField'];
         }
 
         if (requestParameters['sessionId'] != null) {
@@ -164,7 +224,7 @@ export class ConsoleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.
+     * Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
      * Browse console resources
      */
     async consoleBrowseRaw(requestParameters: ConsoleBrowseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConsoleList>> {
@@ -175,11 +235,72 @@ export class ConsoleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.
+     * Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
      * Browse console resources
      */
     async consoleBrowse(requestParameters: ConsoleBrowseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConsoleList> {
         const response = await this.consoleBrowseRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for consoleEvent without sending the request
+     */
+    async consoleEventRequestOpts(requestParameters: ConsoleEventRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['session'] == null) {
+            throw new runtime.RequiredError(
+                'session',
+                'Required parameter "session" was null or undefined when calling consoleEvent().'
+            );
+        }
+
+        if (requestParameters['sequence'] == null) {
+            throw new runtime.RequiredError(
+                'sequence',
+                'Required parameter "sequence" was null or undefined when calling consoleEvent().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/console/events/{session}/{sequence}`;
+        urlPath = urlPath.replace('{session}', encodeURIComponent(String(requestParameters['session'])));
+        urlPath = urlPath.replace('{sequence}', encodeURIComponent(String(requestParameters['sequence'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Read an execution event
+     */
+    async consoleEventRaw(requestParameters: ConsoleEventRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ExecutionEvent>> {
+        const requestOptions = await this.consoleEventRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ExecutionEventFromJSON(jsonValue));
+    }
+
+    /**
+     * Read an execution event
+     */
+    async consoleEvent(requestParameters: ConsoleEventRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ExecutionEvent> {
+        const response = await this.consoleEventRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -260,17 +381,10 @@ export class ConsoleApi extends runtime.BaseAPI {
      * Creates request options for consoleLog without sending the request
      */
     async consoleLogRequestOpts(requestParameters: ConsoleLogRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['session'] == null) {
+        if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
-                'session',
-                'Required parameter "session" was null or undefined when calling consoleLog().'
-            );
-        }
-
-        if (requestParameters['sequence'] == null) {
-            throw new runtime.RequiredError(
-                'sequence',
-                'Required parameter "sequence" was null or undefined when calling consoleLog().'
+                'id',
+                'Required parameter "id" was null or undefined when calling consoleLog().'
             );
         }
 
@@ -287,9 +401,8 @@ export class ConsoleApi extends runtime.BaseAPI {
             }
         }
 
-        let urlPath = `/v1/console/logs/{session}/{sequence}`;
-        urlPath = urlPath.replace('{session}', encodeURIComponent(String(requestParameters['session'])));
-        urlPath = urlPath.replace('{sequence}', encodeURIComponent(String(requestParameters['sequence'])));
+        let urlPath = `/v1/console/logs/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
 
         return {
             path: urlPath,
@@ -300,20 +413,75 @@ export class ConsoleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Read an execution log
+     * Read a structured log
      */
-    async consoleLogRaw(requestParameters: ConsoleLogRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ExecutionEvent>> {
+    async consoleLogRaw(requestParameters: ConsoleLogRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ObserveLog>> {
         const requestOptions = await this.consoleLogRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ExecutionEventFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => ObserveLogFromJSON(jsonValue));
     }
 
     /**
-     * Read an execution log
+     * Read a structured log
      */
-    async consoleLog(requestParameters: ConsoleLogRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ExecutionEvent> {
+    async consoleLog(requestParameters: ConsoleLogRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ObserveLog> {
         const response = await this.consoleLogRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for consoleMetrics without sending the request
+     */
+    async consoleMetricsRequestOpts(requestParameters: ConsoleMetricsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = requestParameters['from'];
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = requestParameters['to'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/console/metrics`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Reads aggregate buckets only. Maximum 30 days; range aligned outwards and returned. Latency percentiles use a 2% histogram; unknown values are null.
+     * Query monitoring metrics
+     */
+    async consoleMetricsRaw(requestParameters: ConsoleMetricsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TelemetryMetrics>> {
+        const requestOptions = await this.consoleMetricsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TelemetryMetricsFromJSON(jsonValue));
+    }
+
+    /**
+     * Reads aggregate buckets only. Maximum 30 days; range aligned outwards and returned. Latency percentiles use a 2% histogram; unknown values are null.
+     * Query monitoring metrics
+     */
+    async consoleMetrics(requestParameters: ConsoleMetricsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TelemetryMetrics> {
+        const response = await this.consoleMetricsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -325,6 +493,7 @@ export class ConsoleApi extends runtime.BaseAPI {
 export const ConsoleBrowseKindEnum = {
     Traces: 'traces',
     Logs: 'logs',
+    Events: 'events',
     Environments: 'environments',
     Files: 'files',
     Memory: 'memory',
@@ -333,3 +502,11 @@ export const ConsoleBrowseKindEnum = {
     Benchmarks: 'benchmarks',
 } as const;
 export type ConsoleBrowseKindEnum = typeof ConsoleBrowseKindEnum[keyof typeof ConsoleBrowseKindEnum];
+/**
+ * @export
+ */
+export const ConsoleBrowseTimeFieldEnum = {
+    CreatedAt: 'created_at',
+    FinishedAt: 'finished_at',
+} as const;
+export type ConsoleBrowseTimeFieldEnum = typeof ConsoleBrowseTimeFieldEnum[keyof typeof ConsoleBrowseTimeFieldEnum];

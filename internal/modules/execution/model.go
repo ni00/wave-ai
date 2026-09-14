@@ -7,6 +7,7 @@ import (
 	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/telemetry"
 )
 
 type Session struct {
@@ -76,7 +77,7 @@ type Task struct {
 	Epoch           int64                   `json:"-"`
 	LeaseUntil      *time.Time              `gorm:"index" json:"-"`
 	StartedAt       *time.Time              `json:"started_at,omitempty" format:"date-time"`
-	FinishedAt      *time.Time              `json:"finished_at,omitempty" format:"date-time"`
+	FinishedAt      *time.Time              `gorm:"index" json:"finished_at,omitempty" format:"date-time"`
 	ContextReady    bool                    `json:"-"`
 	Finalizing      bool                    `json:"-"`
 	PendingFinish   string                  `json:"-"`
@@ -128,7 +129,7 @@ func Terminal(s string) bool {
 	return s == "succeeded" || s == "partial" || s == "failed" || s == "canceled"
 }
 func Models() []any {
-	return []any{&Session{}, &Task{}, &Input{}, &Event{}, &ToolCall{}, &Summary{}, &Receipt{}, &Message{}, &Generation{}}
+	return append([]any{&Session{}, &Task{}, &Input{}, &Event{}, &ToolCall{}, &Summary{}, &Receipt{}, &Message{}, &Generation{}}, telemetry.Models()...)
 }
 
 type Workspace struct {

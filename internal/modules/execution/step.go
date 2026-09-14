@@ -198,7 +198,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 			return e
 		}
 		return fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, current *Task) error {
-			if err := tx.Save(&generation).Error; err != nil {
+			if err := saveGeneration(tx, s, &generation); err != nil {
 				return err
 			}
 			current.Failures++
@@ -223,7 +223,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		})
 	}
 	return fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, current *Task) error {
-		if e := tx.Save(&generation).Error; e != nil {
+		if e := saveGeneration(tx, s, &generation); e != nil {
 			return e
 		}
 		current.Failures = 0

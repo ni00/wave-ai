@@ -97,9 +97,13 @@ __all__ = [
     "ModelclientFuncCallSpec",
     "ModelclientToolCall",
     "ModelclientUsage",
+    "ObserveLog",
     "ObserveSpan",
     "SkillsListResponse",
     "SkillsSkill",
+    "TelemetryMetrics",
+    "TelemetryPoint",
+    "TelemetryValue",
     "VaultCreateRequest",
     "VaultCredential",
     "VaultListResponse",
@@ -189,9 +193,13 @@ from wave_ai_generated.models.memory_write_entry_request import MemoryWriteEntry
 from wave_ai_generated.models.modelclient_func_call_spec import ModelclientFuncCallSpec as ModelclientFuncCallSpec
 from wave_ai_generated.models.modelclient_tool_call import ModelclientToolCall as ModelclientToolCall
 from wave_ai_generated.models.modelclient_usage import ModelclientUsage as ModelclientUsage
+from wave_ai_generated.models.observe_log import ObserveLog as ObserveLog
 from wave_ai_generated.models.observe_span import ObserveSpan as ObserveSpan
 from wave_ai_generated.models.skills_list_response import SkillsListResponse as SkillsListResponse
 from wave_ai_generated.models.skills_skill import SkillsSkill as SkillsSkill
+from wave_ai_generated.models.telemetry_metrics import TelemetryMetrics as TelemetryMetrics
+from wave_ai_generated.models.telemetry_point import TelemetryPoint as TelemetryPoint
+from wave_ai_generated.models.telemetry_value import TelemetryValue as TelemetryValue
 from wave_ai_generated.models.vault_create_request import VaultCreateRequest as VaultCreateRequest
 from wave_ai_generated.models.vault_credential import VaultCredential as VaultCredential
 from wave_ai_generated.models.vault_list_response import VaultListResponse as VaultListResponse

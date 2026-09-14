@@ -21,6 +21,8 @@ from typing_extensions import Annotated
 from wave_ai_generated.models.console_list import ConsoleList
 from wave_ai_generated.models.execution_event import ExecutionEvent
 from wave_ai_generated.models.files_file import FilesFile
+from wave_ai_generated.models.observe_log import ObserveLog
+from wave_ai_generated.models.telemetry_metrics import TelemetryMetrics
 
 from wave_ai_generated.api_client import ApiClient, RequestSerialized
 from wave_ai_generated.api_response import ApiResponse
@@ -45,7 +47,11 @@ class ConsoleApi:
         self,
         kind: Annotated[StrictStr, Field(description="Resource kind")],
         q: Annotated[Optional[StrictStr], Field(description="Name or ID (maximum 128 bytes)")] = None,
-        state: Annotated[Optional[StrictStr], Field(description="State; event type for logs")] = None,
+        state: Annotated[Optional[StrictStr], Field(description="State, log level, or event type")] = None,
+        module: Annotated[Optional[StrictStr], Field(description="Log module")] = None,
+        trace_id: Annotated[Optional[StrictStr], Field(description="Trace ID")] = None,
+        span_id: Annotated[Optional[StrictStr], Field(description="Span ID")] = None,
+        time_field: Annotated[Optional[StrictStr], Field(description="Time field")] = None,
         session_id: Annotated[Optional[StrictStr], Field(description="Session ID")] = None,
         task_id: Annotated[Optional[StrictStr], Field(description="Task ID")] = None,
         before: Annotated[Optional[StrictStr], Field(description="Before RFC3339 timestamp")] = None,
@@ -67,14 +73,22 @@ class ConsoleApi:
     ) -> ConsoleList:
         """Browse console resources
 
-        Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.
+        Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
 
         :param kind: Resource kind (required)
         :type kind: str
         :param q: Name or ID (maximum 128 bytes)
         :type q: str
-        :param state: State; event type for logs
+        :param state: State, log level, or event type
         :type state: str
+        :param module: Log module
+        :type module: str
+        :param trace_id: Trace ID
+        :type trace_id: str
+        :param span_id: Span ID
+        :type span_id: str
+        :param time_field: Time field
+        :type time_field: str
         :param session_id: Session ID
         :type session_id: str
         :param task_id: Task ID
@@ -113,6 +127,10 @@ class ConsoleApi:
             kind=kind,
             q=q,
             state=state,
+            module=module,
+            trace_id=trace_id,
+            span_id=span_id,
+            time_field=time_field,
             session_id=session_id,
             task_id=task_id,
             before=before,
@@ -149,7 +167,11 @@ class ConsoleApi:
         self,
         kind: Annotated[StrictStr, Field(description="Resource kind")],
         q: Annotated[Optional[StrictStr], Field(description="Name or ID (maximum 128 bytes)")] = None,
-        state: Annotated[Optional[StrictStr], Field(description="State; event type for logs")] = None,
+        state: Annotated[Optional[StrictStr], Field(description="State, log level, or event type")] = None,
+        module: Annotated[Optional[StrictStr], Field(description="Log module")] = None,
+        trace_id: Annotated[Optional[StrictStr], Field(description="Trace ID")] = None,
+        span_id: Annotated[Optional[StrictStr], Field(description="Span ID")] = None,
+        time_field: Annotated[Optional[StrictStr], Field(description="Time field")] = None,
         session_id: Annotated[Optional[StrictStr], Field(description="Session ID")] = None,
         task_id: Annotated[Optional[StrictStr], Field(description="Task ID")] = None,
         before: Annotated[Optional[StrictStr], Field(description="Before RFC3339 timestamp")] = None,
@@ -171,14 +193,22 @@ class ConsoleApi:
     ) -> ApiResponse[ConsoleList]:
         """Browse console resources
 
-        Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.
+        Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
 
         :param kind: Resource kind (required)
         :type kind: str
         :param q: Name or ID (maximum 128 bytes)
         :type q: str
-        :param state: State; event type for logs
+        :param state: State, log level, or event type
         :type state: str
+        :param module: Log module
+        :type module: str
+        :param trace_id: Trace ID
+        :type trace_id: str
+        :param span_id: Span ID
+        :type span_id: str
+        :param time_field: Time field
+        :type time_field: str
         :param session_id: Session ID
         :type session_id: str
         :param task_id: Task ID
@@ -217,6 +247,10 @@ class ConsoleApi:
             kind=kind,
             q=q,
             state=state,
+            module=module,
+            trace_id=trace_id,
+            span_id=span_id,
+            time_field=time_field,
             session_id=session_id,
             task_id=task_id,
             before=before,
@@ -253,7 +287,11 @@ class ConsoleApi:
         self,
         kind: Annotated[StrictStr, Field(description="Resource kind")],
         q: Annotated[Optional[StrictStr], Field(description="Name or ID (maximum 128 bytes)")] = None,
-        state: Annotated[Optional[StrictStr], Field(description="State; event type for logs")] = None,
+        state: Annotated[Optional[StrictStr], Field(description="State, log level, or event type")] = None,
+        module: Annotated[Optional[StrictStr], Field(description="Log module")] = None,
+        trace_id: Annotated[Optional[StrictStr], Field(description="Trace ID")] = None,
+        span_id: Annotated[Optional[StrictStr], Field(description="Span ID")] = None,
+        time_field: Annotated[Optional[StrictStr], Field(description="Time field")] = None,
         session_id: Annotated[Optional[StrictStr], Field(description="Session ID")] = None,
         task_id: Annotated[Optional[StrictStr], Field(description="Task ID")] = None,
         before: Annotated[Optional[StrictStr], Field(description="Before RFC3339 timestamp")] = None,
@@ -275,14 +313,22 @@ class ConsoleApi:
     ) -> RESTResponseType:
         """Browse console resources
 
-        Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.
+        Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
 
         :param kind: Resource kind (required)
         :type kind: str
         :param q: Name or ID (maximum 128 bytes)
         :type q: str
-        :param state: State; event type for logs
+        :param state: State, log level, or event type
         :type state: str
+        :param module: Log module
+        :type module: str
+        :param trace_id: Trace ID
+        :type trace_id: str
+        :param span_id: Span ID
+        :type span_id: str
+        :param time_field: Time field
+        :type time_field: str
         :param session_id: Session ID
         :type session_id: str
         :param task_id: Task ID
@@ -321,6 +367,10 @@ class ConsoleApi:
             kind=kind,
             q=q,
             state=state,
+            module=module,
+            trace_id=trace_id,
+            span_id=span_id,
+            time_field=time_field,
             session_id=session_id,
             task_id=task_id,
             before=before,
@@ -353,6 +403,10 @@ class ConsoleApi:
         kind,
         q,
         state,
+        module,
+        trace_id,
+        span_id,
+        time_field,
         session_id,
         task_id,
         before,
@@ -390,6 +444,22 @@ class ConsoleApi:
         if state is not None:
             
             _query_params.append(('state', state))
+            
+        if module is not None:
+            
+            _query_params.append(('module', module))
+            
+        if trace_id is not None:
+            
+            _query_params.append(('trace_id', trace_id))
+            
+        if span_id is not None:
+            
+            _query_params.append(('span_id', span_id))
+            
+        if time_field is not None:
+            
+            _query_params.append(('time_field', time_field))
             
         if session_id is not None:
             
@@ -437,6 +507,294 @@ class ConsoleApi:
         return self.api_client.param_serialize(
             method='GET',
             resource_path='/v1/console/resources/{kind}',
+            path_params=_path_params,
+            query_params=_query_params,
+            header_params=_header_params,
+            body=_body_params,
+            post_params=_form_params,
+            files=_files,
+            auth_settings=_auth_settings,
+            collection_formats=_collection_formats,
+            _host=_host,
+            _request_auth=_request_auth
+        )
+
+
+
+
+    @validate_call
+    def console_event(
+        self,
+        session: Annotated[StrictStr, Field(description="Session ID")],
+        sequence: Annotated[StrictInt, Field(description="Event sequence")],
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> ExecutionEvent:
+        """Read an execution event
+
+
+        :param session: Session ID (required)
+        :type session: str
+        :param sequence: Event sequence (required)
+        :type sequence: int
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._console_event_serialize(
+            session=session,
+            sequence=sequence,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "ExecutionEvent",
+            '400': "ApierrEnvelope",
+            '401': "ApierrEnvelope",
+            '403': "ApierrEnvelope",
+            '404': "ApierrEnvelope",
+            '500': "ApierrEnvelope",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        ).data
+
+
+    @validate_call
+    def console_event_with_http_info(
+        self,
+        session: Annotated[StrictStr, Field(description="Session ID")],
+        sequence: Annotated[StrictInt, Field(description="Event sequence")],
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> ApiResponse[ExecutionEvent]:
+        """Read an execution event
+
+
+        :param session: Session ID (required)
+        :type session: str
+        :param sequence: Event sequence (required)
+        :type sequence: int
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._console_event_serialize(
+            session=session,
+            sequence=sequence,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "ExecutionEvent",
+            '400': "ApierrEnvelope",
+            '401': "ApierrEnvelope",
+            '403': "ApierrEnvelope",
+            '404': "ApierrEnvelope",
+            '500': "ApierrEnvelope",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        )
+
+
+    @validate_call
+    def console_event_without_preload_content(
+        self,
+        session: Annotated[StrictStr, Field(description="Session ID")],
+        sequence: Annotated[StrictInt, Field(description="Event sequence")],
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> RESTResponseType:
+        """Read an execution event
+
+
+        :param session: Session ID (required)
+        :type session: str
+        :param sequence: Event sequence (required)
+        :type sequence: int
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._console_event_serialize(
+            session=session,
+            sequence=sequence,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "ExecutionEvent",
+            '400': "ApierrEnvelope",
+            '401': "ApierrEnvelope",
+            '403': "ApierrEnvelope",
+            '404': "ApierrEnvelope",
+            '500': "ApierrEnvelope",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        return response_data.response
+
+
+    def _console_event_serialize(
+        self,
+        session,
+        sequence,
+        _request_auth,
+        _content_type,
+        _headers,
+        _host_index,
+    ) -> RequestSerialized:
+
+        _host = None
+
+        _collection_formats: Dict[str, str] = {
+        }
+
+        _path_params: Dict[str, str] = {}
+        _query_params: List[Tuple[str, str]] = []
+        _header_params: Dict[str, Optional[str]] = _headers or {}
+        _form_params: List[Tuple[str, str]] = []
+        _files: Dict[
+            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
+        ] = {}
+        _body_params: Optional[bytes] = None
+
+        # process the path parameters
+        if session is not None:
+            _path_params['session'] = session
+        if sequence is not None:
+            _path_params['sequence'] = sequence
+        # process the query parameters
+        # process the header parameters
+        # process the form parameters
+        # process the body parameter
+
+
+        # set the HTTP header `Accept`
+        if 'Accept' not in _header_params:
+            _header_params['Accept'] = self.api_client.select_header_accept(
+                [
+                    'application/json'
+                ]
+            )
+
+
+        # authentication setting
+        _auth_settings: List[str] = [
+            'BearerAuth'
+        ]
+
+        return self.api_client.param_serialize(
+            method='GET',
+            resource_path='/v1/console/events/{session}/{sequence}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -741,8 +1099,7 @@ class ConsoleApi:
     @validate_call
     def console_log(
         self,
-        session: Annotated[StrictStr, Field(description="Session ID")],
-        sequence: Annotated[StrictInt, Field(description="Event sequence")],
+        id: Annotated[StrictStr, Field(description="Log ID")],
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -755,14 +1112,12 @@ class ConsoleApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ExecutionEvent:
-        """Read an execution log
+    ) -> ObserveLog:
+        """Read a structured log
 
 
-        :param session: Session ID (required)
-        :type session: str
-        :param sequence: Event sequence (required)
-        :type sequence: int
+        :param id: Log ID (required)
+        :type id: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -786,8 +1141,7 @@ class ConsoleApi:
         """ # noqa: E501
 
         _param = self._console_log_serialize(
-            session=session,
-            sequence=sequence,
+            id=id,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -795,8 +1149,7 @@ class ConsoleApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "ExecutionEvent",
-            '400': "ApierrEnvelope",
+            '200': "ObserveLog",
             '401': "ApierrEnvelope",
             '403': "ApierrEnvelope",
             '404': "ApierrEnvelope",
@@ -816,8 +1169,7 @@ class ConsoleApi:
     @validate_call
     def console_log_with_http_info(
         self,
-        session: Annotated[StrictStr, Field(description="Session ID")],
-        sequence: Annotated[StrictInt, Field(description="Event sequence")],
+        id: Annotated[StrictStr, Field(description="Log ID")],
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -830,14 +1182,12 @@ class ConsoleApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[ExecutionEvent]:
-        """Read an execution log
+    ) -> ApiResponse[ObserveLog]:
+        """Read a structured log
 
 
-        :param session: Session ID (required)
-        :type session: str
-        :param sequence: Event sequence (required)
-        :type sequence: int
+        :param id: Log ID (required)
+        :type id: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -861,8 +1211,7 @@ class ConsoleApi:
         """ # noqa: E501
 
         _param = self._console_log_serialize(
-            session=session,
-            sequence=sequence,
+            id=id,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -870,8 +1219,7 @@ class ConsoleApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "ExecutionEvent",
-            '400': "ApierrEnvelope",
+            '200': "ObserveLog",
             '401': "ApierrEnvelope",
             '403': "ApierrEnvelope",
             '404': "ApierrEnvelope",
@@ -891,8 +1239,7 @@ class ConsoleApi:
     @validate_call
     def console_log_without_preload_content(
         self,
-        session: Annotated[StrictStr, Field(description="Session ID")],
-        sequence: Annotated[StrictInt, Field(description="Event sequence")],
+        id: Annotated[StrictStr, Field(description="Log ID")],
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -906,13 +1253,11 @@ class ConsoleApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> RESTResponseType:
-        """Read an execution log
+        """Read a structured log
 
 
-        :param session: Session ID (required)
-        :type session: str
-        :param sequence: Event sequence (required)
-        :type sequence: int
+        :param id: Log ID (required)
+        :type id: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -936,8 +1281,7 @@ class ConsoleApi:
         """ # noqa: E501
 
         _param = self._console_log_serialize(
-            session=session,
-            sequence=sequence,
+            id=id,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -945,8 +1289,7 @@ class ConsoleApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "ExecutionEvent",
-            '400': "ApierrEnvelope",
+            '200': "ObserveLog",
             '401': "ApierrEnvelope",
             '403': "ApierrEnvelope",
             '404': "ApierrEnvelope",
@@ -961,8 +1304,7 @@ class ConsoleApi:
 
     def _console_log_serialize(
         self,
-        session,
-        sequence,
+        id,
         _request_auth,
         _content_type,
         _headers,
@@ -984,10 +1326,8 @@ class ConsoleApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
-        if session is not None:
-            _path_params['session'] = session
-        if sequence is not None:
-            _path_params['sequence'] = sequence
+        if id is not None:
+            _path_params['id'] = id
         # process the query parameters
         # process the header parameters
         # process the form parameters
@@ -1010,7 +1350,299 @@ class ConsoleApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/v1/console/logs/{session}/{sequence}',
+            resource_path='/v1/console/logs/{id}',
+            path_params=_path_params,
+            query_params=_query_params,
+            header_params=_header_params,
+            body=_body_params,
+            post_params=_form_params,
+            files=_files,
+            auth_settings=_auth_settings,
+            collection_formats=_collection_formats,
+            _host=_host,
+            _request_auth=_request_auth
+        )
+
+
+
+
+    @validate_call
+    def console_metrics(
+        self,
+        var_from: Annotated[Optional[StrictStr], Field(description="Start RFC3339 (defaults to last hour)")] = None,
+        to: Annotated[Optional[StrictStr], Field(description="End RFC3339 (defaults to now)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> TelemetryMetrics:
+        """Query monitoring metrics
+
+        Reads aggregate buckets only. Maximum 30 days; range aligned outwards and returned. Latency percentiles use a 2% histogram; unknown values are null.
+
+        :param var_from: Start RFC3339 (defaults to last hour)
+        :type var_from: str
+        :param to: End RFC3339 (defaults to now)
+        :type to: str
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._console_metrics_serialize(
+            var_from=var_from,
+            to=to,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "TelemetryMetrics",
+            '400': "ApierrEnvelope",
+            '401': "ApierrEnvelope",
+            '403': "ApierrEnvelope",
+            '500': "ApierrEnvelope",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        ).data
+
+
+    @validate_call
+    def console_metrics_with_http_info(
+        self,
+        var_from: Annotated[Optional[StrictStr], Field(description="Start RFC3339 (defaults to last hour)")] = None,
+        to: Annotated[Optional[StrictStr], Field(description="End RFC3339 (defaults to now)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> ApiResponse[TelemetryMetrics]:
+        """Query monitoring metrics
+
+        Reads aggregate buckets only. Maximum 30 days; range aligned outwards and returned. Latency percentiles use a 2% histogram; unknown values are null.
+
+        :param var_from: Start RFC3339 (defaults to last hour)
+        :type var_from: str
+        :param to: End RFC3339 (defaults to now)
+        :type to: str
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._console_metrics_serialize(
+            var_from=var_from,
+            to=to,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "TelemetryMetrics",
+            '400': "ApierrEnvelope",
+            '401': "ApierrEnvelope",
+            '403': "ApierrEnvelope",
+            '500': "ApierrEnvelope",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        )
+
+
+    @validate_call
+    def console_metrics_without_preload_content(
+        self,
+        var_from: Annotated[Optional[StrictStr], Field(description="Start RFC3339 (defaults to last hour)")] = None,
+        to: Annotated[Optional[StrictStr], Field(description="End RFC3339 (defaults to now)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> RESTResponseType:
+        """Query monitoring metrics
+
+        Reads aggregate buckets only. Maximum 30 days; range aligned outwards and returned. Latency percentiles use a 2% histogram; unknown values are null.
+
+        :param var_from: Start RFC3339 (defaults to last hour)
+        :type var_from: str
+        :param to: End RFC3339 (defaults to now)
+        :type to: str
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._console_metrics_serialize(
+            var_from=var_from,
+            to=to,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "TelemetryMetrics",
+            '400': "ApierrEnvelope",
+            '401': "ApierrEnvelope",
+            '403': "ApierrEnvelope",
+            '500': "ApierrEnvelope",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        return response_data.response
+
+
+    def _console_metrics_serialize(
+        self,
+        var_from,
+        to,
+        _request_auth,
+        _content_type,
+        _headers,
+        _host_index,
+    ) -> RequestSerialized:
+
+        _host = None
+
+        _collection_formats: Dict[str, str] = {
+        }
+
+        _path_params: Dict[str, str] = {}
+        _query_params: List[Tuple[str, str]] = []
+        _header_params: Dict[str, Optional[str]] = _headers or {}
+        _form_params: List[Tuple[str, str]] = []
+        _files: Dict[
+            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
+        ] = {}
+        _body_params: Optional[bytes] = None
+
+        # process the path parameters
+        # process the query parameters
+        if var_from is not None:
+            
+            _query_params.append(('from', var_from))
+            
+        if to is not None:
+            
+            _query_params.append(('to', to))
+            
+        # process the header parameters
+        # process the form parameters
+        # process the body parameter
+
+
+        # set the HTTP header `Accept`
+        if 'Accept' not in _header_params:
+            _header_params['Accept'] = self.api_client.select_header_accept(
+                [
+                    'application/json'
+                ]
+            )
+
+
+        # authentication setting
+        _auth_settings: List[str] = [
+            'BearerAuth'
+        ]
+
+        return self.api_client.param_serialize(
+            method='GET',
+            resource_path='/v1/console/metrics',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

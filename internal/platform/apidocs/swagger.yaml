@@ -1306,6 +1306,43 @@ definitions:
     - completion_tokens
     - prompt_tokens
     type: object
+  observe.Log:
+    properties:
+      attributes:
+        additionalProperties: {}
+        type: object
+      created_at:
+        format: date-time
+        type: string
+      error:
+        additionalProperties: {}
+        type: object
+      id:
+        type: string
+      level:
+        type: string
+      message:
+        type: string
+      module:
+        type: string
+      request_id:
+        type: string
+      session_id:
+        type: string
+      span_id:
+        type: string
+      task_id:
+        type: string
+      trace_id:
+        type: string
+    required:
+    - attributes
+    - created_at
+    - id
+    - level
+    - message
+    - module
+    type: object
   observe.Span:
     properties:
       attributes:
@@ -1375,6 +1412,72 @@ definitions:
     - description
     - id
     - name
+    type: object
+  telemetry.Metrics:
+    properties:
+      from:
+        format: date-time
+        type: string
+      pending_since:
+        format: date-time
+        type: string
+        x-nullable: true
+      points:
+        items:
+          $ref: '#/definitions/telemetry.Point'
+        type: array
+      step_seconds:
+        type: integer
+      to:
+        format: date-time
+        type: string
+      totals:
+        additionalProperties:
+          $ref: '#/definitions/telemetry.Value'
+        type: object
+    required:
+    - from
+    - pending_since
+    - points
+    - step_seconds
+    - to
+    - totals
+    type: object
+  telemetry.Point:
+    properties:
+      at:
+        format: date-time
+        type: string
+      values:
+        additionalProperties:
+          $ref: '#/definitions/telemetry.Value'
+        type: object
+    required:
+    - at
+    - values
+    type: object
+  telemetry.Value:
+    properties:
+      count:
+        format: int64
+        type: integer
+      p50:
+        type: number
+        x-nullable: true
+      p95:
+        type: number
+        x-nullable: true
+      p99:
+        type: number
+        x-nullable: true
+      sum:
+        type: number
+    required:
+    - count
+    - p50
+    - p95
+    - p99
+    - sum
     type: object
   vault.CreateRequest:
     properties:
@@ -1776,11 +1879,11 @@ paths:
       summary: 导入压测报告 || Import a benchmark report
       tags:
       - console
-  /v1/console/logs/{session}/{sequence}:
+  /v1/console/events/{session}/{sequence}:
     get:
       consumes:
       - application/json
-      operationId: consoleLog
+      operationId: consoleEvent
       parameters:
       - description: 会话 ID || Session ID
         in: path
@@ -1822,22 +1925,104 @@ paths:
             $ref: '#/definitions/apierr.Envelope'
       security:
       - BearerAuth: []
-      summary: 读取执行日志 || Read an execution log
+      summary: 读取执行事件 || Read an execution event
+      tags:
+      - console
+  /v1/console/logs/{id}:
+    get:
+      operationId: consoleLog
+      parameters:
+      - description: 日志 ID || Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/observe.Log'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 读取结构化日志 || Read a structured log
+      tags:
+      - console
+  /v1/console/metrics:
+    get:
+      description: 仅查询聚合时间桶。最多 30 天；时间向外对齐，响应返回实际范围。延迟分位数为 2% 直方图估计；未知值为 null。 ||
+        Reads aggregate buckets only. Maximum 30 days; range aligned outwards and
+        returned. Latency percentiles use a 2% histogram; unknown values are null.
+      operationId: consoleMetrics
+      parameters:
+      - description: 开始时间 RFC3339（默认最近 1 小时） || Start RFC3339 (defaults to last hour)
+        in: query
+        name: from
+        type: string
+      - description: 结束时间 RFC3339（默认现在） || End RFC3339 (defaults to now)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/telemetry.Metrics'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 查询监控指标 || Query monitoring metrics
       tags:
       - console
   /v1/console/resources/{kind}:
     get:
       consumes:
       - application/json
-      description: 按当前所有者过滤。列表只含元数据，以不透明游标倒序分页；logs 是持久化执行事件（排除 token delta），不含进程
-        stdout。 || Owner-scoped metadata only, with descending opaque cursor pagination.
-        Logs are durable execution events excluding token deltas, not process stdout.
+      description: 按当前所有者过滤。列表只含元数据，以不透明游标倒序分页；logs 是结构化应用日志，events 是执行事件（排除 token
+        delta）。 || Owner-scoped metadata only, with descending opaque cursor pagination.
+        Logs are structured application logs; events are execution events excluding
+        token deltas.
       operationId: consoleBrowse
       parameters:
       - description: 资源类型 || Resource kind
         enum:
         - traces
         - logs
+        - events
         - environments
         - files
         - memory
@@ -1852,9 +2037,28 @@ paths:
         in: query
         name: q
         type: string
-      - description: 状态；日志使用事件类型 || State; event type for logs
+      - description: 状态；日志级别；事件类型 || State, log level, or event type
         in: query
         name: state
+        type: string
+      - description: 日志模块 || Log module
+        in: query
+        name: module
+        type: string
+      - description: 链路 ID || Trace ID
+        in: query
+        name: trace_id
+        type: string
+      - description: Span ID
+        in: query
+        name: span_id
+        type: string
+      - description: 时间字段 || Time field
+        enum:
+        - created_at
+        - finished_at
+        in: query
+        name: time_field
         type: string
       - description: 会话 ID || Session ID
         in: query

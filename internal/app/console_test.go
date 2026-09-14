@@ -81,7 +81,7 @@ func TestConsoleOwnershipPaginationAndImports(t *testing.T) {
 		}
 		return w.Body.Bytes()
 	}
-	for _, kind := range []string{"traces", "tasks", "sessions", "logs"} {
+	for _, kind := range []string{"traces", "tasks", "sessions", "events"} {
 		var list console.List
 		data := request(peer, "/v1/console/resources/"+kind, 200)
 		if json.Unmarshal(data, &list) != nil || len(list.Data) != 0 {
@@ -89,27 +89,27 @@ func TestConsoleOwnershipPaginationAndImports(t *testing.T) {
 		}
 	}
 	request("", "/v1/console/resources/tasks", 401)
-	request(peer, "/v1/console/logs/"+s.ID+"/1", 404)
-	request(key, "/v1/console/resources/logs?cursor=bad", 400)
+	request(peer, "/v1/console/events/"+s.ID+"/1", 404)
+	request(key, "/v1/console/resources/events?cursor=bad", 400)
 	request(key, "/v1/console/resources/tasks?limit=201", 400)
 	request(key, "/v1/console/resources/tasks?before=bad", 400)
 	request(key, "/v1/console/resources/nope", 400)
 	var log execution.Event
-	if err = json.Unmarshal(request(key, "/v1/console/logs/"+s.ID+"/1", 200), &log); err != nil || log.Data["private"] != "content" {
+	if err = json.Unmarshal(request(key, "/v1/console/events/"+s.ID+"/1", 200), &log); err != nil || log.Data["private"] != "content" {
 		t.Fatal("event detail missing")
 	}
 	var list console.List
 	if err = json.Unmarshal(request(key, "/v1/console/resources/tasks?limit=1", 200), &list); err != nil || len(list.Data) != 1 || list.Data[0].ID != task.ID {
 		t.Fatalf("task ownership subquery: %+v %v", list, err)
 	}
-	if bytes.Contains(request(key, "/v1/console/resources/logs", 200), []byte("private")) {
+	if bytes.Contains(request(key, "/v1/console/resources/events", 200), []byte("private")) {
 		t.Fatal("list leaked payload")
 	}
 	seen := map[string]bool{}
 	cursor := ""
 	for page := 0; page < 5; page++ {
 		var list console.List
-		if err = json.Unmarshal(request(key, "/v1/console/resources/logs?limit=2&cursor="+cursor, 200), &list); err != nil {
+		if err = json.Unmarshal(request(key, "/v1/console/resources/events?limit=2&cursor="+cursor, 200), &list); err != nil {
 			t.Fatal(err)
 		}
 		for _, r := range list.Data {

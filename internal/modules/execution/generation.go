@@ -2,6 +2,7 @@ package execution
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"gorm.io/gorm"
@@ -9,6 +10,7 @@ import (
 
 	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/platform/observe"
+	"wave-ai.local/wave/internal/platform/telemetry"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
@@ -61,7 +63,11 @@ func (g *Generation) complete(final *modelclient.Final, err error) {
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		observe.Logger(ctx).Info("model.finished", "model", g.Model, "state", g.State, "duration_ms", elapsed, "first_delta_ms", g.FirstDeltaMS, "usage", g.Usage)
+		level := slog.LevelInfo
+		if err != nil {
+			level = slog.LevelError
+		}
+		observe.Logger(ctx).Log(ctx, level, "model.finished", "model", g.Model, "state", g.State, "duration_ms", elapsed, "first_delta_ms", g.FirstDeltaMS, "error_kind", observe.ErrorKind(err))
 	}()
 	if err != nil {
 		g.State = "failed"
@@ -70,6 +76,20 @@ func (g *Generation) complete(final *modelclient.Final, err error) {
 }
 
 func interruptGenerations(tx *gorm.DB, t *Task) error {
+	var running []Generation
+	if err := tx.Select("id").Where(clause.And(eq("task_id", t.ID), eq("state", "running"))).Find(&running).Error; err != nil {
+		return err
+	}
+	if len(running) == 0 {
+		return nil
+	}
+	var s Session
+	if err := tx.Select("org_id", "owner_id").Where(eq("id", t.SessionID)).Take(&s).Error; err != nil {
+		return err
+	}
+	if err := telemetry.Enqueue(tx, s.OrgID, s.OwnerID, time.Now(), map[string]float64{"model.calls": float64(len(running)), "model.failed": float64(len(running)), "model.usage_unknown": float64(len(running))}); err != nil {
+		return err
+	}
 	res := tx.Model(&Generation{}).Where(clause.And(eq("task_id", t.ID), eq("state", "running"))).Update("state", "interrupted")
 	if res.Error != nil {
 		return res.Error

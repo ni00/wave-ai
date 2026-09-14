@@ -521,6 +521,7 @@ export const operations = {
           "enum": [
             "traces",
             "logs",
+            "events",
             "environments",
             "files",
             "memory",
@@ -540,10 +541,46 @@ export const operations = {
         }
       },
       {
-        "description": "State; event type for logs",
+        "description": "State, log level, or event type",
         "in": "query",
         "name": "state",
         "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Log module",
+        "in": "query",
+        "name": "module",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Trace ID",
+        "in": "query",
+        "name": "trace_id",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Span ID",
+        "in": "query",
+        "name": "span_id",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Time field",
+        "in": "query",
+        "name": "time_field",
+        "schema": {
+          "enum": [
+            "created_at",
+            "finished_at"
+          ],
           "type": "string"
         }
       },
@@ -665,6 +702,98 @@ export const operations = {
     },
     "summary": "Browse console resources"
   },
+  "consoleEvent": {
+    "authenticated": true,
+    "command": "console event",
+    "id": "consoleEvent",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Session ID",
+        "in": "path",
+        "name": "session",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Event sequence",
+        "in": "path",
+        "name": "sequence",
+        "required": true,
+        "schema": {
+          "format": "int64",
+          "type": "integer"
+        }
+      }
+    ],
+    "path": "/v1/console/events/{session}/{sequence}",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/execution.Event"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Invalid parameters or report"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Authentication required"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Insufficient scope"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Resource not found"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Internal error"
+      }
+    },
+    "summary": "Read an execution event"
+  },
   "consoleImportBench": {
     "authenticated": true,
     "command": "console import-bench",
@@ -764,33 +893,102 @@ export const operations = {
     "method": "GET",
     "parameters": [
       {
-        "description": "Session ID",
+        "description": "Log ID",
         "in": "path",
-        "name": "session",
+        "name": "id",
         "required": true,
         "schema": {
           "type": "string"
         }
-      },
-      {
-        "description": "Event sequence",
-        "in": "path",
-        "name": "sequence",
-        "required": true,
-        "schema": {
-          "format": "int64",
-          "type": "integer"
-        }
       }
     ],
-    "path": "/v1/console/logs/{session}/{sequence}",
+    "path": "/v1/console/logs/{id}",
     "requestBody": null,
     "responses": {
       "200": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/execution.Event"
+              "$ref": "#/components/schemas/observe.Log"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Unauthorized"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Forbidden"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Not Found"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Internal Server Error"
+      }
+    },
+    "summary": "Read a structured log"
+  },
+  "consoleMetrics": {
+    "authenticated": true,
+    "command": "console metrics",
+    "id": "consoleMetrics",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Start RFC3339 (defaults to last hour)",
+        "in": "query",
+        "name": "from",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "End RFC3339 (defaults to now)",
+        "in": "query",
+        "name": "to",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/console/metrics",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/telemetry.Metrics"
             }
           }
         },
@@ -804,7 +1002,7 @@ export const operations = {
             }
           }
         },
-        "description": "Invalid parameters or report"
+        "description": "Bad Request"
       },
       "401": {
         "content": {
@@ -814,7 +1012,7 @@ export const operations = {
             }
           }
         },
-        "description": "Authentication required"
+        "description": "Unauthorized"
       },
       "403": {
         "content": {
@@ -824,17 +1022,7 @@ export const operations = {
             }
           }
         },
-        "description": "Insufficient scope"
-      },
-      "404": {
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/apierr.Envelope"
-            }
-          }
-        },
-        "description": "Resource not found"
+        "description": "Forbidden"
       },
       "500": {
         "content": {
@@ -844,10 +1032,10 @@ export const operations = {
             }
           }
         },
-        "description": "Internal error"
+        "description": "Internal Server Error"
       }
     },
-    "summary": "Read an execution log"
+    "summary": "Query monitoring metrics"
   },
   "deploymentsCreate": {
     "authenticated": true,

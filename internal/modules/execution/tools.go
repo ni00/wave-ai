@@ -2,6 +2,7 @@ package execution
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -55,7 +56,11 @@ func (w *Worker) tool(ctx context.Context, claim *Task, s Session, call ToolCall
 	} else {
 		result = ToolFailed("executor_unavailable", "tool executor not configured")
 	}
-	observe.Logger(ctx).Info("tool.returned", "tool", call.Tool.Name, "is_error", result.IsError, "outcome_unknown", err != nil, "duration_ms", time.Since(*call.StartedAt).Milliseconds())
+	level := slog.LevelInfo
+	if result.IsError || err != nil {
+		level = slog.LevelError
+	}
+	observe.Logger(ctx).Log(ctx, level, "tool.returned", "tool", call.Tool.Name, "is_error", result.IsError, "outcome_unknown", err != nil, "duration_ms", time.Since(*call.StartedAt).Milliseconds(), "error_kind", observe.ErrorKind(err), "error_code", result.ErrorCode)
 	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	return fenced(cleanup, w.DB, claim, func(tx *gorm.DB, s *Session, t *Task) error {

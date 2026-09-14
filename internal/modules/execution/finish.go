@@ -3,11 +3,13 @@ package execution
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"wave-ai.local/wave/internal/platform/observe"
+	"wave-ai.local/wave/internal/platform/telemetry"
 )
 
 func (w *Worker) park(ctx context.Context, t *Task, state string) error {
@@ -115,10 +117,19 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 		if e := tx.Save(t).Error; e != nil {
 			return e
 		}
+		if err := telemetry.Enqueue(tx, s.OrgID, s.OwnerID, now, map[string]float64{"tasks.completed": 1, "tasks." + state: 1, "task.duration": float64(now.Sub(t.CreatedAt)) / float64(time.Millisecond)}); err != nil {
+			return err
+		}
 		return emit(tx, s, t.ID, "task.finished", map[string]any{"state": state, "result": t.Result, "error": t.Error})
 	})
 	if e == nil {
-		observe.Logger(ctx).Info("task.finished", "state", state)
+		level := slog.LevelInfo
+		if state == "failed" {
+			level = slog.LevelError
+		} else if state != "succeeded" {
+			level = slog.LevelWarn
+		}
+		observe.Logger(ctx).Log(ctx, level, "task.finished", "state", state)
 	}
 	return e
 }

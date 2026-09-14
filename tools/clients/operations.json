@@ -254,5 +254,11 @@
   "consoleImportBench": {
     "command": "console import-bench",
     "transport": "upload"
+  },
+  "consoleMetrics": {
+    "command": "console metrics"
+  },
+  "consoleEvent": {
+    "command": "console event"
   }
 }

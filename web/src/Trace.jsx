@@ -44,7 +44,7 @@ const icons = {
   queue: IconClock,
   phase: IconBox,
 };
-export default function Trace({ id, live }) {
+export default function Trace({ id, live, initialSpan }) {
   const api = useAPI();
   const q = useQuery({
     queryKey: ["executionTrace", id],
@@ -53,11 +53,15 @@ export default function Trace({ id, live }) {
     refetchInterval: live ? 5000 : false,
     refetchIntervalInBackground: false,
   });
-  return <Load query={q}>{(data) => <TraceView trace={data} />}</Load>;
+  return (
+    <Load query={q}>
+      {(data) => <TraceView trace={data} initialSpan={initialSpan} />}
+    </Load>
+  );
 }
-function TraceView({ trace }) {
+function TraceView({ trace, initialSpan }) {
   const [tab, setTab] = useState("tree"),
-    [active, setActive] = useState(""),
+    [active, setActive] = useState(initialSpan || ""),
     [collapsed, setCollapsed] = useState(new Set()),
     [search, setSearch] = useState("");
   const spans = trace.spans || [],
@@ -406,6 +410,17 @@ function SpanDetail({ span, trace }) {
           <Copy text={span.id} />
         </h2>
         <p>{date(span.started_at)}</p>
+        <button
+          className="button"
+          onClick={() =>
+            route("logs", "", {
+              task: span.task_id || trace.task_id,
+              span: span.id,
+            })
+          }
+        >
+          Logs <IconArrowUpRight size={15} />
+        </button>
         <div className="span-tags">
           <span>
             Span kind <b>{span.kind}</b>

@@ -11,6 +11,7 @@ import (
 
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/observe"
+	"wave-ai.local/wave/internal/platform/telemetry"
 )
 
 type TraceSummary struct {
@@ -46,6 +47,12 @@ type Trace struct {
 
 func (w *Worker) traceContext(ctx context.Context, t *Task) context.Context {
 	s := observe.Scope{TraceID: t.RootID, TaskID: t.ID, SessionID: t.SessionID, SpanID: t.ID}
+	if w.WriteLog != nil {
+		var owner Session
+		if err := w.DB.WithContext(ctx).Select("org_id", "owner_id").Where(eq("id", t.SessionID)).Take(&owner).Error; err == nil {
+			s.OrgID, s.OwnerID, s.WriteLog = owner.OrgID, owner.OwnerID, w.WriteLog
+		}
+	}
 	s.Record = func(ctx context.Context, span observe.Span) {
 		// Bounded best-effort writes: telemetry failure must not fail/retry a tool.
 		write, cancel := context.WithTimeout(context.WithoutCancel(ctx), 250*time.Millisecond)
@@ -54,6 +61,15 @@ func (w *Worker) traceContext(ctx context.Context, t *Task) context.Context {
 		data := map[string]any{}
 		_ = json.Unmarshal(raw, &data)
 		err := fenced(write, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {
+			if span.Name == "sandbox.ensure" && span.FinishedAt != nil && span.DurationMS != nil {
+				values := map[string]float64{"sandbox.startup": *span.DurationMS}
+				if span.State == "failed" {
+					values["sandbox.failed"] = 1
+				}
+				if err := telemetry.Enqueue(tx, s.OrgID, s.OwnerID, *span.FinishedAt, values); err != nil {
+					return err
+				}
+			}
 			return emit(tx, s, t.ID, "trace.span", data)
 		})
 		if err != nil {

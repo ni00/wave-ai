@@ -119,7 +119,7 @@ func (w *Worker) compact(ctx context.Context, claim *Task, t Task) (Task, error)
 	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	e = fenced(cleanup, w.DB, claim, func(tx *gorm.DB, s *Session, current *Task) error {
-		if e := tx.Save(&generation).Error; e != nil {
+		if e := saveGeneration(tx, s, &generation); e != nil {
 			return e
 		}
 		known := final != nil && final.Usage.PromptTokens != nil && final.Usage.CompletionTokens != nil

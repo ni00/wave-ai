@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"wave-ai.local/wave/internal/platform/telemetry"
 )
 
 func Claim(ctx context.Context, db *gorm.DB, owner string, lease time.Duration) (*Task, error) {
@@ -108,6 +109,9 @@ func claimWithAdmission(ctx context.Context, db *gorm.DB, owner string, lease ti
 				t.LeaseUntil = &until
 				if t.StartedAt == nil {
 					t.StartedAt = &now
+					if err := telemetry.Enqueue(tx, s.OrgID, s.OwnerID, now, map[string]float64{"queue.wait": float64(now.Sub(t.CreatedAt)) / float64(time.Millisecond)}); err != nil {
+						return err
+					}
 				}
 				if e := tx.Save(&t).Error; e != nil {
 					return e

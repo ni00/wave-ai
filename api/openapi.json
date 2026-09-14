@@ -652,7 +652,7 @@
         }
       }
     },
-    "/v1/console/logs/{session}/{sequence}": {
+    "/v1/console/events/{session}/{sequence}": {
       "get": {
         "security": [
           {
@@ -662,8 +662,8 @@
         "tags": [
           "console"
         ],
-        "summary": "Read an execution log",
-        "operationId": "consoleLog",
+        "summary": "Read an execution event",
+        "operationId": "consoleEvent",
         "parameters": [
           {
             "description": "Session ID",
@@ -749,6 +749,168 @@
         }
       }
     },
+    "/v1/console/logs/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "console"
+        ],
+        "summary": "Read a structured log",
+        "operationId": "consoleLog",
+        "parameters": [
+          {
+            "description": "Log ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/observe.Log"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/console/metrics": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Reads aggregate buckets only. Maximum 30 days; range aligned outwards and returned. Latency percentiles use a 2% histogram; unknown values are null.",
+        "tags": [
+          "console"
+        ],
+        "summary": "Query monitoring metrics",
+        "operationId": "consoleMetrics",
+        "parameters": [
+          {
+            "description": "Start RFC3339 (defaults to last hour)",
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "End RFC3339 (defaults to now)",
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/telemetry.Metrics"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/console/resources/{kind}": {
       "get": {
         "security": [
@@ -756,7 +918,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.",
+        "description": "Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.",
         "tags": [
           "console"
         ],
@@ -773,6 +935,7 @@
               "enum": [
                 "traces",
                 "logs",
+                "events",
                 "environments",
                 "files",
                 "memory",
@@ -791,11 +954,47 @@
             }
           },
           {
-            "description": "State; event type for logs",
+            "description": "State, log level, or event type",
             "name": "state",
             "in": "query",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "description": "Log module",
+            "name": "module",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Trace ID",
+            "name": "trace_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Span ID",
+            "name": "span_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Time field",
+            "name": "time_field",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "finished_at"
+              ]
             }
           },
           {
@@ -7375,6 +7574,58 @@
           }
         }
       },
+      "observe.Log": {
+        "type": "object",
+        "required": [
+          "attributes",
+          "created_at",
+          "id",
+          "level",
+          "message",
+          "module"
+        ],
+        "properties": {
+          "attributes": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "id": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "module": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "span_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "trace_id": {
+            "type": "string"
+          }
+        }
+      },
       "observe.Span": {
         "type": "object",
         "required": [
@@ -7468,6 +7719,97 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "telemetry.Metrics": {
+        "type": "object",
+        "required": [
+          "from",
+          "pending_since",
+          "points",
+          "step_seconds",
+          "to",
+          "totals"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pending_since": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/telemetry.Point"
+            }
+          },
+          "step_seconds": {
+            "type": "integer"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totals": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/telemetry.Value"
+            }
+          }
+        }
+      },
+      "telemetry.Point": {
+        "type": "object",
+        "required": [
+          "at",
+          "values"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/telemetry.Value"
+            }
+          }
+        }
+      },
+      "telemetry.Value": {
+        "type": "object",
+        "required": [
+          "count",
+          "p50",
+          "p95",
+          "p99",
+          "sum"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "p50": {
+            "type": "number",
+            "nullable": true
+          },
+          "p95": {
+            "type": "number",
+            "nullable": true
+          },
+          "p99": {
+            "type": "number",
+            "nullable": true
+          },
+          "sum": {
+            "type": "number"
           }
         }
       },

@@ -33,7 +33,7 @@ export default function Resource({ kind, id, record }) {
   if (kind === "environments") return <Environment id={id} />;
   if (kind === "files") return <File id={id} />;
   if (kind === "memory") return <Memory id={id} name={record.name} />;
-  if (kind === "logs") return <Log id={id} />;
+
   if (kind === "benchmarks") return <Bench id={id} />;
 }
 function Jump({ kind, id, children, extra }) {
@@ -83,6 +83,7 @@ function Task({ id }) {
           ["inputs", "Inputs"],
           ["tools", "Tools"],
           ["generations", "Model calls"],
+          ["events", "Events"],
         ]}
         value={tab}
         onChange={setTab}
@@ -159,6 +160,7 @@ function Task({ id }) {
                   </Section>
                 </>
               )}
+              {tab === "events" && <Events session={t.session_id} task={id} />}
               {tab === "inputs" && (
                 <Paged
                   op="executionListInputs"
@@ -232,6 +234,7 @@ function Session({ id }) {
           ["tasks", "Tasks"],
           ["messages", "Messages"],
           ["resources", "Resources"],
+          ["events", "Events"],
         ]}
         value={tab}
         onChange={setTab}
@@ -273,7 +276,8 @@ function Session({ id }) {
                   )}
                 />
               )}{" "}
-              {tab === "messages" && <Messages id={id} />}{" "}
+              {tab === "messages" && <Messages id={id} />}
+              {tab === "events" && <Events session={id} />}{" "}
               {tab === "resources" && (
                 <>
                   <Section title="Environment">
@@ -596,50 +600,6 @@ function Memory({ id, name }) {
     </>
   );
 }
-function Log({ id }) {
-  const api = useAPI(),
-    i = id.lastIndexOf(":"),
-    session = id.slice(0, i),
-    sequence = id.slice(i + 1);
-  const q = useQuery({
-    queryKey: ["log", id],
-    queryFn: ({ signal }) =>
-      api
-        .call("consoleLog", { path: { session, sequence }, signal })
-        .then((r) => r.data),
-  });
-  return (
-    <div className="resource-scroll">
-      <Load query={q}>
-        {(l) => (
-          <>
-            <div className="resource-heading">
-              <span className="eyebrow">EXECUTION EVENT</span>
-              <h2>{l.type}</h2>
-              <p>
-                {date(l.created_at)} · sequence {l.sequence}
-              </p>
-              <div className="actions">
-                {l.task_id && (
-                  <Jump kind="traces" id={l.task_id}>
-                    关联 Trace
-                  </Jump>
-                )}
-                <Jump kind="sessions" id={l.session_id}>
-                  所属 Session
-                </Jump>
-              </div>
-            </div>
-            <Section title="Payload" copy={l.data}>
-              <Code value={l.data} />
-            </Section>
-            <p className="hint">仅含执行事件，不含进程日志。</p>
-          </>
-        )}
-      </Load>
-    </div>
-  );
-}
 function Bench({ id }) {
   const content = useFileContent(id, 16 * 1048576);
   return (
@@ -861,5 +821,100 @@ function BenchTasks({ tasks }) {
         </div>
       )}
     </>
+  );
+}
+
+function Events({ session, task }) {
+  const api = useAPI();
+  const [cursor, setCursor] = useState(""),
+    [pages, setPages] = useState([]),
+    [selected, setSelected] = useState("");
+  const q = useQuery({
+    queryKey: ["events", session, task, cursor],
+    queryFn: ({ signal }) =>
+      api
+        .call("consoleBrowse", {
+          path: { kind: "events" },
+          query: {
+            session_id: session,
+            task_id: task,
+            cursor: cursor || undefined,
+            limit: 50,
+          },
+          signal,
+        })
+        .then((r) => r.data),
+  });
+  return (
+    <>
+      <Load query={q}>
+        {(d) =>
+          d.data.length ? (
+            <div className="event-list">
+              {d.data.map((r) => (
+                <div key={r.id}>
+                  <button
+                    className="event-row"
+                    aria-expanded={selected === r.id}
+                    onClick={() => setSelected(selected === r.id ? "" : r.id)}
+                  >
+                    <time>{date(r.created_at)}</time>
+                    <strong>{r.name}</strong>
+                    <span>#{r.meta.sequence}</span>
+                  </button>
+                  {selected === r.id && (
+                    <EventDetail session={session} sequence={r.meta.sequence} />
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Empty title="暂无事件" />
+          )
+        }
+      </Load>
+      <div className="page-controls">
+        <button
+          disabled={!pages.length || q.isFetching}
+          onClick={() => {
+            setCursor(pages.at(-1));
+            setPages(pages.slice(0, -1));
+            setSelected("");
+          }}
+        >
+          上一页
+        </button>
+        <span>{pages.length + 1}</span>
+        <button
+          disabled={!q.data?.next_cursor || q.isFetching}
+          onClick={() => {
+            setPages([...pages, cursor]);
+            setCursor(q.data.next_cursor);
+            setSelected("");
+          }}
+        >
+          下一页
+        </button>
+      </div>
+    </>
+  );
+}
+function EventDetail({ session, sequence }) {
+  const api = useAPI();
+  const q = useQuery({
+    queryKey: ["event", session, sequence],
+    queryFn: ({ signal }) =>
+      api
+        .call("consoleEvent", { path: { session, sequence }, signal })
+        .then((r) => r.data),
+  });
+  return (
+    <Load query={q}>
+      {(e) => (
+        <Section title="Data" copy={e.data}>
+          <Code value={e.data} />
+        </Section>
+      )}
+    </Load>
   );
 }

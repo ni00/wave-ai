@@ -73,9 +73,13 @@ from wave_ai_generated.models.memory_write_entry_request import MemoryWriteEntry
 from wave_ai_generated.models.modelclient_func_call_spec import ModelclientFuncCallSpec
 from wave_ai_generated.models.modelclient_tool_call import ModelclientToolCall
 from wave_ai_generated.models.modelclient_usage import ModelclientUsage
+from wave_ai_generated.models.observe_log import ObserveLog
 from wave_ai_generated.models.observe_span import ObserveSpan
 from wave_ai_generated.models.skills_list_response import SkillsListResponse
 from wave_ai_generated.models.skills_skill import SkillsSkill
+from wave_ai_generated.models.telemetry_metrics import TelemetryMetrics
+from wave_ai_generated.models.telemetry_point import TelemetryPoint
+from wave_ai_generated.models.telemetry_value import TelemetryValue
 from wave_ai_generated.models.vault_create_request import VaultCreateRequest
 from wave_ai_generated.models.vault_credential import VaultCredential
 from wave_ai_generated.models.vault_list_response import VaultListResponse

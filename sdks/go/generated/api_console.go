@@ -30,6 +30,10 @@ type ApiConsoleBrowseRequest struct {
 	kind string
 	q *string
 	state *string
+	module *string
+	traceId *string
+	spanId *string
+	timeField *string
 	sessionId *string
 	taskId *string
 	before *string
@@ -44,9 +48,33 @@ func (r ApiConsoleBrowseRequest) Q(q string) ApiConsoleBrowseRequest {
 	return r
 }
 
-// State; event type for logs
+// State, log level, or event type
 func (r ApiConsoleBrowseRequest) State(state string) ApiConsoleBrowseRequest {
 	r.state = &state
+	return r
+}
+
+// Log module
+func (r ApiConsoleBrowseRequest) Module(module string) ApiConsoleBrowseRequest {
+	r.module = &module
+	return r
+}
+
+// Trace ID
+func (r ApiConsoleBrowseRequest) TraceId(traceId string) ApiConsoleBrowseRequest {
+	r.traceId = &traceId
+	return r
+}
+
+// Span ID
+func (r ApiConsoleBrowseRequest) SpanId(spanId string) ApiConsoleBrowseRequest {
+	r.spanId = &spanId
+	return r
+}
+
+// Time field
+func (r ApiConsoleBrowseRequest) TimeField(timeField string) ApiConsoleBrowseRequest {
+	r.timeField = &timeField
 	return r
 }
 
@@ -93,7 +121,7 @@ func (r ApiConsoleBrowseRequest) Execute() (*ConsoleList, *http.Response, error)
 /*
 ConsoleBrowse Browse console resources
 
-Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.
+Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param kind Resource kind
@@ -135,6 +163,18 @@ func (a *ConsoleAPIService) ConsoleBrowseExecute(r ApiConsoleBrowseRequest) (*Co
 	if r.state != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "state", r.state, "form", "")
 	}
+	if r.module != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "module", r.module, "form", "")
+	}
+	if r.traceId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "trace_id", r.traceId, "form", "")
+	}
+	if r.spanId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "span_id", r.spanId, "form", "")
+	}
+	if r.timeField != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "time_field", r.timeField, "form", "")
+	}
 	if r.sessionId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "session_id", r.sessionId, "form", "")
 	}
@@ -157,6 +197,165 @@ func (a *ConsoleAPIService) ConsoleBrowseExecute(r ApiConsoleBrowseRequest) (*Co
 		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", defaultValue, "form", "")
 		r.limit = &defaultValue
 	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiConsoleEventRequest struct {
+	ctx context.Context
+	ApiService *ConsoleAPIService
+	session string
+	sequence int64
+}
+
+func (r ApiConsoleEventRequest) Execute() (*ExecutionEvent, *http.Response, error) {
+	return r.ApiService.ConsoleEventExecute(r)
+}
+
+/*
+ConsoleEvent Read an execution event
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param session Session ID
+ @param sequence Event sequence
+ @return ApiConsoleEventRequest
+*/
+func (a *ConsoleAPIService) ConsoleEvent(ctx context.Context, session string, sequence int64) ApiConsoleEventRequest {
+	return ApiConsoleEventRequest{
+		ApiService: a,
+		ctx: ctx,
+		session: session,
+		sequence: sequence,
+	}
+}
+
+// Execute executes the request
+//  @return ExecutionEvent
+func (a *ConsoleAPIService) ConsoleEventExecute(r ApiConsoleEventRequest) (*ExecutionEvent, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *ExecutionEvent
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ConsoleAPIService.ConsoleEvent")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1/console/events/{session}/{sequence}"
+	localVarPath = strings.Replace(localVarPath, "{"+"session"+"}", url.PathEscape(parameterValueToString(r.session, "session")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"sequence"+"}", url.PathEscape(parameterValueToString(r.sequence, "sequence")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -444,39 +643,36 @@ func (a *ConsoleAPIService) ConsoleImportBenchExecute(r ApiConsoleImportBenchReq
 type ApiConsoleLogRequest struct {
 	ctx context.Context
 	ApiService *ConsoleAPIService
-	session string
-	sequence int64
+	id string
 }
 
-func (r ApiConsoleLogRequest) Execute() (*ExecutionEvent, *http.Response, error) {
+func (r ApiConsoleLogRequest) Execute() (*ObserveLog, *http.Response, error) {
 	return r.ApiService.ConsoleLogExecute(r)
 }
 
 /*
-ConsoleLog Read an execution log
+ConsoleLog Read a structured log
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param session Session ID
- @param sequence Event sequence
+ @param id Log ID
  @return ApiConsoleLogRequest
 */
-func (a *ConsoleAPIService) ConsoleLog(ctx context.Context, session string, sequence int64) ApiConsoleLogRequest {
+func (a *ConsoleAPIService) ConsoleLog(ctx context.Context, id string) ApiConsoleLogRequest {
 	return ApiConsoleLogRequest{
 		ApiService: a,
 		ctx: ctx,
-		session: session,
-		sequence: sequence,
+		id: id,
 	}
 }
 
 // Execute executes the request
-//  @return ExecutionEvent
-func (a *ConsoleAPIService) ConsoleLogExecute(r ApiConsoleLogRequest) (*ExecutionEvent, *http.Response, error) {
+//  @return ObserveLog
+func (a *ConsoleAPIService) ConsoleLogExecute(r ApiConsoleLogRequest) (*ObserveLog, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  *ExecutionEvent
+		localVarReturnValue  *ObserveLog
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ConsoleAPIService.ConsoleLog")
@@ -484,14 +680,175 @@ func (a *ConsoleAPIService) ConsoleLogExecute(r ApiConsoleLogRequest) (*Executio
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1/console/logs/{session}/{sequence}"
-	localVarPath = strings.Replace(localVarPath, "{"+"session"+"}", url.PathEscape(parameterValueToString(r.session, "session")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"sequence"+"}", url.PathEscape(parameterValueToString(r.sequence, "sequence")), -1)
+	localVarPath := localBasePath + "/v1/console/logs/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiConsoleMetricsRequest struct {
+	ctx context.Context
+	ApiService *ConsoleAPIService
+	from *string
+	to *string
+}
+
+// Start RFC3339 (defaults to last hour)
+func (r ApiConsoleMetricsRequest) From(from string) ApiConsoleMetricsRequest {
+	r.from = &from
+	return r
+}
+
+// End RFC3339 (defaults to now)
+func (r ApiConsoleMetricsRequest) To(to string) ApiConsoleMetricsRequest {
+	r.to = &to
+	return r
+}
+
+func (r ApiConsoleMetricsRequest) Execute() (*TelemetryMetrics, *http.Response, error) {
+	return r.ApiService.ConsoleMetricsExecute(r)
+}
+
+/*
+ConsoleMetrics Query monitoring metrics
+
+Reads aggregate buckets only. Maximum 30 days; range aligned outwards and returned. Latency percentiles use a 2% histogram; unknown values are null.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiConsoleMetricsRequest
+*/
+func (a *ConsoleAPIService) ConsoleMetrics(ctx context.Context) ApiConsoleMetricsRequest {
+	return ApiConsoleMetricsRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return TelemetryMetrics
+func (a *ConsoleAPIService) ConsoleMetricsExecute(r ApiConsoleMetricsRequest) (*TelemetryMetrics, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *TelemetryMetrics
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ConsoleAPIService.ConsoleMetrics")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1/console/metrics"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.from != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "from", r.from, "form", "")
+	}
+	if r.to != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "to", r.to, "form", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -554,17 +911,6 @@ func (a *ConsoleAPIService) ConsoleLogExecute(r ApiConsoleLogRequest) (*Executio
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
-			var v ApierrEnvelope
-			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-			if err != nil {
-				newErr.error = err.Error()
-				return localVarReturnValue, localVarHTTPResponse, newErr
-			}
-					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
-					newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
-		}
-		if localVarHTTPResponse.StatusCode == 404 {
 			var v ApierrEnvelope
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {

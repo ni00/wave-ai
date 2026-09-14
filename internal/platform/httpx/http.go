@@ -3,6 +3,7 @@ package httpx
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -45,7 +46,21 @@ func Observe() gin.HandlerFunc {
 				}
 				Error(c, apierr.New(500, apierr.API, "internal error"))
 			}
-			observe.Logger(c.Request.Context()).Info("http.request", "method", c.Request.Method, "route", c.FullPath(), "status", c.Writer.Status(), "duration_ms", float64(time.Since(start))/float64(time.Millisecond))
+			level := slog.LevelInfo
+			if c.Writer.Status() >= 500 {
+				level = slog.LevelError
+			} else if c.Writer.Status() >= 400 {
+				level = slog.LevelWarn
+			}
+			logctx := c.Request.Context()
+			// Successful monitor reads must not produce an ever-growing log stream
+			// merely because the user has opened the live Logs page.
+			if strings.HasPrefix(c.FullPath(), "/v1/console/") && c.Request.Method == "GET" && c.Writer.Status() < 400 {
+				scope := observe.From(logctx)
+				scope.WriteLog = nil
+				logctx = observe.With(logctx, scope)
+			}
+			observe.Logger(logctx).Log(logctx, level, "http.request", "method", c.Request.Method, "route", c.FullPath(), "status", c.Writer.Status(), "duration_ms", float64(time.Since(start))/float64(time.Millisecond))
 		}()
 		c.Next()
 	}

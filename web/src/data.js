@@ -51,10 +51,16 @@ export function readRoute() {
   const [path, query = ""] = window.location.hash.slice(1).split("?");
   const params = new URLSearchParams(query);
   return {
-    kind: path?.slice(1) || "traces",
+    kind: path?.slice(1) || "overview",
     id: params.get("id") || "",
     session: params.get("session") || "",
     task: params.get("task") || "",
+    trace: params.get("trace") || "",
+    span: params.get("span") || "",
+    after: params.get("after") || "",
+    before: params.get("before") || "",
+    state: params.get("state") || "",
+    time_field: params.get("time_field") || "",
   };
 }
 // Traverse once, and tolerate partial parents, cycles and out-of-order spans.
@@ -121,5 +127,22 @@ export function comparable(a, b) {
       canonical({ ...b.options, workers: "" }) &&
     a.model === b.model &&
     canonical(phases(a)) === canonical(phases(b))
+  );
+}
+
+export function routeFilters(location) {
+  return Object.fromEntries(
+    [
+      "session",
+      "task",
+      "trace",
+      "span",
+      "after",
+      "before",
+      "state",
+      "time_field",
+    ]
+      .filter((k) => location[k])
+      .map((k) => [k, location[k]]),
   );
 }

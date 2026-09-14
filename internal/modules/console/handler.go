@@ -27,7 +27,9 @@ type handler struct {
 func Register(r *gin.RouterGroup, db *gorm.DB, blobs *blobstore.Store) {
 	h := handler{db, blobs}
 	r.GET("/console/resources/:kind", h.browse)
-	r.GET("/console/logs/:session/:sequence", h.log)
+	r.GET("/console/events/:session/:sequence", h.event)
+	r.GET("/console/logs/:id", h.log)
+	r.GET("/console/metrics", h.metrics)
 	r.POST("/console/benchmarks", h.importBench)
 }
 
@@ -37,10 +39,14 @@ func Register(r *gin.RouterGroup, db *gorm.DB, blobs *blobstore.Store) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Description 按当前所有者过滤。列表只含元数据，以不透明游标倒序分页；logs 是持久化执行事件（排除 token delta），不含进程 stdout。 || Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.
-// @Param kind path string true "资源类型 || Resource kind" Enums(traces,logs,environments,files,memory,sessions,tasks,benchmarks)
+// @Description 按当前所有者过滤。列表只含元数据，以不透明游标倒序分页；logs 是结构化应用日志，events 是执行事件（排除 token delta）。 || Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
+// @Param kind path string true "资源类型 || Resource kind" Enums(traces,logs,events,environments,files,memory,sessions,tasks,benchmarks)
 // @Param q query string false "名称或 ID（最多 128 字节） || Name or ID (maximum 128 bytes)"
-// @Param state query string false "状态；日志使用事件类型 || State; event type for logs"
+// @Param state query string false "状态；日志级别；事件类型 || State, log level, or event type"
+// @Param module query string false "日志模块 || Log module"
+// @Param trace_id query string false "链路 ID || Trace ID"
+// @Param span_id query string false "Span ID"
+// @Param time_field query string false "时间字段 || Time field" Enums(created_at,finished_at)
 // @Param session_id query string false "会话 ID || Session ID"
 // @Param task_id query string false "任务 ID || Task ID"
 // @Param before query string false "早于 RFC3339 时间 || Before RFC3339 timestamp"
@@ -62,7 +68,7 @@ func (h handler) browse(c *gin.Context) {
 	}
 	ctx, cancel := contextTimeout(c)
 	defer cancel()
-	out, err := Browse(ctx, h.db, c.MustGet("principal").(*auth.Principal), Query{Kind: c.Param("kind"), Search: c.Query("q"), State: c.Query("state"), SessionID: c.Query("session_id"), TaskID: c.Query("task_id"), Before: c.Query("before"), After: c.Query("after"), Cursor: c.Query("cursor"), Limit: limit})
+	out, err := Browse(ctx, h.db, c.MustGet("principal").(*auth.Principal), Query{Kind: c.Param("kind"), Module: c.Query("module"), TraceID: c.Query("trace_id"), SpanID: c.Query("span_id"), TimeField: c.Query("time_field"), Search: c.Query("q"), State: c.Query("state"), SessionID: c.Query("session_id"), TaskID: c.Query("task_id"), Before: c.Query("before"), After: c.Query("after"), Cursor: c.Query("cursor"), Limit: limit})
 	if err != nil {
 		httpx.Error(c, err)
 		return
@@ -71,8 +77,8 @@ func (h handler) browse(c *gin.Context) {
 	c.JSON(200, out)
 }
 
-// @ID consoleLog
-// @Summary 读取执行日志 || Read an execution log
+// @ID consoleEvent
+// @Summary 读取执行事件 || Read an execution event
 // @Tags console
 // @Accept json
 // @Produce json
@@ -85,8 +91,8 @@ func (h handler) browse(c *gin.Context) {
 // @Failure 403 {object} apierr.Envelope "权限不足 || Insufficient scope"
 // @Failure 404 {object} apierr.Envelope "资源不存在 || Resource not found"
 // @Failure 500 {object} apierr.Envelope "内部错误 || Internal error"
-// @Router /v1/console/logs/{session}/{sequence} [get]
-func (h handler) log(c *gin.Context) {
+// @Router /v1/console/events/{session}/{sequence} [get]
+func (h handler) event(c *gin.Context) {
 	seq, err := strconv.ParseInt(c.Param("sequence"), 10, 64)
 	if err != nil || seq < 1 {
 		httpx.Error(c, apierr.Invalid("invalid sequence"))

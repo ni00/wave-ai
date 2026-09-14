@@ -20,3 +20,12 @@ Fixes found during verification: GORM subquery parentheses; TypeScript SDK brows
 Validation: full PostgreSQL/S3 integration suite with race detection; targeted console ownership, cursor, report-import and static-asset tests; SDK/CLI contract tests and generation checks; frontend production build and seven tests, including a 20,000-level trace tree without recursion overflow. Memory populated entries/history/conflicts use the existing paginated API; the VPS currently has no memory stores, so browser testing of that module covers its actual empty state.
 
 Performance observations are for the existing small VPS dataset, not a capacity claim: first-load JS ~91.7 kB gzip, Trace chunk ~12.0 kB gzip, other detail chunk ~6.0 kB gzip. Ten sequential loopback reads per resource gave median API times of 1.4–3.0 ms; SSH-tunnel reads were ~127–133 ms. Lists are metadata projections with bounded cursor pages; details load on demand and trace rows are virtualized.
+
+## Monitoring update — 2026-09-15
+
+- Navigation now groups Monitoring (Overview / Metrics / Traces / Logs), resources, and Bench.
+- Logs uses a searchable table with severity/module/time filters and a detail drawer. Events live under Task and Session. Removed the inherited generic `.error` block styling from severity badges.
+- Verified on a local PostgreSQL-backed fixture environment: metric point → completed/failed Task filter → Events payload → task Logs → selected model Span → span-filtered Logs. These fixtures are test data, not performance claims or production history.
+- Checked 1-hour, 7-day, and 30-day metric ranges, mergeable rollups, keyboard chart selection, desktop 1280×720 and mobile 390×844. No page-wide horizontal overflow at mobile width. Long log tables scroll within their own panel.
+- Browser console: no errors or warnings. Evidence: `/home/ni/.local/share/wave-ai/tests/monitoring/metrics-desktop.png`.
+- Validation: full PostgreSQL/SeaweedFS integration suite with race detector; SDK/CLI generation, contract checks and SDK tests; Go vet/build; frontend build and tests. Targeted tests cover concurrent aggregation, rollback/retry, owner isolation, log search/pagination, completion-time drilldown, histogram merging, retention and log metadata filtering.

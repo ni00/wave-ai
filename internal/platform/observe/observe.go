@@ -16,6 +16,9 @@ import (
 
 type scopeKey struct{}
 type Scope struct {
+	OrgID     string
+	OwnerID   string
+	WriteLog  func(Log)
 	RequestID string
 	TraceID   string
 	TaskID    string
@@ -43,7 +46,7 @@ func With(ctx context.Context, s Scope) context.Context { return context.WithVal
 func From(ctx context.Context) Scope                    { s, _ := ctx.Value(scopeKey{}).(Scope); return s }
 func Logger(ctx context.Context) *slog.Logger {
 	s := From(ctx)
-	return slog.Default().With("request_id", s.RequestID, "trace_id", s.TraceID, "task_id", s.TaskID, "session_id", s.SessionID, "span_id", s.SpanID)
+	return slog.New(&logHandler{base: slog.Default().Handler(), scope: s}).With("request_id", s.RequestID, "trace_id", s.TraceID, "task_id", s.TaskID, "session_id", s.SessionID, "span_id", s.SpanID)
 }
 
 func Configure(out io.Writer, rawLevel string) error {
@@ -84,7 +87,11 @@ func Start(ctx context.Context, name string) (context.Context, func(error)) {
 			if s.Record != nil {
 				s.Record(ctx, span)
 			}
-			Logger(ctx).Info("span.finished", "name", name, "state", span.State, "duration_ms", ms)
+			level := slog.LevelInfo
+			if err != nil {
+				level = slog.LevelError
+			}
+			Logger(ctx).Log(ctx, level, "span.finished", "name", name, "state", span.State, "duration_ms", ms, "error_kind", ErrorKind(err))
 		})
 	}
 }

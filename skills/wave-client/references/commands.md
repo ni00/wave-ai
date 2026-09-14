@@ -20,7 +20,9 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | Command | Required path flags | Required body fields | Description |
 | --- | --- | --- | --- |
 | `wavectl console import-bench` | — | `--file` | Import a benchmark report |
-| `wavectl console log` | `--session`, `--sequence` | — | Read an execution log |
+| `wavectl console event` | `--session`, `--sequence` | — | Read an execution event |
+| `wavectl console log` | `--id` | — | Read a structured log |
+| `wavectl console metrics` | — | — | Query monitoring metrics |
 | `wavectl console list` | `--kind` | — | Browse console resources |
 
 ## credentials

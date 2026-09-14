@@ -21,6 +21,7 @@ type Model interface {
 	Stream(context.Context, modelclient.Request, func(modelclient.Delta)) (*modelclient.Final, error)
 }
 type Worker struct {
+	WriteLog      func(observe.Log)
 	Guard         *guardrails.Set
 	ContextTokens int
 	DB            *gorm.DB
