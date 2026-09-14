@@ -39,7 +39,37 @@ export interface EnvironmentsEnvironment {
      * 
      */
     packages: { [key: string]: Array<string>; } | null;
+    /**
+     * Omit for service defaults; existing sessions retain their original backend.
+     */
+    sandboxBackend?: EnvironmentsEnvironmentSandboxBackendEnum;
+    /**
+     * Omit for service defaults; standard uses 2 CPUs/2048 MiB, large uses 2 CPUs/4096 MiB.
+     */
+    sandboxProfile?: EnvironmentsEnvironmentSandboxProfileEnum;
 }
+
+
+/**
+ * @export
+ */
+export const EnvironmentsEnvironmentSandboxBackendEnum = {
+    Sbx: 'sbx',
+    Gvisor: 'gvisor',
+    Podman: 'podman',
+} as const;
+export type EnvironmentsEnvironmentSandboxBackendEnum = typeof EnvironmentsEnvironmentSandboxBackendEnum[keyof typeof EnvironmentsEnvironmentSandboxBackendEnum];
+
+/**
+ * @export
+ */
+export const EnvironmentsEnvironmentSandboxProfileEnum = {
+    Default: 'default',
+    Standard: 'standard',
+    Large: 'large',
+} as const;
+export type EnvironmentsEnvironmentSandboxProfileEnum = typeof EnvironmentsEnvironmentSandboxProfileEnum[keyof typeof EnvironmentsEnvironmentSandboxProfileEnum];
+
 
 /**
  * Check if a given object implements the EnvironmentsEnvironment interface.
@@ -68,6 +98,8 @@ export function EnvironmentsEnvironmentFromJSONTyped(json: any, ignoreDiscrimina
         'id': json['id'],
         'name': json['name'],
         'packages': json['packages'],
+        'sandboxBackend': json['sandbox_backend'] == null ? undefined : json['sandbox_backend'],
+        'sandboxProfile': json['sandbox_profile'] == null ? undefined : json['sandbox_profile'],
     };
 }
 
@@ -87,6 +119,8 @@ export function EnvironmentsEnvironmentToJSONTyped(value?: EnvironmentsEnvironme
         'id': value['id'],
         'name': value['name'],
         'packages': value['packages'],
+        'sandbox_backend': value['sandboxBackend'],
+        'sandbox_profile': value['sandboxProfile'],
     };
 }
 

@@ -78,18 +78,36 @@ services:
       WAVE_CONTEXT_TOKENS: ${WAVE_CONTEXT_TOKENS:-32000}
       WAVE_WORKER_CONCURRENCY: ${WAVE_WORKER_CONCURRENCY:-10}
       WAVE_LEASE_SECONDS: ${WAVE_LEASE_SECONDS:-30}
-      WAVE_SANDBOX_BACKEND: ${WAVE_SANDBOX_BACKEND:-sbx}
+      WAVE_SANDBOX_BACKEND: ${WAVE_SANDBOX_BACKEND:-gvisor}
       WAVE_SANDBOX_ALLOW_LOCAL: ${WAVE_SANDBOX_ALLOW_LOCAL:-false}
       WAVE_SANDBOX_LOCAL_ROOT: /var/lib/wave/sandboxes
+      WAVE_DOCKER_HOST: unix:///var/run/docker.sock
+      WAVE_PODMAN_HOST: unix:///run/wave-podman/podman.sock
+      WAVE_GVISOR_RUNTIME: ${WAVE_GVISOR_RUNTIME:-wave-runsc}
+      WAVE_CONTAINER_IMAGE: ${WAVE_CONTAINER_IMAGE:-docker.io/library/python:3.12-slim-bookworm}
+      WAVE_CONTAINER_NETWORK: ${WAVE_CONTAINER_NETWORK:-none}
+      WAVE_SANDBOX_CPUS: ${WAVE_SANDBOX_CPUS:-${WAVE_SBX_CPUS:-1}}
+      WAVE_SANDBOX_MEMORY_MIB: ${WAVE_SANDBOX_MEMORY_MIB:-${WAVE_SBX_MEMORY_MIB:-1024}}
+      WAVE_SANDBOX_MAX_RUNNING: ${WAVE_SANDBOX_MAX_RUNNING:-${WAVE_SBX_MAX_RUNNING:-2}}
+      WAVE_SANDBOX_MEMORY_BUDGET_MIB: ${WAVE_SANDBOX_MEMORY_BUDGET_MIB:-${WAVE_SBX_MEMORY_BUDGET_MIB:-4096}}
       WAVE_SBX_URL: ${WAVE_SBX_URL:-http://host.docker.internal:6060}
       WAVE_SBX_TOKEN: ${WAVE_SBX_TOKEN:-}
       WAVE_SBX_IMAGE: ${WAVE_SBX_IMAGE:-docker.io/docker/sandbox-ubuntu-24.04:latest}
-      WAVE_SBX_CPUS: ${WAVE_SBX_CPUS:-2}
-      WAVE_SBX_MEMORY_MIB: ${WAVE_SBX_MEMORY_MIB:-2048}
+      WAVE_SBX_CPUS: ${WAVE_SBX_CPUS:-1}
+      WAVE_SBX_MEMORY_MIB: ${WAVE_SBX_MEMORY_MIB:-1024}
+      WAVE_SBX_MAX_RUNNING: ${WAVE_SBX_MAX_RUNNING:-2}
+      WAVE_SBX_MEMORY_BUDGET_MIB: ${WAVE_SBX_MEMORY_BUDGET_MIB:-4096}
       WAVE_MASTER_KEY: ${WAVE_MASTER_KEY:?Run make setup and keep deploy/.env safe}
       WAVE_GUARDRAIL_INPUT_BLOCK: ${WAVE_GUARDRAIL_INPUT_BLOCK:-}
       WAVE_GUARDRAIL_OUTPUT_REDACT: ${WAVE_GUARDRAIL_OUTPUT_REDACT:-}
       WAVE_EGRESS_ALLOW_PRIVATE: ${WAVE_EGRESS_ALLOW_PRIVATE:-false}
+    # Only the trusted Wave service receives this socket, never agent sandboxes.
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:

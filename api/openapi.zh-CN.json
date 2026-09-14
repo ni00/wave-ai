@@ -5577,6 +5577,24 @@
               }
             },
             "nullable": true
+          },
+          "sandbox_backend": {
+            "description": "省略使用服务默认。",
+            "type": "string",
+            "enum": [
+              "sbx",
+              "gvisor",
+              "podman"
+            ]
+          },
+          "sandbox_profile": {
+            "description": "省略使用服务默认；仅影响新会话的沙箱。",
+            "type": "string",
+            "enum": [
+              "default",
+              "standard",
+              "large"
+            ]
           }
         }
       },
@@ -5612,6 +5630,24 @@
               }
             },
             "nullable": true
+          },
+          "sandbox_backend": {
+            "description": "省略使用服务默认；已有会话保留首次选择的后端。",
+            "type": "string",
+            "enum": [
+              "sbx",
+              "gvisor",
+              "podman"
+            ]
+          },
+          "sandbox_profile": {
+            "description": "省略使用服务默认；standard 为 2 CPU/2048 MiB，large 为 2 CPU/4096 MiB。",
+            "type": "string",
+            "enum": [
+              "default",
+              "standard",
+              "large"
+            ]
           }
         }
       },

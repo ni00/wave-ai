@@ -175,6 +175,15 @@ func (a *App) finish(ctx context.Context, s execution.Session, t execution.Task)
 	if s.WriterCall != "" {
 		return errors.New("workspace still has an unresolved writer")
 	}
+	var ws Workspace
+	if err := a.DB.WithContext(ctx).Where(clause.Eq{Column: "session_id", Value: s.ID}).Find(&ws).Error; err != nil {
+		return err
+	}
+	if ws.RootID != t.RootID || ws.State != "ready" {
+		// Cancelled or failed preparation must not retry provisioning just to
+		// collect outputs or publish incomplete memory projections.
+		return a.Sandbox.Stop(ctx, s.ID)
+	}
 	e := a.Sandbox.VisitOutputs(ctx, s.ID, 32<<20, func(name string, data []byte) error {
 		rel := strings.TrimPrefix(name, "/mnt/session/outputs/")
 		if rel == name || path.IsAbs(rel) || path.Clean(rel) != rel || strings.HasPrefix(rel, "../") {

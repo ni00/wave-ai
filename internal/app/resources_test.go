@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -54,6 +55,32 @@ func testResourceTransactions(t *testing.T, backend string) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	t.Run("sandbox profiles", func(t *testing.T) {
+		for _, profile := range []string{"default", "standard", "large", "invalid"} {
+			r := httptest.NewRequest(http.MethodPost, "/v1/environments", strings.NewReader(`{"name":"profile-test","sandbox_profile":"`+profile+`"}`))
+			r.Header.Set("Authorization", "Bearer "+key)
+			r.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			a.Handler().ServeHTTP(w, r)
+			want := http.StatusCreated
+			if profile == "invalid" {
+				want = http.StatusBadRequest
+			}
+			if w.Code != want {
+				t.Fatalf("profile %s: status %d: %s", profile, w.Code, w.Body.String())
+			}
+			if want == http.StatusCreated {
+				var env environments.Environment
+				if err := json.Unmarshal(w.Body.Bytes(), &env); err != nil {
+					t.Fatal(err)
+				}
+				stored, err := environments.Get(ctx, a.DB, p, env.ID)
+				if err != nil || stored.SandboxProfile != profile {
+					t.Fatalf("profile not retained: %+v %v", stored, err)
+				}
+			}
+		}
+	})
 	t.Cleanup(func() {
 		sessions := []execution.Session{}
 		auth.Owned(a.DB, p).Find(&sessions)

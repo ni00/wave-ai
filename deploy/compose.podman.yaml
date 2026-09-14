@@ -1,0 +1,10 @@
+# Add to compose when per-environment Podman selection is required:
+# docker compose -f deploy/compose.yaml -f deploy/compose.podman.yaml up -d
+services:
+  wave:
+    volumes:
+      - type: bind
+        source: ${WAVE_PODMAN_SOCKET:-/run/wave-podman/podman.sock}
+        target: /run/wave-podman/podman.sock
+        bind:
+          create_host_path: false

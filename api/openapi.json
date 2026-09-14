@@ -5577,6 +5577,24 @@
               }
             },
             "nullable": true
+          },
+          "sandbox_backend": {
+            "description": "Omit for service defaults.",
+            "type": "string",
+            "enum": [
+              "sbx",
+              "gvisor",
+              "podman"
+            ]
+          },
+          "sandbox_profile": {
+            "description": "Omit for service defaults; applies only to new session sandboxes.",
+            "type": "string",
+            "enum": [
+              "default",
+              "standard",
+              "large"
+            ]
           }
         }
       },
@@ -5612,6 +5630,24 @@
               }
             },
             "nullable": true
+          },
+          "sandbox_backend": {
+            "description": "Omit for service defaults; existing sessions retain their original backend.",
+            "type": "string",
+            "enum": [
+              "sbx",
+              "gvisor",
+              "podman"
+            ]
+          },
+          "sandbox_profile": {
+            "description": "Omit for service defaults; standard uses 2 CPUs/2048 MiB, large uses 2 CPUs/4096 MiB.",
+            "type": "string",
+            "enum": [
+              "default",
+              "standard",
+              "large"
+            ]
           }
         }
       },

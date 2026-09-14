@@ -41,6 +41,18 @@ func (h handler) create(c *gin.Context) {
 		httpx.Error(c, apierr.Invalid("invalid JSON: %v", err))
 		return
 	}
+	switch in.SandboxProfile {
+	case "", "default", "standard", "large":
+	default:
+		httpx.Error(c, apierr.Invalid("sandbox_profile must be default, standard or large"))
+		return
+	}
+	switch in.SandboxBackend {
+	case "", "sbx", "gvisor", "podman":
+	default:
+		httpx.Error(c, apierr.Invalid("sandbox_backend must be sbx, gvisor or podman"))
+		return
+	}
 	for manager, pkgs := range in.Packages {
 		switch manager {
 		case "apt", "npm", "pip", "go", "cargo", "gem":
@@ -56,7 +68,7 @@ func (h handler) create(c *gin.Context) {
 		}
 	}
 	p := c.MustGet("principal").(*auth.Principal)
-	row := Environment{ID: xid.New("env"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: in.Name, Packages: in.Packages}
+	row := Environment{ID: xid.New("env"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: in.Name, Packages: in.Packages, SandboxProfile: in.SandboxProfile, SandboxBackend: in.SandboxBackend}
 	if e := h.db.WithContext(c.Request.Context()).Create(&row).Error; e != nil {
 		httpx.Error(c, e)
 		return

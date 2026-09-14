@@ -43,6 +43,9 @@ type report struct {
 // Run does not load service environment configuration or use provider keys.
 // All state belongs to a disposable PostgreSQL container and temporary directory.
 func Run(ctx context.Context, args []string, out, diagnostics io.Writer) error {
+	if len(args) > 0 && args[0] == "sandbox" {
+		return runSandbox(ctx, args[1:], out, diagnostics)
+	}
 	var o options
 	fs := flag.NewFlagSet("bench", flag.ContinueOnError)
 	fs.SetOutput(diagnostics)

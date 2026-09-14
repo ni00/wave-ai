@@ -4359,6 +4359,24 @@ const docTemplate = `{
                         }
                     },
                     "x-nullable": true
+                },
+                "sandbox_backend": {
+                    "description": "省略使用服务默认。 || Omit for service defaults.",
+                    "type": "string",
+                    "enum": [
+                        "sbx",
+                        "gvisor",
+                        "podman"
+                    ]
+                },
+                "sandbox_profile": {
+                    "description": "省略使用服务默认；仅影响新会话的沙箱。 || Omit for service defaults; applies only to new session sandboxes.",
+                    "type": "string",
+                    "enum": [
+                        "default",
+                        "standard",
+                        "large"
+                    ]
                 }
             }
         },
@@ -4394,6 +4412,24 @@ const docTemplate = `{
                         }
                     },
                     "x-nullable": true
+                },
+                "sandbox_backend": {
+                    "description": "省略使用服务默认；已有会话保留首次选择的后端。 || Omit for service defaults; existing sessions retain their original backend.",
+                    "type": "string",
+                    "enum": [
+                        "sbx",
+                        "gvisor",
+                        "podman"
+                    ]
+                },
+                "sandbox_profile": {
+                    "description": "省略使用服务默认；standard 为 2 CPU/2048 MiB，large 为 2 CPU/4096 MiB。 || Omit for service defaults; standard uses 2 CPUs/2048 MiB, large uses 2 CPUs/4096 MiB.",
+                    "type": "string",
+                    "enum": [
+                        "default",
+                        "standard",
+                        "large"
+                    ]
                 }
             }
         },

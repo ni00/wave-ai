@@ -10,6 +10,14 @@ import (
 )
 
 func Claim(ctx context.Context, db *gorm.DB, owner string, lease time.Duration) (*Task, error) {
+	return claimWithAdmission(ctx, db, owner, lease, nil)
+}
+
+// Admission runs inside the claim transaction. Returning false leaves the task
+// queued and lets this worker try another session without consuming its lease.
+type Admission func(*gorm.DB, Session, *Task) (bool, error)
+
+func claimWithAdmission(ctx context.Context, db *gorm.DB, owner string, lease time.Duration, admit Admission) (*Task, error) {
 	for offset := 0; ; offset += 64 {
 		candidates := []Task{}
 		now := time.Now()
@@ -81,6 +89,12 @@ func Claim(ctx context.Context, db *gorm.DB, owner string, lease time.Duration) 
 					}
 					if running >= int64(root.Budget.Defaults().MaxConcurrentAgents) {
 						return nil
+					}
+				}
+				if admit != nil && !t.CancelRequested && t.PendingFinish == "" {
+					ok, err := admit(tx, s, &t)
+					if err != nil || !ok {
+						return err
 					}
 				}
 				s.ActiveRoot = t.RootID

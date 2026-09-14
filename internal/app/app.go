@@ -50,7 +50,7 @@ type App struct {
 
 func Models() []any {
 	out := auth.Models()
-	out = append(out, &agents.Agent{}, &agents.Version{}, &environments.Environment{}, &files.File{}, &vault.Credential{}, &skills.Skill{}, &deployments.Deployment{}, &deployments.Run{}, &sandbox.Record{}, &Workspace{})
+	out = append(out, &agents.Agent{}, &agents.Version{}, &environments.Environment{}, &files.File{}, &vault.Credential{}, &skills.Skill{}, &deployments.Deployment{}, &deployments.Run{}, &sandbox.Record{}, &sandbox.Process{}, &Workspace{})
 	out = append(out, memory.Models()...)
 	return append(out, execution.Models()...)
 }
@@ -89,15 +89,34 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	if cfg.SandboxBackend == "local" {
 		provider, e = sandbox.NewLocal(cfg.SandboxLocalRoot)
 	} else {
-		provider = sandbox.NewSbx(sandbox.SbxOptions{
-			BaseURL:   cfg.SbxURL,
-			Token:     cfg.SbxToken,
-			Image:     cfg.SbxImage,
-			Parent:    "wave",
-			CPUs:      uint32(cfg.SbxCPUs),
-			MemoryMiB: uint64(cfg.SbxMemoryMiB),
-			Store:     db,
+		sbx := sandbox.NewSbx(sandbox.SbxOptions{
+			BaseURL:         cfg.SbxURL,
+			Token:           cfg.SbxToken,
+			Image:           cfg.SbxImage,
+			Parent:          "wave",
+			CPUs:            uint32(cfg.SbxCPUs),
+			MemoryMiB:       uint64(cfg.SbxMemoryMiB),
+			MaxRunning:      cfg.SbxMaxRunning,
+			MemoryBudgetMiB: uint64(cfg.SbxMemoryBudgetMiB),
+			Store:           db,
 		})
+		backends := map[string]sandbox.Managed{"sbx": sbx}
+		for _, backend := range []string{"gvisor", "podman"} {
+			host := cfg.DockerHost
+			if backend == "podman" {
+				host = cfg.PodmanHost
+			}
+			container, err := sandbox.NewContainer(sandbox.ContainerOptions{Backend: backend, Host: host, Image: cfg.ContainerImage, Runtime: cfg.GVisorRuntime, Network: cfg.ContainerNetwork, CPUs: uint32(cfg.SbxCPUs), MemoryMiB: uint64(cfg.SbxMemoryMiB), MaxRunning: cfg.SbxMaxRunning, MemoryBudgetMiB: uint64(cfg.SbxMemoryBudgetMiB), Store: db})
+			if err != nil {
+				return nil, err
+			}
+			backends[backend] = container
+		}
+		selected := cfg.SandboxBackend
+		if selected == "" {
+			selected = "gvisor"
+		}
+		provider = &sandbox.Router{Store: db, Default: selected, Backends: backends}
 	}
 	if e != nil {
 		return nil, e
@@ -109,7 +128,14 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	ok = true
 	return &App{Guard: guard, Config: cfg, DB: db, Blobs: b, Box: box, Sandbox: provider}, nil
 }
-func (a *App) Close() { a.MCP.Close(); pool, _ := a.DB.DB(); _ = pool.Close() }
+func (a *App) Close() {
+	a.MCP.Close()
+	if c, ok := a.Sandbox.(interface{ Close() error }); ok {
+		_ = c.Close()
+	}
+	pool, _ := a.DB.DB()
+	_ = pool.Close()
+}
 
 // Handler godoc
 // @Title Wave AI API
@@ -207,6 +233,7 @@ func (a *App) Run(ctx context.Context) error {
 					Execute:       a.execute,
 					Prepare:       a.prepare,
 					Finish:        a.finish,
+					Admit:         a.admitSandbox,
 				}
 				worker.Run(ctx)
 				return nil

@@ -17,7 +17,7 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
@@ -29,8 +29,30 @@ class EnvironmentsCreateRequest(BaseModel):
     """ # noqa: E501
     name: StrictStr
     packages: Optional[Dict[str, List[StrictStr]]] = None
+    sandbox_backend: Optional[StrictStr] = Field(default=None, description="Omit for service defaults.")
+    sandbox_profile: Optional[StrictStr] = Field(default=None, description="Omit for service defaults; applies only to new session sandboxes.")
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["name", "packages"]
+    __properties: ClassVar[List[str]] = ["name", "packages", "sandbox_backend", "sandbox_profile"]
+
+    @field_validator('sandbox_backend')
+    def sandbox_backend_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(['sbx', 'gvisor', 'podman']):
+            raise ValueError("must be one of enum values ('sbx', 'gvisor', 'podman')")
+        return value
+
+    @field_validator('sandbox_profile')
+    def sandbox_profile_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(['default', 'standard', 'large']):
+            raise ValueError("must be one of enum values ('default', 'standard', 'large')")
+        return value
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -96,7 +118,9 @@ class EnvironmentsCreateRequest(BaseModel):
 
         _obj = cls.model_validate({
             "name": obj.get("name"),
-            "packages": obj.get("packages")
+            "packages": obj.get("packages"),
+            "sandbox_backend": obj.get("sandbox_backend"),
+            "sandbox_profile": obj.get("sandbox_profile")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

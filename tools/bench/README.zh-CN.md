@@ -2,6 +2,10 @@
 
 [English](README.md) | 简体中文
 
+真实 microVM 生命周期和 shell 负载使用 `make bench-sandbox` 或 `wave bench sandbox`，
+详见[沙箱压测与规格说明](../../deploy/sandbox-resources.md#benchmark--压测)。
+该模式支持 gVisor（默认）、Podman 和 sbx，会删除自己创建的临时沙箱，与下述合成模型基础压测独立。
+
 `wave bench` 在目标机器上运行独立的端到端基础压测。它启动本机临时 PostgreSQL 16 容器、Wave HTTP API 和实际 worker，并用确定性的本地流式模型代替外部供应商。无需现有部署、模型账号、存储账号或沙箱。
 
 ## 运行

@@ -22,6 +22,10 @@ var _ MappedNullable = &EnvironmentsCreateRequest{}
 type EnvironmentsCreateRequest struct {
 	Name string `json:"name"`
 	Packages map[string][]string `json:"packages,omitempty"`
+	// Omit for service defaults.
+	SandboxBackend *string `json:"sandbox_backend,omitempty"`
+	// Omit for service defaults; applies only to new session sandboxes.
+	SandboxProfile *string `json:"sandbox_profile,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -102,6 +106,70 @@ func (o *EnvironmentsCreateRequest) SetPackages(v map[string][]string) {
 	o.Packages = v
 }
 
+// GetSandboxBackend returns the SandboxBackend field value if set, zero value otherwise.
+func (o *EnvironmentsCreateRequest) GetSandboxBackend() string {
+	if o == nil || IsNil(o.SandboxBackend) {
+		var ret string
+		return ret
+	}
+	return *o.SandboxBackend
+}
+
+// GetSandboxBackendOk returns a tuple with the SandboxBackend field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *EnvironmentsCreateRequest) GetSandboxBackendOk() (*string, bool) {
+	if o == nil || IsNil(o.SandboxBackend) {
+		return nil, false
+	}
+	return o.SandboxBackend, true
+}
+
+// HasSandboxBackend returns a boolean if a field has been set.
+func (o *EnvironmentsCreateRequest) HasSandboxBackend() bool {
+	if o != nil && !IsNil(o.SandboxBackend) {
+		return true
+	}
+
+	return false
+}
+
+// SetSandboxBackend gets a reference to the given string and assigns it to the SandboxBackend field.
+func (o *EnvironmentsCreateRequest) SetSandboxBackend(v string) {
+	o.SandboxBackend = &v
+}
+
+// GetSandboxProfile returns the SandboxProfile field value if set, zero value otherwise.
+func (o *EnvironmentsCreateRequest) GetSandboxProfile() string {
+	if o == nil || IsNil(o.SandboxProfile) {
+		var ret string
+		return ret
+	}
+	return *o.SandboxProfile
+}
+
+// GetSandboxProfileOk returns a tuple with the SandboxProfile field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *EnvironmentsCreateRequest) GetSandboxProfileOk() (*string, bool) {
+	if o == nil || IsNil(o.SandboxProfile) {
+		return nil, false
+	}
+	return o.SandboxProfile, true
+}
+
+// HasSandboxProfile returns a boolean if a field has been set.
+func (o *EnvironmentsCreateRequest) HasSandboxProfile() bool {
+	if o != nil && !IsNil(o.SandboxProfile) {
+		return true
+	}
+
+	return false
+}
+
+// SetSandboxProfile gets a reference to the given string and assigns it to the SandboxProfile field.
+func (o *EnvironmentsCreateRequest) SetSandboxProfile(v string) {
+	o.SandboxProfile = &v
+}
+
 func (o EnvironmentsCreateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -115,6 +183,12 @@ func (o EnvironmentsCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize["name"] = o.Name
 	if o.Packages != nil {
 		toSerialize["packages"] = o.Packages
+	}
+	if !IsNil(o.SandboxBackend) {
+		toSerialize["sandbox_backend"] = o.SandboxBackend
+	}
+	if !IsNil(o.SandboxProfile) {
+		toSerialize["sandbox_profile"] = o.SandboxProfile
 	}
 
 	for key, value := range o.AdditionalProperties {
@@ -161,6 +235,8 @@ func (o *EnvironmentsCreateRequest) UnmarshalJSON(data []byte) (err error) {
 	if err = json.Unmarshal(data, &additionalProperties); err == nil {
 		delete(additionalProperties, "name")
 		delete(additionalProperties, "packages")
+		delete(additionalProperties, "sandbox_backend")
+		delete(additionalProperties, "sandbox_profile")
 		o.AdditionalProperties = additionalProperties
 	}
 

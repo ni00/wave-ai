@@ -23,6 +23,7 @@ Usage:
   wave bootstrap -org NAME [-user admin] [-key-label default] [-format human|json|key]
   wave config check
   wave bench [-workers 2,5,10,20] [-tasks 100] [-clients 32] [-format human|json]
+  wave bench sandbox [-concurrency 1,2] [-memory-mib 512,1024,2048] [-format human|json]
 
 Use 'wave COMMAND --help' for flags. Configuration is read from WAVE_* environment variables.
 init-db initializes a new database; it does not migrate or reset existing deployments.

@@ -2,6 +2,10 @@
 
 English | [简体中文](README.zh-CN.md)
 
+For real microVM lifecycle and shell workloads, use `make bench-sandbox` or
+`wave bench sandbox`. See [sandbox benchmark and sizing](../../deploy/sandbox-resources.md#benchmark--压测).
+That mode supports gVisor (default), Podman and sbx and deletes its temporary sandboxes; it is separate from the synthetic baseline below.
+
 `wave bench` runs an isolated end-to-end baseline on the target host. It starts disposable PostgreSQL 16, the real Wave HTTP API and workers, and a deterministic streaming model in place of an external provider. No existing deployment, model account, storage account or sandbox is required.
 
 ## Running

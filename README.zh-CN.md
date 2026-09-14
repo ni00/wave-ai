@@ -26,7 +26,7 @@ docker compose --project-directory deploy exec wave wave bootstrap -org demo -us
 | 主机 | 4 vCPU、8 GiB 内存、50 GB SSD；按文件保留量扩容磁盘 |
 | 服务 | 使用自带 Compose：Wave、PostgreSQL 16、SeaweedFS（S3） |
 | Worker 并发 | 从 2 开始，结合排队延迟、内存和模型供应商限额调整 |
-| 沙箱 | 可选；每个活动沙箱额外预留 2 vCPU / 2 GiB |
+| 沙箱 | 可选；默认分配 1 vCPU / 1 GiB；活动及预留沙箱默认最多 2 个，客体内存合计最多 4 GiB |
 | 对外访问 | 使用 HTTPS 反向代理，数据库和存储留在私有网络 |
 
 这些是未经容量压测的起始估算；本地模型和沙箱资源另计。在 `deploy/.env` 中覆盖以下参数：
@@ -38,7 +38,9 @@ WAVE_MODEL_TIMEOUT_SEC=300
 WAVE_LEASE_SECONDS=30
 ```
 
-创建 Agent 时选择供应商支持的模型，上下文预算不要超过模型限制。无环境任务不需要沙箱；使用沙箱时配置 `WAVE_SBX_URL`、token 和镜像。`local` 沙箱仅用于可信开发。
+创建 Agent 时选择供应商支持的模型，上下文预算不要超过模型限制。无环境任务不需要沙箱；默认沙箱为 Docker + gVisor，也支持 sbx 和 rootless Podman；先按[沙箱配置说明](deploy/sandbox-resources.md)准备宿主机。`local` 沙箱仅用于可信开发。
+
+沙箱容量与 worker 并发独立控制。详见[沙箱规格、环境分档与初始化说明](deploy/sandbox-resources.md)；开发期间直接清空旧测试数据并初始化当前表结构。
 
 保留 `make setup` 生成的存储凭据与 `WAVE_MASTER_KEY`，备份 `.env`、PostgreSQL、文件和沙箱数据；更换主密钥会导致已有凭据无法解密。[完整配置示例](deploy/.env.example)供查阅。Compose 读取 `deploy/.env`，本机进程只读取环境变量。
 

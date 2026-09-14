@@ -74,6 +74,9 @@ func (s *Sbx) ensureRunning(ctx context.Context, sessionID string, b *sbxBox) er
 	switch sb.GetCore().GetStatus() {
 	case sbxcommonv1.SandboxStatus_SANDBOX_STATUS_RUNNING:
 	case sbxcommonv1.SandboxStatus_SANDBOX_STATUS_STOPPED, sbxcommonv1.SandboxStatus_SANDBOX_STATUS_FAILED:
+		if err := s.st.WithContext(ctx).Model(&Record{}).Where(clause.Eq{Column: "session_id", Value: sessionID}).Update("state", "starting").Error; err != nil {
+			return err
+		}
 		op, err := s.mgmt.Sandboxes().StartSandbox(ctx, connect.NewRequest(&v1.StartSandboxRequest{
 			Sandbox:   s.refByID(b),
 			RequestId: xid.New("start"),
@@ -117,11 +120,8 @@ func (s *Sbx) ensureRunning(ctx context.Context, sessionID string, b *sbxBox) er
 		s.mu.Lock()
 		s.boxes[sessionID] = b
 		s.mu.Unlock()
-		if err := s.st.WithContext(ctx).Model(&Record{}).Where(clause.Eq{Column: "session_id", Value: sessionID}).Updates(map[string]any{"backend_id": b.ID, "endpoint": b.Endpoint, "state": "running"}).Error; err != nil {
-			return err
-		}
 	}
-	return nil
+	return s.st.WithContext(ctx).Model(&Record{}).Where(clause.Eq{Column: "session_id", Value: sessionID}).Updates(map[string]any{"endpoint": b.Endpoint, "state": "running"}).Error
 }
 
 // resolve returns the sandbox for a session, creating it on first use with
@@ -147,16 +147,20 @@ func (s *Sbx) resolve(ctx context.Context, sessionID string) (*sbxBox, error) {
 		s.mu.Unlock()
 		return b, nil
 	}
-	name := ""
-
-	name = "wave-" + sessionID
-	cpus := s.opts.CPUs
-	mem := s.opts.MemoryMiB
+	if record.SessionID == "" || record.State == "stopped" {
+		return nil, errors.New("sandbox must be reserved before creation")
+	}
+	name := record.Name
+	cpus := record.CPUs
+	mem := record.MemoryMiB
+	if err := s.st.WithContext(ctx).Model(&record).Update("state", "creating").Error; err != nil {
+		return nil, err
+	}
 	op, err := s.mgmt.Sandboxes().CreateSandbox(ctx, connect.NewRequest(&v1.CreateSandboxRequest{
 		Parent:    s.opts.Parent,
 		Agent:     "shell",
 		Name:      name,
-		Image:     s.opts.Image,
+		Image:     record.Image,
 		Resources: &sbxcommonv1.Resources{Cpus: &cpus, MemoryMib: &mem},
 		RequestId: "ensure-" + sessionID,
 	}))
@@ -180,7 +184,7 @@ func (s *Sbx) resolve(ctx context.Context, sessionID string) (*sbxBox, error) {
 		return nil, fmt.Errorf("sbx sandbox has no endpoint")
 	}
 	b := &sbxBox{ID: sb.Msg.GetCore().GetId(), Name: name, Endpoint: ep}
-	record = Record{SessionID: sessionID, BackendID: b.ID, Name: name, Endpoint: ep, State: "provisioned"}
+	record.BackendID, record.Endpoint, record.State = b.ID, ep, "provisioned"
 	err = s.st.WithContext(ctx).Save(&record).Error
 	if err != nil {
 		return nil, err
@@ -196,6 +200,11 @@ func (s *Sbx) client(ctx context.Context, sessionID string) (*sbx.SandboxClient,
 	lock := mutex.(*sync.Mutex)
 	lock.Lock()
 	defer lock.Unlock()
+	if err := s.st.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return s.Reserve(tx, sessionID, Resources{s.opts.CPUs, s.opts.MemoryMiB})
+	}); err != nil {
+		return nil, err
+	}
 	if err := s.probe(ctx); err != nil {
 		return nil, err
 	}
@@ -232,28 +241,38 @@ func (s *Sbx) Stop(ctx context.Context, sessionID string) error {
 	lock := mutex.(*sync.Mutex)
 	lock.Lock()
 	defer lock.Unlock()
+	var record Record
+	err := s.st.WithContext(ctx).Where(clause.Eq{Column: "session_id", Value: sessionID}).Take(&record).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if record.State == "stopped" {
+		return nil
+	}
+	if record.BackendID == "" && record.State == "reserved" {
+		// No create has been attempted, so releasing the reservation needs no RPC.
+		return s.st.WithContext(ctx).Model(&record).Update("state", "stopped").Error
+	}
 	if err := s.probe(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	b, ok := s.boxes[sessionID]
-	if ok {
-	}
-	s.mu.Unlock()
-	if !ok {
-		var record Record
-		err := s.st.WithContext(ctx).Where(clause.Eq{Column: "session_id", Value: sessionID}).Take(&record).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil
-		}
+	b := &sbxBox{ID: record.BackendID, Name: record.Name}
+	if b.ID == "" {
+		// An interrupted create may have succeeded. Resolve its deterministic name
+		// before stopping; never free capacity on an ambiguous backend outcome.
+		sb, err := s.mgmt.Sandboxes().GetSandbox(ctx, connect.NewRequest(&v1.GetSandboxRequest{
+			Sandbox: &sbxcommonv1.SandboxRef{Parent: s.opts.Parent, Identifier: &sbxcommonv1.SandboxRef_Name{Name: record.Name}},
+		}))
 		if err != nil {
+			return fmt.Errorf("resolve uncertain sandbox before stop: %w", err)
+		}
+		b.ID = sb.Msg.GetCore().GetId()
+		if err := s.st.WithContext(ctx).Model(&record).Update("backend_id", b.ID).Error; err != nil {
 			return err
 		}
-		if record.BackendID == "" {
-			return nil
-		}
-		b = &sbxBox{ID: record.BackendID, Name: record.Name}
-
 	}
 	op, err := s.mgmt.Sandboxes().StopSandbox(ctx, connect.NewRequest(&v1.StopSandboxRequest{
 		Sandbox:   s.refByID(b),
@@ -281,9 +300,12 @@ func durationPtr(d time.Duration) *durationpb.Duration {
 }
 
 func (s *Sbx) Identity(ctx context.Context, sid string) (string, error) {
-	b, e := s.resolve(ctx, sid)
-	if e != nil {
-		return "", e
+	var record Record
+	if err := s.st.WithContext(ctx).Where(clause.Eq{Column: "session_id", Value: sid}).Take(&record).Error; err != nil {
+		return "", err
 	}
-	return b.ID, nil
+	if record.BackendID == "" {
+		return "", errors.New("sandbox not provisioned")
+	}
+	return record.BackendID, nil
 }

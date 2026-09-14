@@ -28,6 +28,7 @@ type Worker struct {
 	Execute       func(context.Context, Session, ToolCall) (ToolResult, error)
 	Prepare       func(context.Context, Session, Task) error
 	Finish        func(context.Context, Session, Task) error
+	Admit         Admission
 }
 
 func (w *Worker) Run(ctx context.Context) {
@@ -43,7 +44,7 @@ func (w *Worker) Run(ctx context.Context) {
 			return
 		case <-tick.C:
 		}
-		t, e := Claim(ctx, w.DB, owner, w.Lease)
+		t, e := claimWithAdmission(ctx, w.DB, owner, w.Lease, w.Admit)
 		if e != nil {
 			slog.Error("claim", "error", e)
 			continue

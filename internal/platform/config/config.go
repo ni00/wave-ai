@@ -25,11 +25,18 @@ type Config struct {
 	LeaseSeconds          int
 	SandboxBackend        string
 	SandboxLocalRoot      string
+	DockerHost            string
+	PodmanHost            string
+	ContainerImage        string
+	ContainerNetwork      string
+	GVisorRuntime         string
 	SbxURL                string
 	SbxToken              string
 	SbxImage              string
 	SbxCPUs               int
 	SbxMemoryMiB          int
+	SbxMaxRunning         int
+	SbxMemoryBudgetMiB    int
 	MasterKey             []byte
 	GuardrailInputBlock   []string
 	GuardrailOutputRedact []string
@@ -65,6 +72,12 @@ func Load() (*Config, error) {
 		}
 		return n
 	}
+	resourceInteger := func(primary, legacy string, fallback int) int {
+		if os.Getenv(primary) != "" {
+			return integer(primary, fallback)
+		}
+		return integer(legacy, fallback)
+	}
 	dir, err := dataDir()
 	if err != nil {
 		return nil, err
@@ -80,18 +93,25 @@ func Load() (*Config, error) {
 			Endpoint: os.Getenv("WAVE_S3_ENDPOINT"), Prefix: str("WAVE_S3_PREFIX", "wave"),
 			PathStyle: boolean("WAVE_S3_PATH_STYLE"), AllowHTTP: boolean("WAVE_S3_ALLOW_HTTP"),
 		},
-		ModelBaseURL:      str("WAVE_MODEL_BASE_URL", "https://api.openai.com/v1"),
-		ModelAPIKey:       os.Getenv("WAVE_MODEL_API_KEY"),
-		SandboxBackend:    str("WAVE_SANDBOX_BACKEND", "sbx"),
-		SandboxLocalRoot:  str("WAVE_SANDBOX_LOCAL_ROOT", dir+"/sandboxes"),
-		SbxURL:            str("WAVE_SBX_URL", "http://localhost:6060"),
-		SbxToken:          os.Getenv("WAVE_SBX_TOKEN"),
-		SbxImage:          str("WAVE_SBX_IMAGE", "docker.io/docker/sandbox-ubuntu-24.04:latest"),
-		WorkerConcurrency: integer("WAVE_WORKER_CONCURRENCY", 10),
-		LeaseSeconds:      integer("WAVE_LEASE_SECONDS", 30),
-		ModelTimeoutSec:   integer("WAVE_MODEL_TIMEOUT_SEC", 300),
-		SbxCPUs:           integer("WAVE_SBX_CPUS", 2),
-		SbxMemoryMiB:      integer("WAVE_SBX_MEMORY_MIB", 2048),
+		ModelBaseURL:       str("WAVE_MODEL_BASE_URL", "https://api.openai.com/v1"),
+		ModelAPIKey:        os.Getenv("WAVE_MODEL_API_KEY"),
+		SandboxBackend:     str("WAVE_SANDBOX_BACKEND", "gvisor"),
+		DockerHost:         str("WAVE_DOCKER_HOST", "unix:///var/run/docker.sock"),
+		PodmanHost:         str("WAVE_PODMAN_HOST", "unix:///run/wave-podman/podman.sock"),
+		ContainerImage:     str("WAVE_CONTAINER_IMAGE", "docker.io/library/python:3.12-slim-bookworm"),
+		ContainerNetwork:   str("WAVE_CONTAINER_NETWORK", "none"),
+		GVisorRuntime:      str("WAVE_GVISOR_RUNTIME", "wave-runsc"),
+		SandboxLocalRoot:   str("WAVE_SANDBOX_LOCAL_ROOT", dir+"/sandboxes"),
+		SbxURL:             str("WAVE_SBX_URL", "http://localhost:6060"),
+		SbxToken:           os.Getenv("WAVE_SBX_TOKEN"),
+		SbxImage:           str("WAVE_SBX_IMAGE", "docker.io/docker/sandbox-ubuntu-24.04:latest"),
+		WorkerConcurrency:  integer("WAVE_WORKER_CONCURRENCY", 10),
+		LeaseSeconds:       integer("WAVE_LEASE_SECONDS", 30),
+		ModelTimeoutSec:    integer("WAVE_MODEL_TIMEOUT_SEC", 300),
+		SbxCPUs:            resourceInteger("WAVE_SANDBOX_CPUS", "WAVE_SBX_CPUS", 1),
+		SbxMemoryMiB:       resourceInteger("WAVE_SANDBOX_MEMORY_MIB", "WAVE_SBX_MEMORY_MIB", 1024),
+		SbxMaxRunning:      resourceInteger("WAVE_SANDBOX_MAX_RUNNING", "WAVE_SBX_MAX_RUNNING", 2),
+		SbxMemoryBudgetMiB: resourceInteger("WAVE_SANDBOX_MEMORY_BUDGET_MIB", "WAVE_SBX_MEMORY_BUDGET_MIB", 4096),
 	}
 	c.ContextTokens = integer("WAVE_CONTEXT_TOKENS", 32000)
 	if raw := os.Getenv("WAVE_GUARDRAIL_INPUT_BLOCK"); raw != "" {
@@ -102,6 +122,12 @@ func Load() (*Config, error) {
 	}
 	if parseErr != nil {
 		return nil, parseErr
+	}
+	if c.SbxCPUs > 16 || c.SbxMemoryMiB < 512 || c.SbxMemoryMiB > 32768 {
+		return nil, fmt.Errorf("sandbox resources require 1–16 CPUs and 512–32768 MiB; verify support with your sandbox runtime")
+	}
+	if c.SbxMemoryBudgetMiB < c.SbxMemoryMiB {
+		return nil, fmt.Errorf("WAVE_SBX_MEMORY_BUDGET_MIB must fit WAVE_SBX_MEMORY_MIB")
 	}
 	switch c.StorageBackend {
 	case "local":
@@ -118,7 +144,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid WAVE_ROLE")
 	}
 	switch c.SandboxBackend {
-	case "sbx":
+	case "sbx", "gvisor", "podman":
 	case "local":
 		if os.Getenv("WAVE_SANDBOX_ALLOW_LOCAL") != "true" {
 			return nil, fmt.Errorf("local backend requires WAVE_SANDBOX_ALLOW_LOCAL=true")

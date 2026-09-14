@@ -27,7 +27,37 @@ export interface EnvironmentsCreateRequest {
      * 
      */
     packages?: { [key: string]: Array<string>; } | null;
+    /**
+     * Omit for service defaults.
+     */
+    sandboxBackend?: EnvironmentsCreateRequestSandboxBackendEnum;
+    /**
+     * Omit for service defaults; applies only to new session sandboxes.
+     */
+    sandboxProfile?: EnvironmentsCreateRequestSandboxProfileEnum;
 }
+
+
+/**
+ * @export
+ */
+export const EnvironmentsCreateRequestSandboxBackendEnum = {
+    Sbx: 'sbx',
+    Gvisor: 'gvisor',
+    Podman: 'podman',
+} as const;
+export type EnvironmentsCreateRequestSandboxBackendEnum = typeof EnvironmentsCreateRequestSandboxBackendEnum[keyof typeof EnvironmentsCreateRequestSandboxBackendEnum];
+
+/**
+ * @export
+ */
+export const EnvironmentsCreateRequestSandboxProfileEnum = {
+    Default: 'default',
+    Standard: 'standard',
+    Large: 'large',
+} as const;
+export type EnvironmentsCreateRequestSandboxProfileEnum = typeof EnvironmentsCreateRequestSandboxProfileEnum[keyof typeof EnvironmentsCreateRequestSandboxProfileEnum];
+
 
 /**
  * Check if a given object implements the EnvironmentsCreateRequest interface.
@@ -49,6 +79,8 @@ export function EnvironmentsCreateRequestFromJSONTyped(json: any, ignoreDiscrimi
         
         'name': json['name'],
         'packages': json['packages'] === undefined ? undefined : json['packages'] === null ? null : json['packages'],
+        'sandboxBackend': json['sandbox_backend'] == null ? undefined : json['sandbox_backend'],
+        'sandboxProfile': json['sandbox_profile'] == null ? undefined : json['sandbox_profile'],
     };
 }
 
@@ -65,6 +97,8 @@ export function EnvironmentsCreateRequestToJSONTyped(value?: EnvironmentsCreateR
         
         'name': value['name'],
         'packages': value['packages'],
+        'sandbox_backend': value['sandboxBackend'],
+        'sandbox_profile': value['sandboxProfile'],
     };
 }
 

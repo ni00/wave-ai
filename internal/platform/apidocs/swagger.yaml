@@ -301,6 +301,21 @@ definitions:
           type: array
         type: object
         x-nullable: true
+      sandbox_backend:
+        description: 省略使用服务默认。 || Omit for service defaults.
+        enum:
+        - sbx
+        - gvisor
+        - podman
+        type: string
+      sandbox_profile:
+        description: 省略使用服务默认；仅影响新会话的沙箱。 || Omit for service defaults; applies only
+          to new session sandboxes.
+        enum:
+        - default
+        - standard
+        - large
+        type: string
     required:
     - name
     type: object
@@ -322,6 +337,23 @@ definitions:
           type: array
         type: object
         x-nullable: true
+      sandbox_backend:
+        description: 省略使用服务默认；已有会话保留首次选择的后端。 || Omit for service defaults; existing
+          sessions retain their original backend.
+        enum:
+        - sbx
+        - gvisor
+        - podman
+        type: string
+      sandbox_profile:
+        description: 省略使用服务默认；standard 为 2 CPU/2048 MiB，large 为 2 CPU/4096 MiB。 ||
+          Omit for service defaults; standard uses 2 CPUs/2048 MiB, large uses 2 CPUs/4096
+          MiB.
+        enum:
+        - default
+        - standard
+        - large
+        type: string
     required:
     - archived
     - created_at
