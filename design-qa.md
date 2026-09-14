@@ -4,6 +4,7 @@ Last verified: 2026-09-15. Result: passed.
 
 | Area | Verified coverage |
 | --- | --- |
+| Page headers | All 10 workspace pages share title typography, icon size, spacing, and position; checked at desktop and 390 px width |
 | Layout | Desktop 1280 × 720 and 2048 × 1077; mobile 390 × 844; no page-wide overflow |
 | Traces | Call tree, span selection, timeline, timing analysis, child tasks, logs |
 | Monitoring | 1-hour, 7-day, and 30-day ranges; keyboard selection; interval → failed task → trace → logs |

@@ -45,7 +45,15 @@ import {
   duration,
   number,
 } from "./data.js";
-import { IconButton, Badge, Copy, Load, Empty, DetailBoundary } from "./ui.jsx";
+import {
+  PageHeader,
+  IconButton,
+  Badge,
+  Copy,
+  Load,
+  Empty,
+  DetailBoundary,
+} from "./ui.jsx";
 const Trace = lazy(() => import("./Trace.jsx"));
 const Resource = lazy(() => import("./Resource.jsx"));
 const Monitor = lazy(() => import("./Monitor.jsx"));
@@ -392,21 +400,30 @@ function Console({ api, logout }) {
         {monitoring ? (
           <Suspense fallback={<div className="loading">正在加载…</div>}>
             {kind === "logs" ? (
-              <Logs location={location} live={live} />
+              <Logs
+                location={location}
+                live={live}
+                title={nav[1]}
+                icon={NavIcon}
+              />
             ) : (
-              <Monitor key={kind} overview={kind === "overview"} live={live} />
+              <Monitor
+                key={kind}
+                overview={kind === "overview"}
+                live={live}
+                title={nav[1]}
+                icon={NavIcon}
+              />
             )}
           </Suspense>
         ) : (
           <div className={"workbody " + (location.id ? "has-selection" : "")}>
             <section className="collection" aria-label={nav[1] + " 列表"}>
-              <div className="collection-title">
-                <NavIcon size={19} />
-                <h1>{nav[1]}</h1>
-                <span className="count">
-                  {rows.length}
-                  {list.data?.next_cursor ? "+" : ""}
-                </span>
+              <PageHeader
+                title={nav[1]}
+                icon={NavIcon}
+                count={`${rows.length}${list.data?.next_cursor ? "+" : ""}`}
+              >
                 {kind === "benchmarks" && (
                   <IconButton
                     title="导入报告"
@@ -416,7 +433,7 @@ function Console({ api, logout }) {
                     <IconUpload size={18} />
                   </IconButton>
                 )}
-              </div>
+              </PageHeader>
               <div className="list-tools">
                 {(location.after || location.before) && (
                   <div className="range-filter">

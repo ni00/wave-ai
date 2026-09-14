@@ -9,9 +9,18 @@ import {
   date,
   short,
 } from "./data.js";
-import { Badge, Code, Copy, Empty, Fields, Load, Section } from "./ui.jsx";
+import {
+  Badge,
+  Code,
+  Copy,
+  Empty,
+  Fields,
+  Load,
+  Section,
+  PageHeader,
+} from "./ui.jsx";
 
-export default function Logs({ location, live }) {
+export default function Logs({ location, live, title, icon }) {
   const api = useAPI(),
     input = useRef();
   const [search, setSearch] = useState(""),
@@ -108,13 +117,11 @@ export default function Logs({ location, live }) {
   return (
     <div className="logs-workspace">
       <div className="logs-main">
-        <div className="monitor-title">
-          <h1>Logs</h1>
-          <span className="count">
-            {q.data?.data.length || 0}
-            {q.data?.next_cursor ? "+" : ""}
-          </span>
-        </div>
+        <PageHeader
+          title={title}
+          icon={icon}
+          count={`${q.data?.data.length || 0}${q.data?.next_cursor ? "+" : ""}`}
+        />
         <div className="log-filters">
           <label className="search">
             <IconSearch size={17} />

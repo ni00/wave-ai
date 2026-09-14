@@ -291,21 +291,36 @@ nav a.active {
   resize: horizontal;
   overflow: auto;
 }
-.collection-title {
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 14px 18px;
+  flex-shrink: 0;
+}
+.page-heading {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 18px 18px 16px;
-  height: 59px;
+  min-width: 0;
+}
+.page-heading > svg {
   flex-shrink: 0;
 }
-.collection-title h1 {
+.page-heading h1 {
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
+  line-height: 24px;
   letter-spacing: -0.3px;
 }
-.collection-title > .icon-button {
-  margin-left: auto;
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .count {
   color: #898991;
@@ -1744,22 +1759,14 @@ nav .nav-caption {
 .monitor-page {
   flex: 1;
   overflow: auto;
-  padding: 26px 30px;
+  padding: 0 18px 24px;
   min-height: 0;
   background: #fafafb;
 }
-.monitor-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
+.monitor-page > .page-header {
+  margin-inline: -18px;
 }
-.monitor-title h1 {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.5px;
-}
-.monitor-title select,
+.page-header select,
 .log-filters select,
 .metric-range input {
   border: 1px solid var(--line);
@@ -1919,10 +1926,6 @@ nav .nav-caption {
   flex-direction: column;
   min-width: 0;
 }
-.logs-main .monitor-title {
-  padding: 23px 24px 0;
-  margin-bottom: 17px;
-}
 .log-filters {
   display: flex;
   flex-wrap: wrap;
@@ -2064,9 +2067,6 @@ nav .nav-caption {
   margin: 12px;
 }
 @media (max-width: 1100px) {
-  .monitor-page {
-    padding: 20px;
-  }
   .monitor-cards {
     gap: 10px;
   }
@@ -2078,17 +2078,11 @@ nav .nav-caption {
   }
 }
 @media (max-width: 700px) {
-  .monitor-page {
-    padding: 18px 12px;
-  }
   .monitor-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .charts-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .monitor-title {
-    margin-bottom: 16px;
   }
   .metric-summary {
     gap: 12px 20px;
@@ -2098,9 +2092,6 @@ nav .nav-caption {
   }
   .metric-selection .header-spacer {
     display: none;
-  }
-  .logs-main .monitor-title {
-    padding: 18px 12px 0;
   }
   .log-filters,
   .log-chips {

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { IconArrowUpRight, IconChartLine } from "@tabler/icons-react";
 import { useAPI, route, date, duration, number } from "./data.js";
-import { Empty, Load, Metric } from "./ui.jsx";
+import { Empty, Load, Metric, PageHeader } from "./ui.jsx";
 
 const sum = (v, k) => v[k]?.sum || 0;
 const percentile = (v, k, p = "p95") => v[k]?.[p] ?? null;
@@ -24,7 +24,7 @@ const relativeRange = (hours) => {
   };
 };
 const colors = ["#635bba", "#218b78", "#cc8a2e"];
-export default function Monitor({ overview, live }) {
+export default function Monitor({ overview, live, title, icon }) {
   const api = useAPI();
   const [hours, setHours] = useState("1"),
     [range, setRange] = useState(() => ({
@@ -67,9 +67,7 @@ export default function Monitor({ overview, live }) {
   }
   return (
     <div className="monitor-page">
-      <div className="monitor-title">
-        <h1>{overview ? "Overview" : "Metrics"}</h1>
-        <span className="header-spacer" />
+      <PageHeader title={title} icon={icon}>
         <select
           aria-label="指标时间范围"
           value={hours}
@@ -88,7 +86,7 @@ export default function Monitor({ overview, live }) {
             </option>
           ))}
         </select>
-      </div>
+      </PageHeader>
       {hours === "custom" && (
         <form className="metric-range" onSubmit={apply}>
           <input

@@ -7,6 +7,18 @@ import {
   IconAlertCircle,
   IconLoader2,
 } from "@tabler/icons-react";
+export function PageHeader({ title, icon: Icon, count, children }) {
+  return (
+    <header className="page-header">
+      <div className="page-heading">
+        <Icon size={20} stroke={2} aria-hidden="true" />
+        <h1>{title}</h1>
+        {count != null && <span className="count">{count}</span>}
+      </div>
+      {children && <div className="page-header-actions">{children}</div>}
+    </header>
+  );
+}
 export function IconButton({ title, children, ...props }) {
   return (
     <button className="icon-button" title={title} aria-label={title} {...props}>
