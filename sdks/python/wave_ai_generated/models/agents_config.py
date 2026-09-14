@@ -17,8 +17,9 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
+from wave_ai_generated.models.agents_acceptance_check import AgentsAcceptanceCheck
 from wave_ai_generated.models.agents_tool import AgentsTool
 from typing import Optional, Set
 from typing_extensions import Self
@@ -28,15 +29,28 @@ class AgentsConfig(BaseModel):
     """
     AgentsConfig
     """ # noqa: E501
+    acceptance: Optional[List[AgentsAcceptanceCheck]] = None
+    delegation_policy: Optional[StrictStr] = None
     effort: Optional[StrictStr] = None
     expert_ids: Optional[List[StrictStr]] = None
+    expert_versions: Optional[Dict[str, StrictInt]] = None
     instructions: Optional[StrictStr] = Field(default=None, json_schema_extra={"examples": ["Answer clearly and cite your sources."]})
     model: StrictStr = Field(json_schema_extra={"examples": ["your-model-id"]})
     name: StrictStr = Field(json_schema_extra={"examples": ["Research assistant"]})
     skill_ids: Optional[List[StrictStr]] = None
     tools: Optional[List[AgentsTool]] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["effort", "expert_ids", "instructions", "model", "name", "skill_ids", "tools"]
+    __properties: ClassVar[List[str]] = ["acceptance", "delegation_policy", "effort", "expert_ids", "expert_versions", "instructions", "model", "name", "skill_ids", "tools"]
+
+    @field_validator('delegation_policy')
+    def delegation_policy_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(['intersection', 'explicit']):
+            raise ValueError("must be one of enum values ('intersection', 'explicit')")
+        return value
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -79,6 +93,12 @@ class AgentsConfig(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of each item in acceptance (list)
+        _items = []
+        if self.acceptance:
+            for _item_acceptance in self.acceptance:
+                _items.append(_item_acceptance.to_dict() if _item_acceptance is not None else None)
+            _dict['acceptance'] = _items
         # override the default output from pydantic by calling `to_dict()` of each item in tools (list)
         _items = []
         if self.tools:
@@ -117,8 +137,11 @@ class AgentsConfig(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
+            "acceptance": [AgentsAcceptanceCheck.from_dict(_item) for _item in obj["acceptance"]] if obj.get("acceptance") is not None else None,
+            "delegation_policy": obj.get("delegation_policy"),
             "effort": obj.get("effort"),
             "expert_ids": obj.get("expert_ids"),
+            "expert_versions": obj.get("expert_versions"),
             "instructions": obj.get("instructions"),
             "model": obj.get("model"),
             "name": obj.get("name"),

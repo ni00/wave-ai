@@ -48,12 +48,34 @@ import {
     DeploymentsRunsResponseFromJSON,
     DeploymentsRunsResponseToJSON,
 } from '../models/DeploymentsRunsResponse.js';
+import {
+    type DeploymentsScheduleResponse,
+    DeploymentsScheduleResponseFromJSON,
+    DeploymentsScheduleResponseToJSON,
+} from '../models/DeploymentsScheduleResponse.js';
+import {
+    type DeploymentsUpdateRequest,
+    DeploymentsUpdateRequestFromJSON,
+    DeploymentsUpdateRequestToJSON,
+} from '../models/DeploymentsUpdateRequest.js';
+import {
+    type DeploymentsVersionsResponse,
+    DeploymentsVersionsResponseFromJSON,
+    DeploymentsVersionsResponseToJSON,
+} from '../models/DeploymentsVersionsResponse.js';
 
 export interface DeploymentsCreateOperationRequest {
     /**
      * 
      */
     deploymentsCreateRequest: DeploymentsCreateRequest;
+}
+
+export interface DeploymentsGetRequest {
+    /**
+     * Resource ID
+     */
+    id: string;
 }
 
 export interface DeploymentsListRequest {
@@ -83,11 +105,48 @@ export interface DeploymentsRunRequest {
      * Deployment ID
      */
     id: string;
+    /**
+     * Retry deduplication key
+     */
+    idempotencyKey?: string;
 }
 
 export interface DeploymentsRunsRequest {
     /**
      * Deployment ID
+     */
+    id: string;
+    /**
+     * Items per page
+     */
+    limit?: number;
+    /**
+     * Offset
+     */
+    offset?: number;
+}
+
+export interface DeploymentsScheduleRequest {
+    /**
+     * Resource ID
+     */
+    id: string;
+}
+
+export interface DeploymentsUpdateOperationRequest {
+    /**
+     * Resource ID
+     */
+    id: string;
+    /**
+     * 
+     */
+    deploymentsUpdateRequest: DeploymentsUpdateRequest;
+}
+
+export interface DeploymentsVersionsRequest {
+    /**
+     * Resource ID
      */
     id: string;
     /**
@@ -159,6 +218,59 @@ export class DeploymentsApi extends runtime.BaseAPI {
      */
     async deploymentsCreate(requestParameters: DeploymentsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeploymentsDeployment> {
         const response = await this.deploymentsCreateRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for deploymentsGet without sending the request
+     */
+    async deploymentsGetRequestOpts(requestParameters: DeploymentsGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling deploymentsGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/deployments/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get a deployment
+     */
+    async deploymentsGetRaw(requestParameters: DeploymentsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeploymentsDeployment>> {
+        const requestOptions = await this.deploymentsGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DeploymentsDeploymentFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a deployment
+     */
+    async deploymentsGet(requestParameters: DeploymentsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeploymentsDeployment> {
+        const response = await this.deploymentsGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -297,6 +409,10 @@ export class DeploymentsApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
         if (this.configuration && this.configuration.accessToken) {
             const token = this.configuration.accessToken;
             const tokenString = await token("BearerAuth", []);
@@ -318,7 +434,7 @@ export class DeploymentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Trigger a deployment immediately, creating a session and task for asynchronous execution. A paused deployment returns 409.
+     * Trigger a deployment immediately, creating a session and task for asynchronous execution. Paused deployments can be triggered manually.
      * Trigger a deployment manually
      */
     async deploymentsRunRaw(requestParameters: DeploymentsRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeploymentsRun>> {
@@ -329,7 +445,7 @@ export class DeploymentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Trigger a deployment immediately, creating a session and task for asynchronous execution. A paused deployment returns 409.
+     * Trigger a deployment immediately, creating a session and task for asynchronous execution. Paused deployments can be triggered manually.
      * Trigger a deployment manually
      */
     async deploymentsRun(requestParameters: DeploymentsRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeploymentsRun> {
@@ -397,6 +513,183 @@ export class DeploymentsApi extends runtime.BaseAPI {
      */
     async deploymentsRuns(requestParameters: DeploymentsRunsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeploymentsRunsResponse> {
         const response = await this.deploymentsRunsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for deploymentsSchedule without sending the request
+     */
+    async deploymentsScheduleRequestOpts(requestParameters: DeploymentsScheduleRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling deploymentsSchedule().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/deployments/{id}/schedule`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Upcoming occurrences
+     */
+    async deploymentsScheduleRaw(requestParameters: DeploymentsScheduleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeploymentsScheduleResponse>> {
+        const requestOptions = await this.deploymentsScheduleRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DeploymentsScheduleResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Upcoming occurrences
+     */
+    async deploymentsSchedule(requestParameters: DeploymentsScheduleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeploymentsScheduleResponse> {
+        const response = await this.deploymentsScheduleRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for deploymentsUpdate without sending the request
+     */
+    async deploymentsUpdateRequestOpts(requestParameters: DeploymentsUpdateOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling deploymentsUpdate().'
+            );
+        }
+
+        if (requestParameters['deploymentsUpdateRequest'] == null) {
+            throw new runtime.RequiredError(
+                'deploymentsUpdateRequest',
+                'Required parameter "deploymentsUpdateRequest" was null or undefined when calling deploymentsUpdate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/deployments/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: DeploymentsUpdateRequestToJSON(requestParameters['deploymentsUpdateRequest']),
+        };
+    }
+
+    /**
+     * Update deployment configuration
+     */
+    async deploymentsUpdateRaw(requestParameters: DeploymentsUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeploymentsDeployment>> {
+        const requestOptions = await this.deploymentsUpdateRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DeploymentsDeploymentFromJSON(jsonValue));
+    }
+
+    /**
+     * Update deployment configuration
+     */
+    async deploymentsUpdate(requestParameters: DeploymentsUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeploymentsDeployment> {
+        const response = await this.deploymentsUpdateRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for deploymentsVersions without sending the request
+     */
+    async deploymentsVersionsRequestOpts(requestParameters: DeploymentsVersionsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling deploymentsVersions().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/deployments/{id}/versions`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Deployment versions
+     */
+    async deploymentsVersionsRaw(requestParameters: DeploymentsVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeploymentsVersionsResponse>> {
+        const requestOptions = await this.deploymentsVersionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DeploymentsVersionsResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Deployment versions
+     */
+    async deploymentsVersions(requestParameters: DeploymentsVersionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeploymentsVersionsResponse> {
+        const response = await this.deploymentsVersionsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

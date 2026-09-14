@@ -87,6 +87,10 @@ export interface ExecutionToolCall {
      * 
      */
     updatedAt: Date;
+    /**
+     * 
+     */
+    waitUntil?: string;
 }
 
 
@@ -147,6 +151,7 @@ export function ExecutionToolCallFromJSONTyped(json: any, ignoreDiscriminator: b
         'taskId': json['task_id'],
         'tool': AgentsToolFromJSON(json['tool']),
         'updatedAt': (json['updated_at'] == null ? json['updated_at'] : parseDateTime(json['updated_at'])),
+        'waitUntil': json['wait_until'] == null ? undefined : json['wait_until'],
     };
 }
 
@@ -176,6 +181,7 @@ export function ExecutionToolCallToJSONTyped(value?: ExecutionToolCall | null, i
         'task_id': value['taskId'],
         'tool': AgentsToolToJSON(value['tool']),
         'updated_at': value['updatedAt'] == null ? value['updatedAt'] : serializeDateTime(value['updatedAt']),
+        'wait_until': value['waitUntil'],
     };
 }
 

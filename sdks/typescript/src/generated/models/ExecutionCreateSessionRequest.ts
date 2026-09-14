@@ -35,6 +35,10 @@ export interface ExecutionCreateSessionRequest {
      * 
      */
     title?: string;
+    /**
+     * 
+     */
+    vaultIds?: Array<string>;
 }
 
 /**
@@ -58,6 +62,7 @@ export function ExecutionCreateSessionRequestFromJSONTyped(json: any, ignoreDisc
         'fileIds': json['file_ids'] === undefined ? undefined : json['file_ids'] === null ? null : json['file_ids'],
         'memoryStoreIds': json['memory_store_ids'] === undefined ? undefined : json['memory_store_ids'] === null ? null : json['memory_store_ids'],
         'title': json['title'] == null ? undefined : json['title'],
+        'vaultIds': json['vault_ids'] == null ? undefined : json['vault_ids'],
     };
 }
 
@@ -76,6 +81,7 @@ export function ExecutionCreateSessionRequestToJSONTyped(value?: ExecutionCreate
         'file_ids': value['fileIds'],
         'memory_store_ids': value['memoryStoreIds'],
         'title': value['title'],
+        'vault_ids': value['vaultIds'],
     };
 }
 

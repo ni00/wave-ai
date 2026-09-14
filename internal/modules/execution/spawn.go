@@ -37,7 +37,7 @@ func Spawn(ctx context.Context, db *gorm.DB, p *auth.Principal, parentID, agentI
 		if len(limits) > 0 {
 			budget = budget.Narrow(limits[0])
 		}
-		cfg := agents.Restrict(parent.Snapshot, a.Config)
+		cfg := agents.Delegated(parent.Snapshot, a.Config)
 		child = Task{
 			ID:           xid.New("task"),
 			SessionID:    s.ID,

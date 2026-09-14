@@ -18,6 +18,8 @@ import (
 	"wave-ai.local/wave/internal/modules/files"
 	"wave-ai.local/wave/internal/modules/memory"
 	"wave-ai.local/wave/internal/modules/skills"
+	"wave-ai.local/wave/internal/modules/vault"
+	"wave-ai.local/wave/internal/modules/webhooks"
 	"wave-ai.local/wave/internal/platform/apierr"
 	"wave-ai.local/wave/internal/platform/auth"
 )
@@ -75,6 +77,14 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 			b, _ := json.Marshal([]string{in.SkillID})
 			q = q.Where(clause.Expr{SQL: "config->'skill_ids' @> ?::jsonb", Vars: []any{string(b)}})
 		}
+	case "vaults":
+		model = &vault.Vault{}
+		q = owned(q)
+		searchColumns = []string{"id", "name"}
+	case "webhooks":
+		model = &webhooks.Subscription{}
+		q = owned(q)
+		searchColumns = []string{"id", "name"}
 	case "skills":
 		model = &skills.Skill{}
 		q = owned(q)
@@ -141,12 +151,12 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 		switch in.Kind {
 		case "tasks", "traces":
 			q = q.Where(clause.Eq{Column: "state", Value: in.State})
-		case "environments", "sessions", "agents":
+		case "environments", "sessions", "agents", "vaults":
 			if in.State != "active" && in.State != "archived" {
 				return out, apierr.Invalid("state must be active or archived")
 			}
 			q = q.Where(clause.Eq{Column: "archived", Value: in.State == "archived"})
-		case "deployments":
+		case "deployments", "webhooks":
 			if in.State != "active" && in.State != "paused" {
 				return out, apierr.Invalid("state must be active or paused")
 			}
@@ -213,7 +223,7 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 	switch in.Kind {
 	case "tasks", "traces":
 		var rows []execution.Task
-		if err := q.Select("id", "agent_id", "agent_version", "state", "session_id", "root_id", "created_at", "started_at", "finished_at", "used_tokens", "tool_count", "attempts", "usage_known").Find(&rows).Error; err != nil {
+		if err := q.Select("id", "agent_id", "agent_version", "state", "session_id", "root_id", "created_at", "started_at", "finished_at", "used_tokens", "tool_count", "attempts", "usage_known", "evaluation").Find(&rows).Error; err != nil {
 			return out, err
 		}
 		ids := make([]any, 0, len(rows))
@@ -237,7 +247,7 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 				v := float64(r.FinishedAt.Sub(r.CreatedAt)) / float64(time.Millisecond)
 				ms = &v
 			}
-			out.Data = append(out.Data, Record{ID: r.ID, Name: taskName(titles[r.SessionID], r.AgentID), State: r.State, CreatedAt: r.CreatedAt, SessionID: r.SessionID, TaskID: r.ID, RootID: r.RootID, Meta: map[string]any{"duration_ms": ms, "tokens": r.UsedTokens, "usage_known": r.UsageKnown, "tool_calls": r.ToolCount, "model_calls": r.Attempts, "agent_version": r.AgentVersion}})
+			out.Data = append(out.Data, Record{ID: r.ID, Name: taskName(titles[r.SessionID], r.AgentID), State: r.State, CreatedAt: r.CreatedAt, SessionID: r.SessionID, TaskID: r.ID, RootID: r.RootID, Meta: map[string]any{"duration_ms": ms, "tokens": r.UsedTokens, "usage_known": r.UsageKnown, "tool_calls": r.ToolCount, "model_calls": r.Attempts, "agent_version": r.AgentVersion, "evaluation": r.Evaluation}})
 		}
 	case "agents":
 		var rows []struct {
@@ -257,6 +267,30 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 				state = "archived"
 			}
 			out.Data = append(out.Data, Record{ID: r.ID, Name: r.Name, State: state, CreatedAt: r.CreatedAt, Meta: map[string]any{"model": r.Model, "version": r.Version}})
+		}
+	case "vaults":
+		var rows []vault.Vault
+		if e := q.Find(&rows).Error; e != nil {
+			return out, e
+		}
+		for _, v := range rows {
+			state := "active"
+			if v.Archived {
+				state = "archived"
+			}
+			out.Data = append(out.Data, Record{ID: v.ID, Name: v.Name, State: state, CreatedAt: v.CreatedAt, Meta: map[string]any{}})
+		}
+	case "webhooks":
+		var rows []webhooks.Subscription
+		if e := q.Omit("ciphertext", "nonce").Find(&rows).Error; e != nil {
+			return out, e
+		}
+		for _, v := range rows {
+			state := "active"
+			if v.Paused {
+				state = "paused"
+			}
+			out.Data = append(out.Data, Record{ID: v.ID, Name: v.Name, State: state, CreatedAt: v.CreatedAt, Meta: map[string]any{"events": v.Events}})
 		}
 	case "skills":
 		var rows []skills.Skill

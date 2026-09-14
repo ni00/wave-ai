@@ -47,6 +47,10 @@ export interface VaultListRequest {
      */
     limit?: number;
     /**
+     * Vault ID
+     */
+    vaultId?: string;
+    /**
      * Offset
      */
     offset?: number;
@@ -129,6 +133,10 @@ export class VaultApi extends runtime.BaseAPI {
 
         if (requestParameters['limit'] != null) {
             queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['vaultId'] != null) {
+            queryParameters['vault_id'] = requestParameters['vaultId'];
         }
 
         if (requestParameters['offset'] != null) {

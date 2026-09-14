@@ -30,6 +30,7 @@ type ExecutionTask struct {
 	CancelRequested bool `json:"cancel_requested"`
 	CreatedAt time.Time `json:"created_at"`
 	Error *string `json:"error,omitempty"`
+	Evaluation *ExecutionEvaluation `json:"evaluation,omitempty"`
 	Experts *map[string]AgentsAgent `json:"experts,omitempty"`
 	FinishedAt *time.Time `json:"finished_at,omitempty"`
 	Id string `json:"id"`
@@ -303,6 +304,38 @@ func (o *ExecutionTask) HasError() bool {
 // SetError gets a reference to the given string and assigns it to the Error field.
 func (o *ExecutionTask) SetError(v string) {
 	o.Error = &v
+}
+
+// GetEvaluation returns the Evaluation field value if set, zero value otherwise.
+func (o *ExecutionTask) GetEvaluation() ExecutionEvaluation {
+	if o == nil || IsNil(o.Evaluation) {
+		var ret ExecutionEvaluation
+		return ret
+	}
+	return *o.Evaluation
+}
+
+// GetEvaluationOk returns a tuple with the Evaluation field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ExecutionTask) GetEvaluationOk() (*ExecutionEvaluation, bool) {
+	if o == nil || IsNil(o.Evaluation) {
+		return nil, false
+	}
+	return o.Evaluation, true
+}
+
+// HasEvaluation returns a boolean if a field has been set.
+func (o *ExecutionTask) HasEvaluation() bool {
+	if o != nil && !IsNil(o.Evaluation) {
+		return true
+	}
+
+	return false
+}
+
+// SetEvaluation gets a reference to the given ExecutionEvaluation and assigns it to the Evaluation field.
+func (o *ExecutionTask) SetEvaluation(v ExecutionEvaluation) {
+	o.Evaluation = &v
 }
 
 // GetExperts returns the Experts field value if set, zero value otherwise.
@@ -678,6 +711,9 @@ func (o ExecutionTask) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Error) {
 		toSerialize["error"] = o.Error
 	}
+	if !IsNil(o.Evaluation) {
+		toSerialize["evaluation"] = o.Evaluation
+	}
 	if !IsNil(o.Experts) {
 		toSerialize["experts"] = o.Experts
 	}
@@ -768,6 +804,7 @@ func (o *ExecutionTask) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "cancel_requested")
 		delete(additionalProperties, "created_at")
 		delete(additionalProperties, "error")
+		delete(additionalProperties, "evaluation")
 		delete(additionalProperties, "experts")
 		delete(additionalProperties, "finished_at")
 		delete(additionalProperties, "id")

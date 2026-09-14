@@ -55,7 +55,8 @@
     "command": "deployments pause"
   },
   "deploymentsRun": {
-    "command": "deployments run"
+    "command": "deployments run",
+    "idempotent": true
   },
   "deploymentsRuns": {
     "command": "deployments runs",
@@ -263,5 +264,76 @@
   },
   "consoleResource": {
     "command": "console resource"
+  },
+  "vaultsCreate": {
+    "command": "vaults create"
+  },
+  "vaultsList": {
+    "command": "vaults list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "vaultsGet": {
+    "command": "vaults get"
+  },
+  "vaultsArchive": {
+    "command": "vaults archive"
+  },
+  "vaultRotate": {
+    "command": "credentials rotate"
+  },
+  "vaultValidate": {
+    "command": "credentials validate"
+  },
+  "deploymentsGet": {
+    "command": "deployments get"
+  },
+  "deploymentsUpdate": {
+    "command": "deployments update"
+  },
+  "deploymentsVersions": {
+    "command": "deployments versions",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "deploymentsSchedule": {
+    "command": "deployments schedule"
+  },
+  "webhooksCreate": {
+    "command": "webhooks create"
+  },
+  "webhooksList": {
+    "command": "webhooks list",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "webhooksGet": {
+    "command": "webhooks get"
+  },
+  "webhooksUpdate": {
+    "command": "webhooks update"
+  },
+  "webhooksDeliveries": {
+    "command": "webhooks deliveries",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
+  },
+  "webhooksRetry": {
+    "command": "webhooks retry"
+  },
+  "executionCollaboration": {
+    "command": "tasks collaboration",
+    "pagination": {
+      "request": "offset",
+      "next": "next_offset"
+    }
   }
 }

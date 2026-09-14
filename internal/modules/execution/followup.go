@@ -35,6 +35,7 @@ func followup(ctx context.Context, db *gorm.DB, p *auth.Principal, id, text, sou
 		t.Messages = completeHistory(t.Messages)
 		t.State = "queued"
 		t.FinishedAt = nil
+		t.Evaluation = nil
 		t.PendingFinish = ""
 		t.Finalizing = false
 		t.CancelRequested = false

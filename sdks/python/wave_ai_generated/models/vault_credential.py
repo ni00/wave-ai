@@ -18,8 +18,8 @@ import re  # noqa: F401
 import json
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictStr
-from typing import Any, ClassVar, Dict, List
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
+from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
@@ -33,8 +33,11 @@ class VaultCredential(BaseModel):
     id: StrictStr
     name: StrictStr
     revoked: StrictBool
+    updated_at: Optional[StrictStr] = None
+    vault_id: Optional[StrictStr] = None
+    version: Optional[StrictInt] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["created_at", "host", "id", "name", "revoked"]
+    __properties: ClassVar[List[str]] = ["created_at", "host", "id", "name", "revoked", "updated_at", "vault_id", "version"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -98,7 +101,10 @@ class VaultCredential(BaseModel):
             "host": obj.get("host"),
             "id": obj.get("id"),
             "name": obj.get("name"),
-            "revoked": obj.get("revoked")
+            "revoked": obj.get("revoked"),
+            "updated_at": obj.get("updated_at"),
+            "vault_id": obj.get("vault_id"),
+            "version": obj.get("version")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

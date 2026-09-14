@@ -17,8 +17,9 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
+from wave_ai_generated.models.execution_budget import ExecutionBudget
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
@@ -28,12 +29,41 @@ class DeploymentsCreateRequest(BaseModel):
     DeploymentsCreateRequest
     """ # noqa: E501
     agent_id: StrictStr
+    agent_version: Optional[StrictInt] = None
+    budget: Optional[ExecutionBudget] = None
     cron: Optional[StrictStr] = None
     environment_id: Optional[StrictStr] = None
+    file_ids: Optional[List[StrictStr]] = None
+    follow_latest: Optional[StrictBool] = None
     input: StrictStr
+    memory_store_ids: Optional[List[StrictStr]] = None
+    misfire_policy: Optional[StrictStr] = None
     name: StrictStr
+    overlap_policy: Optional[StrictStr] = None
+    timezone: Optional[StrictStr] = None
+    vault_ids: Optional[List[StrictStr]] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["agent_id", "cron", "environment_id", "input", "name"]
+    __properties: ClassVar[List[str]] = ["agent_id", "agent_version", "budget", "cron", "environment_id", "file_ids", "follow_latest", "input", "memory_store_ids", "misfire_policy", "name", "overlap_policy", "timezone", "vault_ids"]
+
+    @field_validator('misfire_policy')
+    def misfire_policy_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(['skip', 'run_once']):
+            raise ValueError("must be one of enum values ('skip', 'run_once')")
+        return value
+
+    @field_validator('overlap_policy')
+    def overlap_policy_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(['skip', 'allow']):
+            raise ValueError("must be one of enum values ('skip', 'allow')")
+        return value
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -76,6 +106,9 @@ class DeploymentsCreateRequest(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of budget
+        if self.budget:
+            _dict['budget'] = self.budget.to_dict()
         # puts key-value pairs in additional_properties in the top level
         if self.additional_properties is not None:
             for _key, _value in self.additional_properties.items():
@@ -94,10 +127,19 @@ class DeploymentsCreateRequest(BaseModel):
 
         _obj = cls.model_validate({
             "agent_id": obj.get("agent_id"),
+            "agent_version": obj.get("agent_version"),
+            "budget": ExecutionBudget.from_dict(obj["budget"]) if obj.get("budget") is not None else None,
             "cron": obj.get("cron"),
             "environment_id": obj.get("environment_id"),
+            "file_ids": obj.get("file_ids"),
+            "follow_latest": obj.get("follow_latest"),
             "input": obj.get("input"),
-            "name": obj.get("name")
+            "memory_store_ids": obj.get("memory_store_ids"),
+            "misfire_policy": obj.get("misfire_policy"),
+            "name": obj.get("name"),
+            "overlap_policy": obj.get("overlap_policy"),
+            "timezone": obj.get("timezone"),
+            "vault_ids": obj.get("vault_ids")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

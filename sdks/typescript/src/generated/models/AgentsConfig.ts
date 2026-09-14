@@ -20,6 +20,13 @@ import {
     AgentsToolToJSON,
     AgentsToolToJSONTyped,
 } from './AgentsTool.js';
+import type { AgentsAcceptanceCheck } from './AgentsAcceptanceCheck.js';
+import {
+    AgentsAcceptanceCheckFromJSON,
+    AgentsAcceptanceCheckFromJSONTyped,
+    AgentsAcceptanceCheckToJSON,
+    AgentsAcceptanceCheckToJSONTyped,
+} from './AgentsAcceptanceCheck.js';
 
 /**
  * 
@@ -30,11 +37,23 @@ export interface AgentsConfig {
     /**
      * 
      */
+    acceptance?: Array<AgentsAcceptanceCheck>;
+    /**
+     * 
+     */
+    delegationPolicy?: AgentsConfigDelegationPolicyEnum;
+    /**
+     * 
+     */
     effort?: string;
     /**
      * 
      */
     expertIds?: Array<string> | null;
+    /**
+     * 
+     */
+    expertVersions?: { [key: string]: number; };
     /**
      * 
      */
@@ -57,6 +76,17 @@ export interface AgentsConfig {
     tools?: Array<AgentsTool> | null;
 }
 
+
+/**
+ * @export
+ */
+export const AgentsConfigDelegationPolicyEnum = {
+    Intersection: 'intersection',
+    Explicit: 'explicit',
+} as const;
+export type AgentsConfigDelegationPolicyEnum = typeof AgentsConfigDelegationPolicyEnum[keyof typeof AgentsConfigDelegationPolicyEnum];
+
+
 /**
  * Check if a given object implements the AgentsConfig interface.
  */
@@ -76,8 +106,11 @@ export function AgentsConfigFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
         
+        'acceptance': json['acceptance'] == null ? undefined : ((json['acceptance'] as Array<any>).map(AgentsAcceptanceCheckFromJSON)),
+        'delegationPolicy': json['delegation_policy'] == null ? undefined : json['delegation_policy'],
         'effort': json['effort'] == null ? undefined : json['effort'],
         'expertIds': json['expert_ids'] === undefined ? undefined : json['expert_ids'] === null ? null : json['expert_ids'],
+        'expertVersions': json['expert_versions'] == null ? undefined : json['expert_versions'],
         'instructions': json['instructions'] == null ? undefined : json['instructions'],
         'model': json['model'],
         'name': json['name'],
@@ -97,8 +130,11 @@ export function AgentsConfigToJSONTyped(value?: AgentsConfig | null, ignoreDiscr
 
     return {
         
+        'acceptance': value['acceptance'] == null ? undefined : ((value['acceptance'] as Array<any>).map(AgentsAcceptanceCheckToJSON)),
+        'delegation_policy': value['delegationPolicy'],
         'effort': value['effort'],
         'expert_ids': value['expertIds'],
+        'expert_versions': value['expertVersions'],
         'instructions': value['instructions'],
         'model': value['model'],
         'name': value['name'],

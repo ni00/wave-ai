@@ -27,7 +27,7 @@ func (a *App) execute(ctx context.Context, s execution.Session, call execution.T
 	if call.Tool.Kind == "mcp" {
 		bearer := ""
 		if call.Tool.CredentialID != "" {
-			token, e := vault.Bearer(ctx, a.DB, a.Box, principal(s), call.Tool.CredentialID, call.Tool.ServerURL)
+			token, e := vault.SessionBearer(ctx, a.DB, a.Box, principal(s), call.Tool.CredentialID, call.Tool.ServerURL, s.VaultIDs)
 			if e != nil {
 				return execution.ToolFailed("credential_unavailable", "credential unavailable"), nil
 			}

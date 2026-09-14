@@ -26,6 +26,9 @@ type VaultCredential struct {
 	Id string `json:"id"`
 	Name string `json:"name"`
 	Revoked bool `json:"revoked"`
+	UpdatedAt *string `json:"updated_at,omitempty"`
+	VaultId *string `json:"vault_id,omitempty"`
+	Version *int32 `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -173,6 +176,102 @@ func (o *VaultCredential) SetRevoked(v bool) {
 	o.Revoked = v
 }
 
+// GetUpdatedAt returns the UpdatedAt field value if set, zero value otherwise.
+func (o *VaultCredential) GetUpdatedAt() string {
+	if o == nil || IsNil(o.UpdatedAt) {
+		var ret string
+		return ret
+	}
+	return *o.UpdatedAt
+}
+
+// GetUpdatedAtOk returns a tuple with the UpdatedAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VaultCredential) GetUpdatedAtOk() (*string, bool) {
+	if o == nil || IsNil(o.UpdatedAt) {
+		return nil, false
+	}
+	return o.UpdatedAt, true
+}
+
+// HasUpdatedAt returns a boolean if a field has been set.
+func (o *VaultCredential) HasUpdatedAt() bool {
+	if o != nil && !IsNil(o.UpdatedAt) {
+		return true
+	}
+
+	return false
+}
+
+// SetUpdatedAt gets a reference to the given string and assigns it to the UpdatedAt field.
+func (o *VaultCredential) SetUpdatedAt(v string) {
+	o.UpdatedAt = &v
+}
+
+// GetVaultId returns the VaultId field value if set, zero value otherwise.
+func (o *VaultCredential) GetVaultId() string {
+	if o == nil || IsNil(o.VaultId) {
+		var ret string
+		return ret
+	}
+	return *o.VaultId
+}
+
+// GetVaultIdOk returns a tuple with the VaultId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VaultCredential) GetVaultIdOk() (*string, bool) {
+	if o == nil || IsNil(o.VaultId) {
+		return nil, false
+	}
+	return o.VaultId, true
+}
+
+// HasVaultId returns a boolean if a field has been set.
+func (o *VaultCredential) HasVaultId() bool {
+	if o != nil && !IsNil(o.VaultId) {
+		return true
+	}
+
+	return false
+}
+
+// SetVaultId gets a reference to the given string and assigns it to the VaultId field.
+func (o *VaultCredential) SetVaultId(v string) {
+	o.VaultId = &v
+}
+
+// GetVersion returns the Version field value if set, zero value otherwise.
+func (o *VaultCredential) GetVersion() int32 {
+	if o == nil || IsNil(o.Version) {
+		var ret int32
+		return ret
+	}
+	return *o.Version
+}
+
+// GetVersionOk returns a tuple with the Version field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VaultCredential) GetVersionOk() (*int32, bool) {
+	if o == nil || IsNil(o.Version) {
+		return nil, false
+	}
+	return o.Version, true
+}
+
+// HasVersion returns a boolean if a field has been set.
+func (o *VaultCredential) HasVersion() bool {
+	if o != nil && !IsNil(o.Version) {
+		return true
+	}
+
+	return false
+}
+
+// SetVersion gets a reference to the given int32 and assigns it to the Version field.
+func (o *VaultCredential) SetVersion(v int32) {
+	o.Version = &v
+}
+
 func (o VaultCredential) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -188,6 +287,15 @@ func (o VaultCredential) ToMap() (map[string]interface{}, error) {
 	toSerialize["id"] = o.Id
 	toSerialize["name"] = o.Name
 	toSerialize["revoked"] = o.Revoked
+	if !IsNil(o.UpdatedAt) {
+		toSerialize["updated_at"] = o.UpdatedAt
+	}
+	if !IsNil(o.VaultId) {
+		toSerialize["vault_id"] = o.VaultId
+	}
+	if !IsNil(o.Version) {
+		toSerialize["version"] = o.Version
+	}
 
 	for key, value := range o.AdditionalProperties {
 		toSerialize[key] = value
@@ -240,6 +348,9 @@ func (o *VaultCredential) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "id")
 		delete(additionalProperties, "name")
 		delete(additionalProperties, "revoked")
+		delete(additionalProperties, "updated_at")
+		delete(additionalProperties, "vault_id")
+		delete(additionalProperties, "version")
 		o.AdditionalProperties = additionalProperties
 	}
 

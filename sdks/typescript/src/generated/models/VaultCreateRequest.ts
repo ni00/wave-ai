@@ -31,6 +31,10 @@ export interface VaultCreateRequest {
      * 
      */
     token: string;
+    /**
+     * 
+     */
+    vaultId?: string;
 }
 
 /**
@@ -56,6 +60,7 @@ export function VaultCreateRequestFromJSONTyped(json: any, ignoreDiscriminator: 
         'host': json['host'],
         'name': json['name'],
         'token': json['token'],
+        'vaultId': json['vault_id'] == null ? undefined : json['vault_id'],
     };
 }
 
@@ -73,6 +78,7 @@ export function VaultCreateRequestToJSONTyped(value?: VaultCreateRequest | null,
         'host': value['host'],
         'name': value['name'],
         'token': value['token'],
+        'vault_id': value['vaultId'],
     };
 }
 

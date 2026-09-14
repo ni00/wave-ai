@@ -13,6 +13,14 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime.js';
+import type { ExecutionBudget } from './ExecutionBudget.js';
+import {
+    ExecutionBudgetFromJSON,
+    ExecutionBudgetFromJSONTyped,
+    ExecutionBudgetToJSON,
+    ExecutionBudgetToJSONTyped,
+} from './ExecutionBudget.js';
+
 /**
  * 
  * @export
@@ -23,6 +31,14 @@ export interface DeploymentsDeployment {
      * 
      */
     agentId: string;
+    /**
+     * 
+     */
+    agentVersion?: number;
+    /**
+     * 
+     */
+    budget?: ExecutionBudget;
     /**
      * 
      */
@@ -38,6 +54,14 @@ export interface DeploymentsDeployment {
     /**
      * 
      */
+    fileIds?: Array<string>;
+    /**
+     * 
+     */
+    followLatest?: boolean;
+    /**
+     * 
+     */
     id: string;
     /**
      * 
@@ -50,6 +74,14 @@ export interface DeploymentsDeployment {
     /**
      * 
      */
+    memoryStoreIds?: Array<string>;
+    /**
+     * 
+     */
+    misfirePolicy?: string;
+    /**
+     * 
+     */
     name: string;
     /**
      * 
@@ -58,7 +90,27 @@ export interface DeploymentsDeployment {
     /**
      * 
      */
+    overlapPolicy?: string;
+    /**
+     * 
+     */
+    pauseReason?: string;
+    /**
+     * 
+     */
     paused: boolean;
+    /**
+     * 
+     */
+    timezone?: string;
+    /**
+     * 
+     */
+    vaultIds?: Array<string>;
+    /**
+     * 
+     */
+    version: number;
 }
 
 /**
@@ -71,6 +123,7 @@ export function instanceOfDeploymentsDeployment(value: object): value is Deploym
     if (!('input' in value) || value['input'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('paused' in value) || value['paused'] === undefined) return false;
+    if (!('version' in value) || value['version'] === undefined) return false;
     return true;
 }
 
@@ -85,15 +138,26 @@ export function DeploymentsDeploymentFromJSONTyped(json: any, ignoreDiscriminato
     return {
         
         'agentId': json['agent_id'],
+        'agentVersion': json['agent_version'] == null ? undefined : json['agent_version'],
+        'budget': json['budget'] == null ? undefined : ExecutionBudgetFromJSON(json['budget']),
         'createdAt': (json['created_at'] == null ? json['created_at'] : parseDateTime(json['created_at'])),
         'cron': json['cron'] == null ? undefined : json['cron'],
         'environmentId': json['environment_id'] == null ? undefined : json['environment_id'],
+        'fileIds': json['file_ids'] == null ? undefined : json['file_ids'],
+        'followLatest': json['follow_latest'] == null ? undefined : json['follow_latest'],
         'id': json['id'],
         'input': json['input'],
         'lastTaskId': json['last_task_id'] == null ? undefined : json['last_task_id'],
+        'memoryStoreIds': json['memory_store_ids'] == null ? undefined : json['memory_store_ids'],
+        'misfirePolicy': json['misfire_policy'] == null ? undefined : json['misfire_policy'],
         'name': json['name'],
         'nextAt': json['next_at'] == null ? undefined : (parseDateTime(json['next_at'])),
+        'overlapPolicy': json['overlap_policy'] == null ? undefined : json['overlap_policy'],
+        'pauseReason': json['pause_reason'] == null ? undefined : json['pause_reason'],
         'paused': json['paused'],
+        'timezone': json['timezone'] == null ? undefined : json['timezone'],
+        'vaultIds': json['vault_ids'] == null ? undefined : json['vault_ids'],
+        'version': json['version'],
     };
 }
 
@@ -109,15 +173,26 @@ export function DeploymentsDeploymentToJSONTyped(value?: DeploymentsDeployment |
     return {
         
         'agent_id': value['agentId'],
+        'agent_version': value['agentVersion'],
+        'budget': ExecutionBudgetToJSON(value['budget']),
         'created_at': value['createdAt'] == null ? value['createdAt'] : serializeDateTime(value['createdAt']),
         'cron': value['cron'],
         'environment_id': value['environmentId'],
+        'file_ids': value['fileIds'],
+        'follow_latest': value['followLatest'],
         'id': value['id'],
         'input': value['input'],
         'last_task_id': value['lastTaskId'],
+        'memory_store_ids': value['memoryStoreIds'],
+        'misfire_policy': value['misfirePolicy'],
         'name': value['name'],
         'next_at': value['nextAt'] == null ? value['nextAt'] : serializeDateTime(value['nextAt']),
+        'overlap_policy': value['overlapPolicy'],
+        'pause_reason': value['pauseReason'],
         'paused': value['paused'],
+        'timezone': value['timezone'],
+        'vault_ids': value['vaultIds'],
+        'version': value['version'],
     };
 }
 

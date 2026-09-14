@@ -736,6 +736,8 @@ const docTemplate = `{
                             "skills",
                             "agents",
                             "deployments",
+                            "vaults",
+                            "webhooks",
                             "files",
                             "memory",
                             "sessions",
@@ -990,6 +992,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "凭据库 ID || Vault ID",
+                        "name": "vault_id",
+                        "in": "query"
+                    },
+                    {
                         "minimum": 0,
                         "type": "integer",
                         "default": 0,
@@ -1095,6 +1103,86 @@ const docTemplate = `{
             }
         },
         "/v1/credentials/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "credentials"
+                ],
+                "summary": "轮换凭据 || Rotate a credential",
+                "operationId": "vaultRotate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "请求 || Request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vault.RotateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/vault.Credential"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -1143,6 +1231,88 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "内部错误，可用 request_id 排查 || Internal error; use request_id for troubleshooting",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/credentials/{id}/validate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "credentials"
+                ],
+                "summary": "校验凭据绑定与加密数据 || Validate credential binding and encryption",
+                "operationId": "vaultValidate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "请求 || Request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vault.ValidateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/vault.Validation"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
                         "schema": {
                             "$ref": "#/definitions/apierr.Envelope"
                         }
@@ -1288,6 +1458,157 @@ const docTemplate = `{
             }
         },
         "/v1/deployments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deployments"
+                ],
+                "summary": "查看部署 || Get a deployment",
+                "operationId": "deploymentsGet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/deployments.Deployment"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deployments"
+                ],
+                "summary": "更新部署配置 || Update deployment configuration",
+                "operationId": "deploymentsUpdate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "请求 || Request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/deployments.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/deployments.Deployment"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {
@@ -1371,7 +1692,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "立即触发一次部署运行，创建会话与任务并异步执行；部署处于暂停状态时返回 409。 || Trigger a deployment immediately, creating a session and task for asynchronous execution. A paused deployment returns 409.",
+                "description": "立即触发一次部署运行，创建会话与任务并异步执行；暂停时仍可手动触发。 || Trigger a deployment immediately, creating a session and task for asynchronous execution. Paused deployments can be triggered manually.",
                 "produces": [
                     "application/json"
                 ],
@@ -1387,6 +1708,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "重试去重键 || Retry deduplication key",
+                        "name": "Idempotency-Key",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -1416,12 +1743,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "部署不存在或不在当前所有者范围内 || Deployment not found or outside the current owner's scope",
-                        "schema": {
-                            "$ref": "#/definitions/apierr.Envelope"
-                        }
-                    },
-                    "409": {
-                        "description": "部署已暂停 || Deployment is paused",
                         "schema": {
                             "$ref": "#/definitions/apierr.Envelope"
                         }
@@ -1510,6 +1831,169 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "内部错误，可用 request_id 排查 || Internal error; use request_id for troubleshooting",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/deployments/{id}/schedule": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deployments"
+                ],
+                "summary": "未来触发时间 || Upcoming occurrences",
+                "operationId": "deploymentsSchedule",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/deployments.ScheduleResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/deployments/{id}/versions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deployments"
+                ],
+                "summary": "部署版本 || Deployment versions",
+                "operationId": "deploymentsVersions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "maximum": 200,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 100,
+                        "description": "每页条数 || Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "偏移量 || Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/deployments.VersionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
                         "schema": {
                             "$ref": "#/definitions/apierr.Envelope"
                         }
@@ -3908,6 +4392,87 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/tasks/{id}/collaboration": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "execution"
+                ],
+                "summary": "协作任务 || Collaboration tasks",
+                "operationId": "executionCollaboration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务 ID || Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "maximum": 200,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 100,
+                        "description": "每页条数 || Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "偏移量 || Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/execution.TasksResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/tasks/{id}/generations": {
             "get": {
                 "security": [
@@ -4515,9 +5080,815 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/vaults": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaults"
+                ],
+                "summary": "列出凭据库 || List vaults",
+                "operationId": "vaultsList",
+                "parameters": [
+                    {
+                        "maximum": 200,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 100,
+                        "description": "每页条数 || Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "偏移量 || Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/vault.VaultsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaults"
+                ],
+                "summary": "创建凭据库 || Create a vault",
+                "operationId": "vaultsCreate",
+                "parameters": [
+                    {
+                        "description": "请求 || Request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vault.VaultRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/vault.Vault"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/vaults/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaults"
+                ],
+                "summary": "查看凭据库 || Get a vault",
+                "operationId": "vaultsGet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/vault.Vault"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaults"
+                ],
+                "summary": "归档凭据库 || Archive a vault",
+                "operationId": "vaultsArchive",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/vault.Vault"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/webhooks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "列出 Webhooks || List webhooks",
+                "operationId": "webhooksList",
+                "parameters": [
+                    {
+                        "maximum": 200,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 100,
+                        "description": "每页条数 || Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "偏移量 || Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/webhooks.ListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "创建 Webhook || Create a webhook",
+                "operationId": "webhooksCreate",
+                "parameters": [
+                    {
+                        "description": "请求 || Request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/webhooks.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/webhooks.Subscription"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/webhooks/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "查看 Webhook || Get a webhook",
+                "operationId": "webhooksGet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/webhooks.Subscription"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "暂停或恢复 Webhook || Pause or resume a webhook",
+                "operationId": "webhooksUpdate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "请求 || Request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/webhooks.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/webhooks.Subscription"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/webhooks/{id}/deliveries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "Webhook 投递记录 || Webhook deliveries",
+                "operationId": "webhooksDeliveries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "maximum": 200,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 100,
+                        "description": "每页条数 || Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "偏移量 || Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/webhooks.DeliveriesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/webhooks/{id}/deliveries/{delivery}/retry": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "重试投递 || Retry delivery",
+                "operationId": "webhooksRetry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "资源 ID || Resource ID",
+                        "name": "delivery",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/webhooks.Delivery"
+                        }
+                    },
+                    "400": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "请求失败 || Request failed",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "agents.AcceptanceCheck": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "file_exists",
+                        "json"
+                    ]
+                },
+                "path": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "types": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "agents.Agent": {
             "type": "object",
             "required": [
@@ -4558,6 +5929,19 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "acceptance": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/agents.AcceptanceCheck"
+                    }
+                },
+                "delegation_policy": {
+                    "type": "string",
+                    "enum": [
+                        "intersection",
+                        "explicit"
+                    ]
+                },
                 "effort": {
                     "type": "string"
                 },
@@ -4567,6 +5951,12 @@ const docTemplate = `{
                         "type": "string"
                     },
                     "x-nullable": true
+                },
+                "expert_versions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
                 },
                 "instructions": {
                     "type": "string",
@@ -4840,17 +6230,61 @@ const docTemplate = `{
                 "agent_id": {
                     "type": "string"
                 },
+                "agent_version": {
+                    "type": "integer"
+                },
+                "budget": {
+                    "$ref": "#/definitions/execution.Budget"
+                },
                 "cron": {
                     "type": "string"
                 },
                 "environment_id": {
                     "type": "string"
                 },
+                "file_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "follow_latest": {
+                    "type": "boolean"
+                },
                 "input": {
                     "type": "string"
                 },
+                "memory_store_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "misfire_policy": {
+                    "type": "string",
+                    "enum": [
+                        "skip",
+                        "run_once"
+                    ]
+                },
                 "name": {
                     "type": "string"
+                },
+                "overlap_policy": {
+                    "type": "string",
+                    "enum": [
+                        "skip",
+                        "allow"
+                    ]
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "vault_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -4862,11 +6296,18 @@ const docTemplate = `{
                 "id",
                 "input",
                 "name",
-                "paused"
+                "paused",
+                "version"
             ],
             "properties": {
                 "agent_id": {
                     "type": "string"
+                },
+                "agent_version": {
+                    "type": "integer"
+                },
+                "budget": {
+                    "$ref": "#/definitions/execution.Budget"
                 },
                 "created_at": {
                     "type": "string",
@@ -4878,6 +6319,15 @@ const docTemplate = `{
                 "environment_id": {
                     "type": "string"
                 },
+                "file_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "follow_latest": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -4887,6 +6337,15 @@ const docTemplate = `{
                 "last_task_id": {
                     "type": "string"
                 },
+                "memory_store_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "misfire_policy": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -4894,8 +6353,26 @@ const docTemplate = `{
                     "type": "string",
                     "format": "date-time"
                 },
+                "overlap_policy": {
+                    "type": "string"
+                },
+                "pause_reason": {
+                    "type": "string"
+                },
                 "paused": {
                     "type": "boolean"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "vault_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -4937,11 +6414,20 @@ const docTemplate = `{
                 "id"
             ],
             "properties": {
+                "agent_version": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string",
                     "format": "date-time"
                 },
                 "deployment_id": {
+                    "type": "string"
+                },
+                "deployment_version": {
+                    "type": "integer"
+                },
+                "error_code": {
                     "type": "string"
                 },
                 "id": {
@@ -4950,10 +6436,19 @@ const docTemplate = `{
                 "reason": {
                     "type": "string"
                 },
+                "scheduled_at": {
+                    "type": "string"
+                },
                 "session_id": {
                     "type": "string"
                 },
+                "status": {
+                    "type": "string"
+                },
                 "task_id": {
+                    "type": "string"
+                },
+                "trigger": {
                     "type": "string"
                 }
             }
@@ -4972,6 +6467,63 @@ const docTemplate = `{
                 },
                 "next_offset": {
                     "description": "仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted on the last page.",
+                    "type": "integer"
+                }
+            }
+        },
+        "deployments.ScheduleResponse": {
+            "type": "object",
+            "properties": {
+                "times": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "deployments.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "config",
+                "version"
+            ],
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/deployments.CreateRequest"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "deployments.Version": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/deployments.CreateRequest"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deployment_id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "deployments.VersionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/deployments.Version"
+                    }
+                },
+                "next_offset": {
                     "type": "integer"
                 }
             }
@@ -5112,6 +6664,23 @@ const docTemplate = `{
                 }
             }
         },
+        "execution.CheckResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "execution.CreateSessionRequest": {
             "type": "object",
             "properties": {
@@ -5133,6 +6702,29 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "title": {
+                    "type": "string"
+                },
+                "vault_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "execution.Evaluation": {
+            "type": "object",
+            "properties": {
+                "checks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/execution.CheckResult"
+                    }
+                },
+                "evaluated_at": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -5512,6 +7104,12 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "vault_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -5581,6 +7179,9 @@ const docTemplate = `{
                 },
                 "error": {
                     "type": "string"
+                },
+                "evaluation": {
+                    "$ref": "#/definitions/execution.Evaluation"
                 },
                 "experts": {
                     "type": "object",
@@ -5767,6 +7368,9 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "format": "date-time"
+                },
+                "wait_until": {
+                    "type": "string"
                 }
             }
         },
@@ -6555,6 +8159,9 @@ const docTemplate = `{
                 },
                 "token": {
                     "type": "string"
+                },
+                "vault_id": {
+                    "type": "string"
                 }
             }
         },
@@ -6583,6 +8190,15 @@ const docTemplate = `{
                 },
                 "revoked": {
                     "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vault_id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -6601,6 +8217,214 @@ const docTemplate = `{
                 "next_offset": {
                     "description": "仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted on the last page.",
                     "type": "integer"
+                }
+            }
+        },
+        "vault.RotateRequest": {
+            "type": "object",
+            "required": [
+                "token",
+                "version"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "vault.ValidateRequest": {
+            "type": "object",
+            "required": [
+                "target"
+            ],
+            "properties": {
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
+        "vault.Validation": {
+            "type": "object",
+            "properties": {
+                "valid": {
+                    "type": "boolean"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "vault.Vault": {
+            "type": "object",
+            "properties": {
+                "archived": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "vault.VaultRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "vault.VaultsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vault.Vault"
+                    }
+                },
+                "next_offset": {
+                    "type": "integer"
+                }
+            }
+        },
+        "webhooks.CreateRequest": {
+            "type": "object",
+            "required": [
+                "events",
+                "name",
+                "secret",
+                "url"
+            ],
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "webhooks.DeliveriesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/webhooks.Delivery"
+                    }
+                },
+                "next_offset": {
+                    "type": "integer"
+                }
+            }
+        },
+        "webhooks.Delivery": {
+            "type": "object",
+            "properties": {
+                "attempts": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "delivered_at": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "event_type": {
+                    "type": "string"
+                },
+                "http_status": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "next_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subscription_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "webhooks.ListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/webhooks.Subscription"
+                    }
+                },
+                "next_offset": {
+                    "type": "integer"
+                }
+            }
+        },
+        "webhooks.Subscription": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "paused": {
+                    "type": "boolean"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "webhooks.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "paused"
+            ],
+            "properties": {
+                "paused": {
+                    "type": "boolean"
                 }
             }
         }

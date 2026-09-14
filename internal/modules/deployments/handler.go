@@ -1,18 +1,15 @@
 package deployments
 
 import (
-	"time"
 	"wave-ai.local/wave/internal/platform/apierr"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"wave-ai.local/wave/internal/modules/agents"
-	"wave-ai.local/wave/internal/modules/environments"
+	"wave-ai.local/wave/internal/modules/execution"
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/httpx"
-	"wave-ai.local/wave/internal/platform/xid"
 )
 
 type handler struct{ db *gorm.DB }
@@ -21,6 +18,10 @@ func Register(r *gin.RouterGroup, db *gorm.DB) {
 	h := handler{db: db}
 	r.POST("/deployments", h.create)
 	r.GET("/deployments", h.list)
+	r.GET("/deployments/:id", h.get)
+	r.PUT("/deployments/:id", h.update)
+	r.GET("/deployments/:id/versions", h.versions)
+	r.GET("/deployments/:id/schedule", h.schedule)
 	r.POST("/deployments/:id/run", h.run)
 	r.PATCH("/deployments/:id", h.pause)
 	r.GET("/deployments/:id/runs", h.runs)
@@ -49,33 +50,8 @@ func (h handler) create(c *gin.Context) {
 		return
 	}
 	p := c.MustGet("principal").(*auth.Principal)
-	if _, e := agents.Get(c.Request.Context(), h.db, p, in.AgentID); e != nil {
-		httpx.Error(c, e)
-		return
-	}
-	if in.EnvironmentID != "" {
-		if _, e := environments.Get(c.Request.Context(), h.db, p, in.EnvironmentID); e != nil {
-			httpx.Error(c, e)
-			return
-		}
-	}
-	n, e := next(in.Cron, time.Now())
+	d, e := Create(c.Request.Context(), h.db, p, in)
 	if e != nil {
-		httpx.Error(c, e)
-		return
-	}
-	d := Deployment{
-		ID:            xid.New("deployment"),
-		OrgID:         p.OrgID,
-		OwnerID:       p.PrincipalID,
-		Name:          in.Name,
-		AgentID:       in.AgentID,
-		EnvironmentID: in.EnvironmentID,
-		Input:         in.Input,
-		Cron:          in.Cron,
-		NextAt:        n,
-	}
-	if e = h.db.WithContext(c.Request.Context()).Create(&d).Error; e != nil {
 		httpx.Error(c, e)
 		return
 	}
@@ -109,7 +85,7 @@ func (h handler) list(c *gin.Context) {
 // run godoc
 // @ID deploymentsRun
 // @Summary 手动触发部署 || Trigger a deployment manually
-// @Description 立即触发一次部署运行，创建会话与任务并异步执行；部署处于暂停状态时返回 409。 || Trigger a deployment immediately, creating a session and task for asynchronous execution. A paused deployment returns 409.
+// @Description 立即触发一次部署运行，创建会话与任务并异步执行；暂停时仍可手动触发。 || Trigger a deployment immediately, creating a session and task for asynchronous execution. Paused deployments can be triggered manually.
 // @Tags deployments
 // @Produce json
 // @Security BearerAuth
@@ -120,10 +96,11 @@ func (h handler) list(c *gin.Context) {
 // @Failure 403 {object} apierr.Envelope "Key 不具备 API scope || Key does not have API scope"
 // @Failure 500 {object} apierr.Envelope "内部错误，可用 request_id 排查 || Internal error; use request_id for troubleshooting"
 // @Failure 404 {object} apierr.Envelope "部署不存在或不在当前所有者范围内 || Deployment not found or outside the current owner's scope"
-// @Failure 409 {object} apierr.Envelope "部署已暂停 || Deployment is paused"
+// @Param Idempotency-Key header string false "重试去重键 || Retry deduplication key"
 // @Router /v1/deployments/{id}/run [post]
 func (h handler) run(c *gin.Context) {
-	row, e := Fire(c.Request.Context(), h.db, c.MustGet("principal").(*auth.Principal), c.Param("id"), false)
+	p := c.MustGet("principal").(*auth.Principal)
+	row, e := execution.Admit(c.Request.Context(), h.db, p, c.GetHeader("Idempotency-Key"), "deployment.run", c.Param("id"), func(tx *gorm.DB) (Run, error) { return Fire(c.Request.Context(), tx, p, c.Param("id"), false) })
 	if e != nil {
 		httpx.Error(c, e)
 		return

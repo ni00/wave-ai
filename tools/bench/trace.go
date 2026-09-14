@@ -8,13 +8,14 @@ import (
 )
 
 type taskSample struct {
-	TaskID          string           `json:"task_id"`
-	State           string           `json:"state"`
-	ObservedMS      float64          `json:"observed_ms"`
-	Trace           *execution.Trace `json:"trace,omitempty"`
-	TraceError      bool             `json:"trace_error,omitempty"`
-	CancelRequested bool             `json:"cancel_requested,omitempty"`
-	CancelError     bool             `json:"cancel_error,omitempty"`
+	Evaluation      *execution.Evaluation `json:"evaluation,omitempty"`
+	TaskID          string                `json:"task_id"`
+	State           string                `json:"state"`
+	ObservedMS      float64               `json:"observed_ms"`
+	Trace           *execution.Trace      `json:"trace,omitempty"`
+	TraceError      bool                  `json:"trace_error,omitempty"`
+	CancelRequested bool                  `json:"cancel_requested,omitempty"`
+	CancelError     bool                  `json:"cancel_error,omitempty"`
 }
 
 func (c apiClient) trace(ctx context.Context, s *sample) {
@@ -35,5 +36,5 @@ func (c apiClient) trace(ctx context.Context, s *sample) {
 // traceData is kept in the report because synthetic benchmark databases are
 // disposable. It contains no response bodies, snapshots or tool commands.
 func traceData(s sample) taskSample {
-	return taskSample{TaskID: s.task.ID, State: s.state, ObservedMS: float64(s.latency) / float64(time.Millisecond), Trace: s.trace, TraceError: s.traceError, CancelRequested: s.cancelRequested, CancelError: s.cancelError}
+	return taskSample{Evaluation: s.task.Evaluation, TaskID: s.task.ID, State: s.state, ObservedMS: float64(s.latency) / float64(time.Millisecond), Trace: s.trace, TraceError: s.traceError, CancelRequested: s.cancelRequested, CancelError: s.cancelError}
 }

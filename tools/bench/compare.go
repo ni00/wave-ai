@@ -17,6 +17,7 @@ type comparison struct {
 	Phases    []phaseComparison `json:"phases"`
 }
 type phaseComparison struct {
+	AcceptanceChangePP        *float64 `json:"acceptance_change_pp,omitempty"`
 	Workers                   int      `json:"workers"`
 	BaselineSamples           int      `json:"baseline_samples"`
 	CandidateSamples          int      `json:"candidate_samples"`
@@ -104,6 +105,13 @@ func compare(args []string, out, diag io.Writer) error {
 		}
 		seen[bp.Workers] = true
 		p := phaseComparison{Workers: bp.Workers, BaselineSamples: bp.Succeeded, CandidateSamples: ap.Succeeded, P95ChangePercent: change(bp.EndToEnd.P95, ap.EndToEnd.P95), ModelP95ChangePercent: change(bp.Model.P95, ap.Model.P95), OutputTokensChangePercent: change(float64(bp.OutputTokens), float64(ap.OutputTokens)), Reasons: []string{}}
+		if bp.AcceptanceRate != nil && ap.AcceptanceRate != nil {
+			delta := (*ap.AcceptanceRate - *bp.AcceptanceRate) * 100
+			p.AcceptanceChangePP = &delta
+		}
+		if bp.Evaluated > 0 && (ap.Evaluated < ap.Attempted || ap.AcceptanceRate == nil || (bp.AcceptanceRate != nil && *ap.AcceptanceRate < *bp.AcceptanceRate)) {
+			p.Reasons = append(p.Reasons, "candidate acceptance coverage or pass rate regressed")
+		}
 		for _, run := range []phaseReport{bp, *ap} {
 			if run.Requested < 1 || run.Succeeded != run.Requested || run.Attempted != run.Requested || run.Failed != 0 || run.PhaseError != "" || run.TraceFailures != 0 || run.IncompleteTraces != 0 || run.EndToEnd.Count != run.Succeeded || len(run.Tasks) != run.Attempted {
 				p.Reasons = append(p.Reasons, "failed, incomplete or missing telemetry in a compared phase")

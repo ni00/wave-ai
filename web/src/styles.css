@@ -2310,3 +2310,37 @@ nav .nav-caption {
 .resource-links {
   padding: 0 24px 20px;
 }
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.check-label {
+  display: flex !important;
+  align-items: center;
+  gap: 8px !important;
+}
+.check-label input {
+  width: auto !important;
+  flex: 0 0 auto;
+}
+.checkbox-grid {
+  display: grid;
+  gap: 8px;
+}
+.task-controls {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.task-controls .error {
+  width: 100%;
+}
+@media (max-width: 600px) {
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+}

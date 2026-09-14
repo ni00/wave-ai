@@ -127,7 +127,7 @@ func (a *App) prepare(ctx context.Context, s execution.Session, t execution.Task
 	}
 	skillIDs := append([]string{}, t.Snapshot.SkillIDs...)
 	for _, expert := range t.Experts {
-		skillIDs = append(skillIDs, agents.Restrict(t.Snapshot, expert.Config).SkillIDs...)
+		skillIDs = append(skillIDs, agents.Delegated(t.Snapshot, expert.Config).SkillIDs...)
 	}
 	seenSkills := map[string]bool{}
 	for _, id := range skillIDs {

@@ -3,7 +3,9 @@ package execution
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
+	"wave-ai.local/wave/internal/modules/webhooks"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -26,7 +28,16 @@ func emit(tx *gorm.DB, s *Session, task, typ string, data map[string]any) error 
 	if err := tx.Model(s).Update("event_seq", s.EventSeq).Error; err != nil {
 		return err
 	}
-	return tx.Create(&Event{SessionID: s.ID, Seq: s.EventSeq, TaskID: task, Type: typ, Data: data}).Error
+	if err := tx.Create(&Event{SessionID: s.ID, Seq: s.EventSeq, TaskID: task, Type: typ, Data: data}).Error; err != nil {
+		return err
+	}
+	payload := map[string]any{"session_id": s.ID, "task_id": task}
+	for _, key := range []string{"state", "status", "call_id"} {
+		if value, ok := data[key]; ok {
+			payload[key] = value
+		}
+	}
+	return webhooks.Enqueue(tx, principal(*s), fmt.Sprintf("%s:%d", s.ID, s.EventSeq), typ, payload)
 }
 
 // withTask always locks session before task; all state writers follow this order.

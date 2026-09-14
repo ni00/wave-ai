@@ -31,8 +31,9 @@ class ExecutionCreateSessionRequest(BaseModel):
     file_ids: Optional[List[StrictStr]] = None
     memory_store_ids: Optional[List[StrictStr]] = None
     title: Optional[StrictStr] = None
+    vault_ids: Optional[List[StrictStr]] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["environment_id", "file_ids", "memory_store_ids", "title"]
+    __properties: ClassVar[List[str]] = ["environment_id", "file_ids", "memory_store_ids", "title", "vault_ids"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -105,7 +106,8 @@ class ExecutionCreateSessionRequest(BaseModel):
             "environment_id": obj.get("environment_id"),
             "file_ids": obj.get("file_ids"),
             "memory_store_ids": obj.get("memory_store_ids"),
-            "title": obj.get("title")
+            "title": obj.get("title"),
+            "vault_ids": obj.get("vault_ids")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

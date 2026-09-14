@@ -16,6 +16,9 @@ type distribution struct {
 }
 
 type phaseReport struct {
+	Evaluated        int            `json:"evaluated"`
+	AcceptancePassed int            `json:"acceptance_passed"`
+	AcceptanceRate   *float64       `json:"acceptance_rate,omitempty"`
 	Tasks            []taskSample   `json:"tasks"`
 	Model            distribution   `json:"model"`
 	Tool             distribution   `json:"tool"`
@@ -51,6 +54,12 @@ func (p *phaseReport) summarize(samples []sample, elapsed time.Duration) {
 	p.UsageKnown = true
 	p.Tasks = []taskSample{}
 	for _, s := range samples {
+		if s.task.Evaluation != nil {
+			p.Evaluated++
+			if s.task.Evaluation.Status == "passed" {
+				p.AcceptancePassed++
+			}
+		}
 		p.States[s.state]++
 		p.Tasks = append(p.Tasks, traceData(s))
 		if s.traceError {
@@ -83,6 +92,10 @@ func (p *phaseReport) summarize(samples []sample, elapsed time.Duration) {
 		e2e = append(e2e, float64(s.latency)/float64(time.Millisecond))
 		queue = append(queue, float64(s.task.StartedAt.Sub(s.task.CreatedAt))/float64(time.Millisecond))
 		execution = append(execution, float64(s.task.FinishedAt.Sub(*s.task.StartedAt))/float64(time.Millisecond))
+	}
+	if p.Evaluated > 0 {
+		rate := float64(p.AcceptancePassed) / float64(p.Evaluated)
+		p.AcceptanceRate = &rate
 	}
 	if p.Attempted > 0 {
 		p.ErrorRate = float64(p.Failed) / float64(p.Attempted)

@@ -1,4 +1,22 @@
 definitions:
+  agents.AcceptanceCheck:
+    properties:
+      kind:
+        enum:
+        - file_exists
+        - json
+        type: string
+      path:
+        type: string
+      required:
+        items:
+          type: string
+        type: array
+      types:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
   agents.Agent:
     properties:
       archived:
@@ -25,6 +43,15 @@ definitions:
     type: object
   agents.Config:
     properties:
+      acceptance:
+        items:
+          $ref: '#/definitions/agents.AcceptanceCheck'
+        type: array
+      delegation_policy:
+        enum:
+        - intersection
+        - explicit
+        type: string
       effort:
         type: string
       expert_ids:
@@ -32,6 +59,10 @@ definitions:
           type: string
         type: array
         x-nullable: true
+      expert_versions:
+        additionalProperties:
+          type: integer
+        type: object
       instructions:
         example: Answer clearly and cite your sources.
         type: string
@@ -229,14 +260,44 @@ definitions:
     properties:
       agent_id:
         type: string
+      agent_version:
+        type: integer
+      budget:
+        $ref: '#/definitions/execution.Budget'
       cron:
         type: string
       environment_id:
         type: string
+      file_ids:
+        items:
+          type: string
+        type: array
+      follow_latest:
+        type: boolean
       input:
+        type: string
+      memory_store_ids:
+        items:
+          type: string
+        type: array
+      misfire_policy:
+        enum:
+        - skip
+        - run_once
         type: string
       name:
         type: string
+      overlap_policy:
+        enum:
+        - skip
+        - allow
+        type: string
+      timezone:
+        type: string
+      vault_ids:
+        items:
+          type: string
+        type: array
     required:
     - agent_id
     - input
@@ -246,6 +307,10 @@ definitions:
     properties:
       agent_id:
         type: string
+      agent_version:
+        type: integer
+      budget:
+        $ref: '#/definitions/execution.Budget'
       created_at:
         format: date-time
         type: string
@@ -253,19 +318,43 @@ definitions:
         type: string
       environment_id:
         type: string
+      file_ids:
+        items:
+          type: string
+        type: array
+      follow_latest:
+        type: boolean
       id:
         type: string
       input:
         type: string
       last_task_id:
         type: string
+      memory_store_ids:
+        items:
+          type: string
+        type: array
+      misfire_policy:
+        type: string
       name:
         type: string
       next_at:
         format: date-time
         type: string
+      overlap_policy:
+        type: string
+      pause_reason:
+        type: string
       paused:
         type: boolean
+      timezone:
+        type: string
+      vault_ids:
+        items:
+          type: string
+        type: array
+      version:
+        type: integer
     required:
     - agent_id
     - created_at
@@ -273,6 +362,7 @@ definitions:
     - input
     - name
     - paused
+    - version
     type: object
   deployments.ListResponse:
     properties:
@@ -297,18 +387,30 @@ definitions:
     type: object
   deployments.Run:
     properties:
+      agent_version:
+        type: integer
       created_at:
         format: date-time
         type: string
       deployment_id:
         type: string
+      deployment_version:
+        type: integer
+      error_code:
+        type: string
       id:
         type: string
       reason:
         type: string
+      scheduled_at:
+        type: string
       session_id:
         type: string
+      status:
+        type: string
       task_id:
+        type: string
+      trigger:
         type: string
     required:
     - created_at
@@ -327,6 +429,43 @@ definitions:
         type: integer
     required:
     - data
+    type: object
+  deployments.ScheduleResponse:
+    properties:
+      times:
+        items:
+          type: string
+        type: array
+    type: object
+  deployments.UpdateRequest:
+    properties:
+      config:
+        $ref: '#/definitions/deployments.CreateRequest'
+      version:
+        type: integer
+    required:
+    - config
+    - version
+    type: object
+  deployments.Version:
+    properties:
+      config:
+        $ref: '#/definitions/deployments.CreateRequest'
+      created_at:
+        type: string
+      deployment_id:
+        type: string
+      version:
+        type: integer
+    type: object
+  deployments.VersionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/deployments.Version'
+        type: array
+      next_offset:
+        type: integer
     type: object
   environments.CreateRequest:
     properties:
@@ -439,6 +578,17 @@ definitions:
           narrow it.'
         type: integer
     type: object
+  execution.CheckResult:
+    properties:
+      error:
+        type: string
+      kind:
+        type: string
+      path:
+        type: string
+      status:
+        type: string
+    type: object
   execution.CreateSessionRequest:
     properties:
       environment_id:
@@ -454,6 +604,21 @@ definitions:
         type: array
         x-nullable: true
       title:
+        type: string
+      vault_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  execution.Evaluation:
+    properties:
+      checks:
+        items:
+          $ref: '#/definitions/execution.CheckResult'
+        type: array
+      evaluated_at:
+        type: string
+      status:
         type: string
     type: object
   execution.Event:
@@ -718,6 +883,10 @@ definitions:
         type: integer
       title:
         type: string
+      vault_ids:
+        items:
+          type: string
+        type: array
     required:
     - archived
     - created_at
@@ -762,6 +931,8 @@ definitions:
         type: string
       error:
         type: string
+      evaluation:
+        $ref: '#/definitions/execution.Evaluation'
       experts:
         additionalProperties:
           $ref: '#/definitions/agents.Agent'
@@ -905,6 +1076,8 @@ definitions:
         $ref: '#/definitions/agents.Tool'
       updated_at:
         format: date-time
+        type: string
+      wait_until:
         type: string
     required:
     - arguments
@@ -1487,6 +1660,8 @@ definitions:
         type: string
       token:
         type: string
+      vault_id:
+        type: string
     required:
     - host
     - name
@@ -1505,6 +1680,12 @@ definitions:
         type: string
       revoked:
         type: boolean
+      updated_at:
+        type: string
+      vault_id:
+        type: string
+      version:
+        type: integer
     required:
     - created_at
     - host
@@ -1524,6 +1705,142 @@ definitions:
         type: integer
     required:
     - data
+    type: object
+  vault.RotateRequest:
+    properties:
+      token:
+        type: string
+      version:
+        type: integer
+    required:
+    - token
+    - version
+    type: object
+  vault.ValidateRequest:
+    properties:
+      target:
+        type: string
+    required:
+    - target
+    type: object
+  vault.Validation:
+    properties:
+      valid:
+        type: boolean
+      version:
+        type: integer
+    type: object
+  vault.Vault:
+    properties:
+      archived:
+        type: boolean
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  vault.VaultRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  vault.VaultsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/vault.Vault'
+        type: array
+      next_offset:
+        type: integer
+    type: object
+  webhooks.CreateRequest:
+    properties:
+      events:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      secret:
+        type: string
+      url:
+        type: string
+    required:
+    - events
+    - name
+    - secret
+    - url
+    type: object
+  webhooks.DeliveriesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/webhooks.Delivery'
+        type: array
+      next_offset:
+        type: integer
+    type: object
+  webhooks.Delivery:
+    properties:
+      attempts:
+        type: integer
+      created_at:
+        type: string
+      delivered_at:
+        type: string
+      error:
+        type: string
+      event_id:
+        type: string
+      event_type:
+        type: string
+      http_status:
+        type: integer
+      id:
+        type: string
+      next_at:
+        type: string
+      status:
+        type: string
+      subscription_id:
+        type: string
+    type: object
+  webhooks.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/webhooks.Subscription'
+        type: array
+      next_offset:
+        type: integer
+    type: object
+  webhooks.Subscription:
+    properties:
+      created_at:
+        type: string
+      events:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      paused:
+        type: boolean
+      url:
+        type: string
+    type: object
+  webhooks.UpdateRequest:
+    properties:
+      paused:
+        type: boolean
+    required:
+    - paused
     type: object
 info:
   contact: {}
@@ -2028,6 +2345,8 @@ paths:
         - skills
         - agents
         - deployments
+        - vaults
+        - webhooks
         - files
         - memory
         - sessions
@@ -2201,6 +2520,10 @@ paths:
         minimum: 1
         name: limit
         type: integer
+      - description: 凭据库 ID || Vault ID
+        in: query
+        name: vault_id
+        type: string
       - default: 0
         description: 偏移量 || Offset
         in: query
@@ -2320,6 +2643,111 @@ paths:
       summary: 吊销凭据 || Revoke a credential
       tags:
       - vault
+    put:
+      consumes:
+      - application/json
+      operationId: vaultRotate
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 请求 || Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vault.RotateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vault.Credential'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 轮换凭据 || Rotate a credential
+      tags:
+      - credentials
+  /v1/credentials/{id}/validate:
+    post:
+      consumes:
+      - application/json
+      operationId: vaultValidate
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 请求 || Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vault.ValidateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vault.Validation'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 校验凭据绑定与加密数据 || Validate credential binding and encryption
+      tags:
+      - credentials
   /v1/deployments:
     get:
       description: 分页返回当前所有者可见的部署。 || Return deployments visible to the current owner,
@@ -2418,6 +2846,52 @@ paths:
       tags:
       - deployments
   /v1/deployments/{id}:
+    get:
+      consumes:
+      - application/json
+      operationId: deploymentsGet
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/deployments.Deployment'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 查看部署 || Get a deployment
+      tags:
+      - deployments
     patch:
       consumes:
       - application/json
@@ -2471,17 +2945,73 @@ paths:
       summary: 暂停或恢复部署 || Pause or resume a deployment
       tags:
       - deployments
+    put:
+      consumes:
+      - application/json
+      operationId: deploymentsUpdate
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 请求 || Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/deployments.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/deployments.Deployment'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 更新部署配置 || Update deployment configuration
+      tags:
+      - deployments
   /v1/deployments/{id}/run:
     post:
-      description: 立即触发一次部署运行，创建会话与任务并异步执行；部署处于暂停状态时返回 409。 || Trigger a deployment
-        immediately, creating a session and task for asynchronous execution. A paused
-        deployment returns 409.
+      description: 立即触发一次部署运行，创建会话与任务并异步执行；暂停时仍可手动触发。 || Trigger a deployment immediately,
+        creating a session and task for asynchronous execution. Paused deployments
+        can be triggered manually.
       operationId: deploymentsRun
       parameters:
       - description: 部署 ID || Deployment ID
         in: path
         name: id
         required: true
+        type: string
+      - description: 重试去重键 || Retry deduplication key
+        in: header
+        name: Idempotency-Key
         type: string
       produces:
       - application/json
@@ -2506,10 +3036,6 @@ paths:
         "404":
           description: 部署不存在或不在当前所有者范围内 || Deployment not found or outside the current
             owner's scope
-          schema:
-            $ref: '#/definitions/apierr.Envelope'
-        "409":
-          description: 部署已暂停 || Deployment is paused
           schema:
             $ref: '#/definitions/apierr.Envelope'
         "500":
@@ -2578,6 +3104,113 @@ paths:
       security:
       - BearerAuth: []
       summary: 部署运行记录 || Deployment run records
+      tags:
+      - deployments
+  /v1/deployments/{id}/schedule:
+    get:
+      consumes:
+      - application/json
+      operationId: deploymentsSchedule
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/deployments.ScheduleResponse'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 未来触发时间 || Upcoming occurrences
+      tags:
+      - deployments
+  /v1/deployments/{id}/versions:
+    get:
+      consumes:
+      - application/json
+      operationId: deploymentsVersions
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/deployments.VersionsResponse'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 部署版本 || Deployment versions
       tags:
       - deployments
   /v1/environments:
@@ -4330,6 +4963,60 @@ paths:
       summary: 取消任务 || Cancel a task
       tags:
       - execution
+  /v1/tasks/{id}/collaboration:
+    get:
+      operationId: executionCollaboration
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.TasksResponse'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 协作任务 || Collaboration tasks
+      tags:
+      - execution
   /v1/tasks/{id}/generations:
     get:
       description: 按任务返回每次模型调用的记录，包括压缩与重试，涵盖耗时、首个增量时间与供应商 token 用量。缺失的用量保持 null，中断调用标记
@@ -4782,6 +5469,514 @@ paths:
       summary: 任务执行链路与耗时 || Task trace and timing breakdown
       tags:
       - execution
+  /v1/vaults:
+    get:
+      consumes:
+      - application/json
+      operationId: vaultsList
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vault.VaultsResponse'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出凭据库 || List vaults
+      tags:
+      - vaults
+    post:
+      consumes:
+      - application/json
+      operationId: vaultsCreate
+      parameters:
+      - description: 请求 || Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vault.VaultRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vault.Vault'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 创建凭据库 || Create a vault
+      tags:
+      - vaults
+  /v1/vaults/{id}:
+    delete:
+      consumes:
+      - application/json
+      operationId: vaultsArchive
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vault.Vault'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 归档凭据库 || Archive a vault
+      tags:
+      - vaults
+    get:
+      consumes:
+      - application/json
+      operationId: vaultsGet
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vault.Vault'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 查看凭据库 || Get a vault
+      tags:
+      - vaults
+  /v1/webhooks:
+    get:
+      consumes:
+      - application/json
+      operationId: webhooksList
+      parameters:
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/webhooks.ListResponse'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 列出 Webhooks || List webhooks
+      tags:
+      - webhooks
+    post:
+      consumes:
+      - application/json
+      operationId: webhooksCreate
+      parameters:
+      - description: 请求 || Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/webhooks.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/webhooks.Subscription'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 创建 Webhook || Create a webhook
+      tags:
+      - webhooks
+  /v1/webhooks/{id}:
+    get:
+      consumes:
+      - application/json
+      operationId: webhooksGet
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/webhooks.Subscription'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 查看 Webhook || Get a webhook
+      tags:
+      - webhooks
+    patch:
+      consumes:
+      - application/json
+      operationId: webhooksUpdate
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 请求 || Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/webhooks.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/webhooks.Subscription'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 暂停或恢复 Webhook || Pause or resume a webhook
+      tags:
+      - webhooks
+  /v1/webhooks/{id}/deliveries:
+    get:
+      consumes:
+      - application/json
+      operationId: webhooksDeliveries
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量 || Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/webhooks.DeliveriesResponse'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: Webhook 投递记录 || Webhook deliveries
+      tags:
+      - webhooks
+  /v1/webhooks/{id}/deliveries/{delivery}/retry:
+    post:
+      consumes:
+      - application/json
+      operationId: webhooksRetry
+      parameters:
+      - description: 资源 ID || Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 资源 ID || Resource ID
+        in: path
+        name: delivery
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/webhooks.Delivery'
+        "400":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "409":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 请求失败 || Request failed
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 重试投递 || Retry delivery
+      tags:
+      - webhooks
 securityDefinitions:
   BearerAuth:
     description: 填写完整的 Bearer <Wave API Key>，包含 Bearer 前缀和空格。 || Enter the full Bearer

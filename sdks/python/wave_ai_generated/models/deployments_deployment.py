@@ -18,8 +18,9 @@ import re  # noqa: F401
 import json
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
+from wave_ai_generated.models.execution_budget import ExecutionBudget
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
@@ -29,17 +30,28 @@ class DeploymentsDeployment(BaseModel):
     DeploymentsDeployment
     """ # noqa: E501
     agent_id: StrictStr
+    agent_version: Optional[StrictInt] = None
+    budget: Optional[ExecutionBudget] = None
     created_at: datetime
     cron: Optional[StrictStr] = None
     environment_id: Optional[StrictStr] = None
+    file_ids: Optional[List[StrictStr]] = None
+    follow_latest: Optional[StrictBool] = None
     id: StrictStr
     input: StrictStr
     last_task_id: Optional[StrictStr] = None
+    memory_store_ids: Optional[List[StrictStr]] = None
+    misfire_policy: Optional[StrictStr] = None
     name: StrictStr
     next_at: Optional[datetime] = None
+    overlap_policy: Optional[StrictStr] = None
+    pause_reason: Optional[StrictStr] = None
     paused: StrictBool
+    timezone: Optional[StrictStr] = None
+    vault_ids: Optional[List[StrictStr]] = None
+    version: StrictInt
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["agent_id", "created_at", "cron", "environment_id", "id", "input", "last_task_id", "name", "next_at", "paused"]
+    __properties: ClassVar[List[str]] = ["agent_id", "agent_version", "budget", "created_at", "cron", "environment_id", "file_ids", "follow_latest", "id", "input", "last_task_id", "memory_store_ids", "misfire_policy", "name", "next_at", "overlap_policy", "pause_reason", "paused", "timezone", "vault_ids", "version"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -82,6 +94,9 @@ class DeploymentsDeployment(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of budget
+        if self.budget:
+            _dict['budget'] = self.budget.to_dict()
         # puts key-value pairs in additional_properties in the top level
         if self.additional_properties is not None:
             for _key, _value in self.additional_properties.items():
@@ -100,15 +115,26 @@ class DeploymentsDeployment(BaseModel):
 
         _obj = cls.model_validate({
             "agent_id": obj.get("agent_id"),
+            "agent_version": obj.get("agent_version"),
+            "budget": ExecutionBudget.from_dict(obj["budget"]) if obj.get("budget") is not None else None,
             "created_at": obj.get("created_at"),
             "cron": obj.get("cron"),
             "environment_id": obj.get("environment_id"),
+            "file_ids": obj.get("file_ids"),
+            "follow_latest": obj.get("follow_latest"),
             "id": obj.get("id"),
             "input": obj.get("input"),
             "last_task_id": obj.get("last_task_id"),
+            "memory_store_ids": obj.get("memory_store_ids"),
+            "misfire_policy": obj.get("misfire_policy"),
             "name": obj.get("name"),
             "next_at": obj.get("next_at"),
-            "paused": obj.get("paused")
+            "overlap_policy": obj.get("overlap_policy"),
+            "pause_reason": obj.get("pause_reason"),
+            "paused": obj.get("paused"),
+            "timezone": obj.get("timezone"),
+            "vault_ids": obj.get("vault_ids"),
+            "version": obj.get("version")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

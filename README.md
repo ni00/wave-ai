@@ -157,3 +157,5 @@ make clients-check clients-test  # Check generated clients and behavior.
 
 See [client tooling](tools/clients/README.md) for dependencies, integration tests,
 and packaging.
+
+[Configure schedules, delegation, Vaults, Webhooks, and acceptance checks](deploy/managed-agents.md).

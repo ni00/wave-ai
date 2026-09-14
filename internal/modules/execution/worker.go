@@ -29,6 +29,7 @@ type Worker struct {
 	Lease         time.Duration
 	Execute       func(context.Context, Session, ToolCall) (ToolResult, error)
 	Prepare       func(context.Context, Session, Task) error
+	Evaluate      func(context.Context, Session, Task) *Evaluation
 	Finish        func(context.Context, Session, Task) error
 	Admit         Admission
 }

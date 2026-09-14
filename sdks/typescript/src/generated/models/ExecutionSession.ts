@@ -59,6 +59,10 @@ export interface ExecutionSession {
      * 
      */
     title: string;
+    /**
+     * 
+     */
+    vaultIds?: Array<string>;
 }
 
 /**
@@ -96,6 +100,7 @@ export function ExecutionSessionFromJSONTyped(json: any, ignoreDiscriminator: bo
         'memoryStoreIds': json['memory_store_ids'] == null ? null : json['memory_store_ids'],
         'messageSequence': json['message_sequence'],
         'title': json['title'],
+        'vaultIds': json['vault_ids'] == null ? undefined : json['vault_ids'],
     };
 }
 
@@ -120,6 +125,7 @@ export function ExecutionSessionToJSONTyped(value?: ExecutionSession | null, ign
         'memory_store_ids': value['memoryStoreIds'],
         'message_sequence': value['messageSequence'],
         'title': value['title'],
+        'vault_ids': value['vaultIds'],
     };
 }
 

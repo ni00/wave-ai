@@ -128,6 +128,21 @@ export interface ExecutionCancelTaskRequest {
     id: string;
 }
 
+export interface ExecutionCollaborationRequest {
+    /**
+     * Task ID
+     */
+    id: string;
+    /**
+     * Items per page
+     */
+    limit?: number;
+    /**
+     * Offset
+     */
+    offset?: number;
+}
+
 export interface ExecutionCreateSessionOperationRequest {
     /**
      * 
@@ -521,6 +536,67 @@ export class ExecutionApi extends runtime.BaseAPI {
      */
     async executionCancelTask(requestParameters: ExecutionCancelTaskRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.executionCancelTaskRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for executionCollaboration without sending the request
+     */
+    async executionCollaborationRequestOpts(requestParameters: ExecutionCollaborationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling executionCollaboration().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/tasks/{id}/collaboration`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Collaboration tasks
+     */
+    async executionCollaborationRaw(requestParameters: ExecutionCollaborationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ExecutionTasksResponse>> {
+        const requestOptions = await this.executionCollaborationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ExecutionTasksResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Collaboration tasks
+     */
+    async executionCollaboration(requestParameters: ExecutionCollaborationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ExecutionTasksResponse> {
+        const response = await this.executionCollaborationRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**

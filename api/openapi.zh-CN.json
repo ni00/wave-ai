@@ -941,6 +941,8 @@
                 "skills",
                 "agents",
                 "deployments",
+                "vaults",
+                "webhooks",
                 "files",
                 "memory",
                 "sessions",
@@ -1269,6 +1271,14 @@
             }
           },
           {
+            "description": "凭据库 ID",
+            "name": "vault_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "偏移量",
             "name": "offset",
             "in": "query",
@@ -1410,6 +1420,112 @@
       }
     },
     "/v1/credentials/{id}": {
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "credentials"
+        ],
+        "summary": "轮换凭据",
+        "operationId": "vaultRotate",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/vault.RotateRequest"
+              }
+            }
+          },
+          "description": "请求",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.Credential"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "security": [
           {
@@ -1469,6 +1585,114 @@
           },
           "500": {
             "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credentials/{id}/validate": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "credentials"
+        ],
+        "summary": "校验凭据绑定与加密数据",
+        "operationId": "vaultValidate",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/vault.ValidateRequest"
+              }
+            }
+          },
+          "description": "请求",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.Validation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
             "content": {
               "application/json": {
                 "schema": {
@@ -1657,6 +1881,207 @@
       }
     },
     "/v1/deployments/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "deployments"
+        ],
+        "summary": "查看部署",
+        "operationId": "deploymentsGet",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "deployments"
+        ],
+        "summary": "更新部署配置",
+        "operationId": "deploymentsUpdate",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/deployments.UpdateRequest"
+              }
+            }
+          },
+          "description": "请求",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.Deployment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "security": [
           {
@@ -1762,7 +2187,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "立即触发一次部署运行，创建会话与任务并异步执行；部署处于暂停状态时返回 409。",
+        "description": "立即触发一次部署运行，创建会话与任务并异步执行；暂停时仍可手动触发。",
         "tags": [
           "deployments"
         ],
@@ -1774,6 +2199,14 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "重试去重键",
+            "name": "Idempotency-Key",
+            "in": "header",
             "schema": {
               "type": "string"
             }
@@ -1822,16 +2255,6 @@
           },
           "404": {
             "description": "部署不存在或不在当前所有者范围内",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/apierr.Envelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "部署已暂停",
             "content": {
               "application/json": {
                 "schema": {
@@ -1951,6 +2374,221 @@
           },
           "500": {
             "description": "内部错误，可用 request_id 排查",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}/schedule": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "deployments"
+        ],
+        "summary": "未来触发时间",
+        "operationId": "deploymentsSchedule",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.ScheduleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/deployments/{id}/versions": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "deployments"
+        ],
+        "summary": "部署版本",
+        "operationId": "deploymentsVersions",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/deployments.VersionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
             "content": {
               "application/json": {
                 "schema": {
@@ -5124,6 +5762,114 @@
         }
       }
     },
+    "/v1/tasks/{id}/collaboration": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "execution"
+        ],
+        "summary": "协作任务",
+        "operationId": "executionCollaboration",
+        "parameters": [
+          {
+            "description": "任务 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.TasksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/tasks/{id}/generations": {
       "get": {
         "security": [
@@ -5911,6 +6657,1033 @@
           }
         }
       }
+    },
+    "/v1/vaults": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "vaults"
+        ],
+        "summary": "列出凭据库",
+        "operationId": "vaultsList",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.VaultsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "vaults"
+        ],
+        "summary": "创建凭据库",
+        "operationId": "vaultsCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/vault.VaultRequest"
+              }
+            }
+          },
+          "description": "请求",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.Vault"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/vaults/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "vaults"
+        ],
+        "summary": "查看凭据库",
+        "operationId": "vaultsGet",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.Vault"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "vaults"
+        ],
+        "summary": "归档凭据库",
+        "operationId": "vaultsArchive",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/vault.Vault"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "列出 Webhooks",
+        "operationId": "webhooksList",
+        "parameters": [
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhooks.ListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "创建 Webhook",
+        "operationId": "webhooksCreate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/webhooks.CreateRequest"
+              }
+            }
+          },
+          "description": "请求",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhooks.Subscription"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "查看 Webhook",
+        "operationId": "webhooksGet",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhooks.Subscription"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "暂停或恢复 Webhook",
+        "operationId": "webhooksUpdate",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/webhooks.UpdateRequest"
+              }
+            }
+          },
+          "description": "请求",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhooks.Subscription"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{id}/deliveries": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Webhook 投递记录",
+        "operationId": "webhooksDeliveries",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页条数",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "description": "偏移量",
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhooks.DeliveriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{id}/deliveries/{delivery}/retry": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "重试投递",
+        "operationId": "webhooksRetry",
+        "parameters": [
+          {
+            "description": "资源 ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "资源 ID",
+            "name": "delivery",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhooks.Delivery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5921,6 +7694,33 @@
       }
     },
     "schemas": {
+      "agents.AcceptanceCheck": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "file_exists",
+              "json"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "required": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "types": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "agents.Agent": {
         "type": "object",
         "required": [
@@ -5961,6 +7761,19 @@
           "name"
         ],
         "properties": {
+          "acceptance": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/agents.AcceptanceCheck"
+            }
+          },
+          "delegation_policy": {
+            "type": "string",
+            "enum": [
+              "intersection",
+              "explicit"
+            ]
+          },
           "effort": {
             "type": "string"
           },
@@ -5970,6 +7783,12 @@
               "type": "string"
             },
             "nullable": true
+          },
+          "expert_versions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
           },
           "instructions": {
             "type": "string",
@@ -6243,17 +8062,61 @@
           "agent_id": {
             "type": "string"
           },
+          "agent_version": {
+            "type": "integer"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/execution.Budget"
+          },
           "cron": {
             "type": "string"
           },
           "environment_id": {
             "type": "string"
           },
+          "file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "follow_latest": {
+            "type": "boolean"
+          },
           "input": {
             "type": "string"
           },
+          "memory_store_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "misfire_policy": {
+            "type": "string",
+            "enum": [
+              "skip",
+              "run_once"
+            ]
+          },
           "name": {
             "type": "string"
+          },
+          "overlap_policy": {
+            "type": "string",
+            "enum": [
+              "skip",
+              "allow"
+            ]
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "vault_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -6265,11 +8128,18 @@
           "id",
           "input",
           "name",
-          "paused"
+          "paused",
+          "version"
         ],
         "properties": {
           "agent_id": {
             "type": "string"
+          },
+          "agent_version": {
+            "type": "integer"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/execution.Budget"
           },
           "created_at": {
             "type": "string",
@@ -6281,6 +8151,15 @@
           "environment_id": {
             "type": "string"
           },
+          "file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "follow_latest": {
+            "type": "boolean"
+          },
           "id": {
             "type": "string"
           },
@@ -6290,6 +8169,15 @@
           "last_task_id": {
             "type": "string"
           },
+          "memory_store_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "misfire_policy": {
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -6297,8 +8185,26 @@
             "type": "string",
             "format": "date-time"
           },
+          "overlap_policy": {
+            "type": "string"
+          },
+          "pause_reason": {
+            "type": "string"
+          },
           "paused": {
             "type": "boolean"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "vault_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "integer"
           }
         }
       },
@@ -6340,11 +8246,20 @@
           "id"
         ],
         "properties": {
+          "agent_version": {
+            "type": "integer"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
           },
           "deployment_id": {
+            "type": "string"
+          },
+          "deployment_version": {
+            "type": "integer"
+          },
+          "error_code": {
             "type": "string"
           },
           "id": {
@@ -6353,10 +8268,19 @@
           "reason": {
             "type": "string"
           },
+          "scheduled_at": {
+            "type": "string"
+          },
           "session_id": {
             "type": "string"
           },
+          "status": {
+            "type": "string"
+          },
           "task_id": {
+            "type": "string"
+          },
+          "trigger": {
             "type": "string"
           }
         }
@@ -6375,6 +8299,63 @@
           },
           "next_offset": {
             "description": "仅有下一页时返回；省略表示末页。",
+            "type": "integer"
+          }
+        }
+      },
+      "deployments.ScheduleResponse": {
+        "type": "object",
+        "properties": {
+          "times": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "deployments.UpdateRequest": {
+        "type": "object",
+        "required": [
+          "config",
+          "version"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/deployments.CreateRequest"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "deployments.Version": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/deployments.CreateRequest"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "deployment_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "deployments.VersionsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/deployments.Version"
+            }
+          },
+          "next_offset": {
             "type": "integer"
           }
         }
@@ -6515,6 +8496,23 @@
           }
         }
       },
+      "execution.CheckResult": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "execution.CreateSessionRequest": {
         "type": "object",
         "properties": {
@@ -6536,6 +8534,29 @@
             "nullable": true
           },
           "title": {
+            "type": "string"
+          },
+          "vault_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "execution.Evaluation": {
+        "type": "object",
+        "properties": {
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/execution.CheckResult"
+            }
+          },
+          "evaluated_at": {
+            "type": "string"
+          },
+          "status": {
             "type": "string"
           }
         }
@@ -6915,6 +8936,12 @@
           },
           "title": {
             "type": "string"
+          },
+          "vault_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -6984,6 +9011,9 @@
           },
           "error": {
             "type": "string"
+          },
+          "evaluation": {
+            "$ref": "#/components/schemas/execution.Evaluation"
           },
           "experts": {
             "type": "object",
@@ -7170,6 +9200,9 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "wait_until": {
+            "type": "string"
           }
         }
       },
@@ -7959,6 +9992,9 @@
           },
           "token": {
             "type": "string"
+          },
+          "vault_id": {
+            "type": "string"
           }
         }
       },
@@ -7987,6 +10023,15 @@
           },
           "revoked": {
             "type": "boolean"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "vault_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         }
       },
@@ -8005,6 +10050,214 @@
           "next_offset": {
             "description": "仅有下一页时返回；省略表示末页。",
             "type": "integer"
+          }
+        }
+      },
+      "vault.RotateRequest": {
+        "type": "object",
+        "required": [
+          "token",
+          "version"
+        ],
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "vault.ValidateRequest": {
+        "type": "object",
+        "required": [
+          "target"
+        ],
+        "properties": {
+          "target": {
+            "type": "string"
+          }
+        }
+      },
+      "vault.Validation": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "vault.Vault": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "vault.VaultRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "vault.VaultsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/vault.Vault"
+            }
+          },
+          "next_offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "webhooks.CreateRequest": {
+        "type": "object",
+        "required": [
+          "events",
+          "name",
+          "secret",
+          "url"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "webhooks.DeliveriesResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/webhooks.Delivery"
+            }
+          },
+          "next_offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "webhooks.Delivery": {
+        "type": "object",
+        "properties": {
+          "attempts": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "delivered_at": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "http_status": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "next_at": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "subscription_id": {
+            "type": "string"
+          }
+        }
+      },
+      "webhooks.ListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/webhooks.Subscription"
+            }
+          },
+          "next_offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "webhooks.Subscription": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "webhooks.UpdateRequest": {
+        "type": "object",
+        "required": [
+          "paused"
+        ],
+        "properties": {
+          "paused": {
+            "type": "boolean"
           }
         }
       }

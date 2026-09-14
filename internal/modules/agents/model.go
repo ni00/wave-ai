@@ -18,14 +18,26 @@ type Tool struct {
 	RemoteName   string         `json:"remote_name,omitempty"`
 	CredentialID string         `json:"credential_id,omitempty"`
 }
+
+// AcceptanceCheck verifies published artifacts or a JSON final response.
+// JSON fields are top-level required fields with optional primitive type checks.
+type AcceptanceCheck struct {
+	Kind     string            `json:"kind" enums:"file_exists,json"`
+	Path     string            `json:"path,omitempty"`
+	Required []string          `json:"required,omitempty"`
+	Types    map[string]string `json:"types,omitempty"`
+}
 type Config struct {
-	Name         string   `json:"name" binding:"required" example:"Research assistant"`
-	Model        string   `json:"model" binding:"required" example:"your-model-id"`
-	Instructions string   `json:"instructions" example:"Answer clearly and cite your sources."`
-	Effort       string   `json:"effort,omitempty"`
-	Tools        []Tool   `json:"tools" extensions:"x-nullable"`
-	SkillIDs     []string `json:"skill_ids" extensions:"x-nullable"`
-	ExpertIDs    []string `json:"expert_ids" extensions:"x-nullable"`
+	Acceptance       []AcceptanceCheck `json:"acceptance,omitempty"`
+	Name             string            `json:"name" binding:"required" example:"Research assistant"`
+	Model            string            `json:"model" binding:"required" example:"your-model-id"`
+	Instructions     string            `json:"instructions" example:"Answer clearly and cite your sources."`
+	Effort           string            `json:"effort,omitempty"`
+	Tools            []Tool            `json:"tools" extensions:"x-nullable"`
+	SkillIDs         []string          `json:"skill_ids" extensions:"x-nullable"`
+	ExpertVersions   map[string]int    `json:"expert_versions,omitempty"`
+	DelegationPolicy string            `json:"delegation_policy,omitempty" enums:"intersection,explicit"`
+	ExpertIDs        []string          `json:"expert_ids" extensions:"x-nullable"`
 }
 type Agent struct {
 	Organization auth.Organization `gorm:"foreignKey:OrgID" json:"-"`

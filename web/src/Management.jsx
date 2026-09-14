@@ -38,7 +38,7 @@ function useDetail(kind, id) {
         .then((r) => r.data),
   });
 }
-function useChange() {
+export function useChange() {
   const api = useAPI(),
     qc = useQueryClient();
   const [busy, setBusy] = useState(false),
@@ -141,7 +141,7 @@ function Records({ kind, filter = {}, render }) {
     </Load>
   );
 }
-function Picker({ kind, value, onChange, multiple = false }) {
+export function Picker({ kind, value, onChange, multiple = false }) {
   const [search, setSearch] = useState(""),
     [term, setTerm] = useState(""),
     [open, setOpen] = useState(false);
@@ -182,7 +182,9 @@ function Picker({ kind, value, onChange, multiple = false }) {
             kind={kind}
             filter={{
               q: term || undefined,
-              state: kind === "skills" ? undefined : "active",
+              state: ["skills", "files", "memory"].includes(kind)
+                ? undefined
+                : "active",
             }}
             render={(r) => (
               <button
@@ -213,19 +215,35 @@ function Picker({ kind, value, onChange, multiple = false }) {
     </div>
   );
 }
-function Editor({ kind, agent, close }) {
+function Editor({ kind, agent, initialDeployment, close }) {
   const dialog = useRef();
   const [config, setConfig] = useState(agent?.config || emptyAgent);
   const [tools, setTools] = useState(
     JSON.stringify(agent?.config?.tools || [], null, 2),
   );
-  const [deployment, setDeployment] = useState({
-    name: "",
-    agent_id: "",
-    environment_id: "",
-    input: "",
-    cron: "",
-  });
+  const [deployment, setDeployment] = useState(
+    initialDeployment || {
+      timezone: "UTC",
+      agent_version: 0,
+      follow_latest: false,
+      misfire_policy: "skip",
+      overlap_policy: "skip",
+      file_ids: [],
+      memory_store_ids: [],
+      vault_ids: [],
+      name: "",
+      agent_id: "",
+      environment_id: "",
+      input: "",
+      cron: "",
+    },
+  );
+  const [acceptance, setAcceptance] = useState(
+    JSON.stringify(agent?.config?.acceptance || [], null, 2),
+  );
+  const [budget, setBudget] = useState(
+    JSON.stringify(initialDeployment?.budget || {}, null, 2),
+  );
   const selectedAgent = useResource(
     "agentsGet",
     kind === "deployments" ? deployment.agent_id : "",
@@ -254,7 +272,15 @@ function Editor({ kind, agent, close }) {
         setValidation("Tools 必须是 JSON 数组");
         return;
       }
-      const body = { ...config, tools: parsed };
+      let checks;
+      try {
+        checks = JSON.parse(acceptance);
+        if (!Array.isArray(checks)) throw new Error();
+      } catch {
+        setValidation("验收规则必须是 JSON 数组");
+        return;
+      }
+      const body = { ...config, tools: parsed, acceptance: checks };
       await change(
         agent ? "agentsUpdate" : "agentsCreate",
         {
@@ -286,10 +312,45 @@ function Editor({ kind, agent, close }) {
         setValidation("此 Agent 使用 Skills，请选择 Environment");
         return;
       }
-      await change("deploymentsCreate", { body: deployment }, (result) => {
-        close();
-        route(kind, result.id);
-      });
+      let limits;
+      try {
+        limits = JSON.parse(budget);
+        if (!limits || Array.isArray(limits) || typeof limits !== "object")
+          throw new Error();
+      } catch {
+        setValidation("Budget 必须是 JSON 对象");
+        return;
+      }
+      const allowed = [
+        "name",
+        "agent_id",
+        "agent_version",
+        "follow_latest",
+        "environment_id",
+        "input",
+        "cron",
+        "timezone",
+        "misfire_policy",
+        "overlap_policy",
+        "file_ids",
+        "memory_store_ids",
+        "vault_ids",
+      ];
+      const body = Object.fromEntries(allowed.map((k) => [k, deployment[k]]));
+      body.budget = limits;
+      await change(
+        initialDeployment ? "deploymentsUpdate" : "deploymentsCreate",
+        initialDeployment
+          ? {
+              path: { id: initialDeployment.id },
+              body: { version: initialDeployment.version, config: body },
+            }
+          : { body },
+        (result) => {
+          close();
+          route(kind, result.id);
+        },
+      );
     }
   }
   return (
@@ -308,7 +369,9 @@ function Editor({ kind, agent, close }) {
             ? "编辑 Agent"
             : kind === "agents"
               ? "新建 Agent"
-              : "新建 Deployment"}
+              : initialDeployment
+                ? "编辑 Deployment"
+                : "新建 Deployment"}
         </h2>
         <IconButton title="关闭" disabled={busy} onClick={close}>
           <IconX size={18} />
@@ -370,6 +433,45 @@ function Editor({ kind, agent, close }) {
                 />
               </div>
               <label>
+                协作权限
+                <select
+                  value={config.delegation_policy || "intersection"}
+                  onChange={(e) => field("delegation_policy", e.target.value)}
+                >
+                  <option value="intersection">仅共同授权工具</option>
+                  <option value="explicit">允许专家使用自身工具</option>
+                </select>
+              </label>
+              {!!config.expert_ids?.length && (
+                <>
+                  <div className="actions">
+                    {config.expert_ids.map((id) => (
+                      <span className="tag" key={id}>
+                        {id} · v{config.expert_versions?.[id] || "当前"}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => field("expert_versions", {})}
+                  >
+                    更新专家到当前版本
+                  </button>
+                </>
+              )}
+              <label>
+                验收规则 · JSON
+                <textarea
+                  className="mono"
+                  rows={4}
+                  value={acceptance}
+                  onChange={(e) => setAcceptance(e.target.value)}
+                  placeholder={
+                    '[{"kind":"json","path":"summary.json","required":["total"]}]'
+                  }
+                />
+              </label>
+              <label>
                 Tools · JSON
                 <textarea
                   className="mono"
@@ -415,7 +517,13 @@ function Editor({ kind, agent, close }) {
                 <Picker
                   kind="agents"
                   value={deployment.agent_id}
-                  onChange={(v) => field("agent_id", v)}
+                  onChange={(v) =>
+                    setDeployment((d) => ({
+                      ...d,
+                      agent_id: v,
+                      agent_version: 0,
+                    }))
+                  }
                 />
               </div>
               <div className="form-field">
@@ -440,13 +548,92 @@ function Editor({ kind, agent, close }) {
                 />
               </label>
               <label>
+                Agent 版本（0：固定当前版本）
+                <input
+                  type="number"
+                  min="0"
+                  value={deployment.agent_version || 0}
+                  onChange={(e) =>
+                    field("agent_version", Number(e.target.value))
+                  }
+                />
+              </label>
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={!!deployment.follow_latest}
+                  onChange={(e) => field("follow_latest", e.target.checked)}
+                />
+                每次使用最新 Agent 版本
+              </label>
+              <label>
+                时区
+                <input
+                  required
+                  value={deployment.timezone || "UTC"}
+                  onChange={(e) => field("timezone", e.target.value)}
+                  list="timezones"
+                />
+                <datalist id="timezones">
+                  <option value="UTC" />
+                  <option value="Asia/Shanghai" />
+                  <option value="America/New_York" />
+                </datalist>
+              </label>
+              <label>
                 Cron
                 <input
                   placeholder="留空则仅手动触发"
-                  value={deployment.cron}
+                  value={deployment.cron || ""}
                   onChange={(e) => field("cron", e.target.value)}
                 />
               </label>
+              <div className="editor-grid">
+                <label>
+                  错过触发
+                  <select
+                    value={deployment.misfire_policy || "skip"}
+                    onChange={(e) => field("misfire_policy", e.target.value)}
+                  >
+                    <option value="skip">跳过</option>
+                    <option value="run_once">补跑一次</option>
+                  </select>
+                </label>
+                <label>
+                  任务重叠
+                  <select
+                    value={deployment.overlap_policy || "skip"}
+                    onChange={(e) => field("overlap_policy", e.target.value)}
+                  >
+                    <option value="skip">跳过</option>
+                    <option value="allow">允许</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                Budget · JSON
+                <textarea
+                  className="mono"
+                  rows={4}
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                />
+              </label>
+              {[
+                ["files", "file_ids", "Files"],
+                ["memory", "memory_store_ids", "Memory"],
+                ["vaults", "vault_ids", "Vaults"],
+              ].map(([resource, key, label]) => (
+                <div className="form-field" key={key}>
+                  <span>{label}</span>
+                  <Picker
+                    kind={resource}
+                    multiple
+                    value={deployment[key] || []}
+                    onChange={(v) => field(key, v)}
+                  />
+                </div>
+              ))}
             </>
           )}
         </fieldset>
@@ -632,6 +819,11 @@ function Versions({ id }) {
   );
 }
 function ManagedResource({ kind, id }) {
+  const [editing, setEditing] = useState(false);
+  const deployment = useResource(
+    "deploymentsGet",
+    kind === "deployments" ? id : "",
+  );
   const q = useDetail(kind, id),
     api = useAPI(),
     [tab, setTab] = useState("detail");
@@ -674,6 +866,7 @@ function ManagedResource({ kind, id }) {
         ? [
             ["detail", "配置"],
             ["runs", "运行记录"],
+            ["versions", "版本"],
           ]
         : [
             ["detail", "实例"],
@@ -707,7 +900,21 @@ function ManagedResource({ kind, id }) {
                       <>
                         <button
                           className="button"
-                          disabled={busy || m.paused}
+                          disabled={!deployment.data}
+                          onClick={() => setEditing(true)}
+                        >
+                          编辑
+                        </button>
+                        {editing && (
+                          <Editor
+                            kind="deployments"
+                            initialDeployment={deployment.data}
+                            close={() => setEditing(false)}
+                          />
+                        )}
+                        <button
+                          className="button"
+                          disabled={busy}
                           onClick={() =>
                             change(
                               "deploymentsRun",
@@ -791,8 +998,38 @@ function ManagedResource({ kind, id }) {
                 {kind === "deployments" &&
                   (tab === "runs" ? (
                     <Runs id={id} />
+                  ) : tab === "versions" ? (
+                    <DeploymentVersions id={id} />
                   ) : (
                     <>
+                      {deployment.data && (
+                        <Section title="配置">
+                          <Fields
+                            values={{
+                              版本: deployment.data.version,
+                              "Agent 版本": deployment.data.follow_latest
+                                ? "最新"
+                                : deployment.data.agent_version,
+                              时区: deployment.data.timezone || "UTC",
+                              错过触发:
+                                deployment.data.misfire_policy || "skip",
+                              任务重叠:
+                                deployment.data.overlap_policy || "skip",
+                            }}
+                          />
+                          <ErrorMessage error={deployment.data.pause_reason} />
+                          <Code
+                            value={{
+                              budget: deployment.data.budget,
+                              file_ids: deployment.data.file_ids,
+                              memory_store_ids:
+                                deployment.data.memory_store_ids,
+                              vault_ids: deployment.data.vault_ids,
+                            }}
+                          />
+                        </Section>
+                      )}
+                      <Upcoming id={id} />
                       <Section title="Schedule">
                         <Fields
                           values={{
@@ -868,7 +1105,16 @@ function Runs({ id }) {
           {d.data.length ? (
             d.data.map((r) => (
               <Section key={r.id} title={date(r.created_at)}>
-                <Fields values={{ ID: r.id, Reason: r.reason }} />
+                <Fields
+                  values={{
+                    ID: r.id,
+                    Status: r.status,
+                    Trigger: r.trigger,
+                    配置版本: r.deployment_version,
+                    "Agent 版本": r.agent_version,
+                    Reason: r.reason,
+                  }}
+                />
                 <div className="actions">
                   {r.task_id && (
                     <>
@@ -901,6 +1147,62 @@ function Runs({ id }) {
             </button>
             <button
               type="button"
+              disabled={!d.next_offset}
+              onClick={() => setOffset(d.next_offset)}
+            >
+              下一页
+            </button>
+          </div>
+        </>
+      )}
+    </Load>
+  );
+}
+
+function Upcoming({ id }) {
+  const q = useResource("deploymentsSchedule", id);
+  return (
+    <Load query={q}>
+      {(d) => (
+        <Section title="未来触发时间">
+          {d.times.length ? (
+            d.times.map((t) => (
+              <div className="package-row" key={t}>
+                {date(t)}
+              </div>
+            ))
+          ) : (
+            <Empty title="仅手动触发" />
+          )}
+        </Section>
+      )}
+    </Load>
+  );
+}
+function DeploymentVersions({ id }) {
+  const [offset, setOffset] = useState(0);
+  const q = useResource("deploymentsVersions", id, { offset, limit: 20 });
+  return (
+    <Load query={q}>
+      {(d) => (
+        <>
+          {d.data.map((v) => (
+            <Section
+              key={v.version}
+              title={`v${v.version} · ${date(v.created_at)}`}
+              open={false}
+            >
+              <Code value={v.config} />
+            </Section>
+          ))}
+          <div className="page-controls">
+            <button
+              disabled={!offset}
+              onClick={() => setOffset(Math.max(0, offset - 20))}
+            >
+              上一页
+            </button>
+            <button
               disabled={!d.next_offset}
               onClick={() => setOffset(d.next_offset)}
             >

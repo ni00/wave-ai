@@ -21,12 +21,18 @@ var _ MappedNullable = &DeploymentsRun{}
 
 // DeploymentsRun struct for DeploymentsRun
 type DeploymentsRun struct {
+	AgentVersion *int32 `json:"agent_version,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	DeploymentId string `json:"deployment_id"`
+	DeploymentVersion *int32 `json:"deployment_version,omitempty"`
+	ErrorCode *string `json:"error_code,omitempty"`
 	Id string `json:"id"`
 	Reason *string `json:"reason,omitempty"`
+	ScheduledAt *string `json:"scheduled_at,omitempty"`
 	SessionId *string `json:"session_id,omitempty"`
+	Status *string `json:"status,omitempty"`
 	TaskId *string `json:"task_id,omitempty"`
+	Trigger *string `json:"trigger,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -50,6 +56,38 @@ func NewDeploymentsRun(createdAt time.Time, deploymentId string, id string) *Dep
 func NewDeploymentsRunWithDefaults() *DeploymentsRun {
 	this := DeploymentsRun{}
 	return &this
+}
+
+// GetAgentVersion returns the AgentVersion field value if set, zero value otherwise.
+func (o *DeploymentsRun) GetAgentVersion() int32 {
+	if o == nil || IsNil(o.AgentVersion) {
+		var ret int32
+		return ret
+	}
+	return *o.AgentVersion
+}
+
+// GetAgentVersionOk returns a tuple with the AgentVersion field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsRun) GetAgentVersionOk() (*int32, bool) {
+	if o == nil || IsNil(o.AgentVersion) {
+		return nil, false
+	}
+	return o.AgentVersion, true
+}
+
+// HasAgentVersion returns a boolean if a field has been set.
+func (o *DeploymentsRun) HasAgentVersion() bool {
+	if o != nil && !IsNil(o.AgentVersion) {
+		return true
+	}
+
+	return false
+}
+
+// SetAgentVersion gets a reference to the given int32 and assigns it to the AgentVersion field.
+func (o *DeploymentsRun) SetAgentVersion(v int32) {
+	o.AgentVersion = &v
 }
 
 // GetCreatedAt returns the CreatedAt field value
@@ -98,6 +136,70 @@ func (o *DeploymentsRun) GetDeploymentIdOk() (*string, bool) {
 // SetDeploymentId sets field value
 func (o *DeploymentsRun) SetDeploymentId(v string) {
 	o.DeploymentId = v
+}
+
+// GetDeploymentVersion returns the DeploymentVersion field value if set, zero value otherwise.
+func (o *DeploymentsRun) GetDeploymentVersion() int32 {
+	if o == nil || IsNil(o.DeploymentVersion) {
+		var ret int32
+		return ret
+	}
+	return *o.DeploymentVersion
+}
+
+// GetDeploymentVersionOk returns a tuple with the DeploymentVersion field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsRun) GetDeploymentVersionOk() (*int32, bool) {
+	if o == nil || IsNil(o.DeploymentVersion) {
+		return nil, false
+	}
+	return o.DeploymentVersion, true
+}
+
+// HasDeploymentVersion returns a boolean if a field has been set.
+func (o *DeploymentsRun) HasDeploymentVersion() bool {
+	if o != nil && !IsNil(o.DeploymentVersion) {
+		return true
+	}
+
+	return false
+}
+
+// SetDeploymentVersion gets a reference to the given int32 and assigns it to the DeploymentVersion field.
+func (o *DeploymentsRun) SetDeploymentVersion(v int32) {
+	o.DeploymentVersion = &v
+}
+
+// GetErrorCode returns the ErrorCode field value if set, zero value otherwise.
+func (o *DeploymentsRun) GetErrorCode() string {
+	if o == nil || IsNil(o.ErrorCode) {
+		var ret string
+		return ret
+	}
+	return *o.ErrorCode
+}
+
+// GetErrorCodeOk returns a tuple with the ErrorCode field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsRun) GetErrorCodeOk() (*string, bool) {
+	if o == nil || IsNil(o.ErrorCode) {
+		return nil, false
+	}
+	return o.ErrorCode, true
+}
+
+// HasErrorCode returns a boolean if a field has been set.
+func (o *DeploymentsRun) HasErrorCode() bool {
+	if o != nil && !IsNil(o.ErrorCode) {
+		return true
+	}
+
+	return false
+}
+
+// SetErrorCode gets a reference to the given string and assigns it to the ErrorCode field.
+func (o *DeploymentsRun) SetErrorCode(v string) {
+	o.ErrorCode = &v
 }
 
 // GetId returns the Id field value
@@ -156,6 +258,38 @@ func (o *DeploymentsRun) SetReason(v string) {
 	o.Reason = &v
 }
 
+// GetScheduledAt returns the ScheduledAt field value if set, zero value otherwise.
+func (o *DeploymentsRun) GetScheduledAt() string {
+	if o == nil || IsNil(o.ScheduledAt) {
+		var ret string
+		return ret
+	}
+	return *o.ScheduledAt
+}
+
+// GetScheduledAtOk returns a tuple with the ScheduledAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsRun) GetScheduledAtOk() (*string, bool) {
+	if o == nil || IsNil(o.ScheduledAt) {
+		return nil, false
+	}
+	return o.ScheduledAt, true
+}
+
+// HasScheduledAt returns a boolean if a field has been set.
+func (o *DeploymentsRun) HasScheduledAt() bool {
+	if o != nil && !IsNil(o.ScheduledAt) {
+		return true
+	}
+
+	return false
+}
+
+// SetScheduledAt gets a reference to the given string and assigns it to the ScheduledAt field.
+func (o *DeploymentsRun) SetScheduledAt(v string) {
+	o.ScheduledAt = &v
+}
+
 // GetSessionId returns the SessionId field value if set, zero value otherwise.
 func (o *DeploymentsRun) GetSessionId() string {
 	if o == nil || IsNil(o.SessionId) {
@@ -186,6 +320,38 @@ func (o *DeploymentsRun) HasSessionId() bool {
 // SetSessionId gets a reference to the given string and assigns it to the SessionId field.
 func (o *DeploymentsRun) SetSessionId(v string) {
 	o.SessionId = &v
+}
+
+// GetStatus returns the Status field value if set, zero value otherwise.
+func (o *DeploymentsRun) GetStatus() string {
+	if o == nil || IsNil(o.Status) {
+		var ret string
+		return ret
+	}
+	return *o.Status
+}
+
+// GetStatusOk returns a tuple with the Status field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsRun) GetStatusOk() (*string, bool) {
+	if o == nil || IsNil(o.Status) {
+		return nil, false
+	}
+	return o.Status, true
+}
+
+// HasStatus returns a boolean if a field has been set.
+func (o *DeploymentsRun) HasStatus() bool {
+	if o != nil && !IsNil(o.Status) {
+		return true
+	}
+
+	return false
+}
+
+// SetStatus gets a reference to the given string and assigns it to the Status field.
+func (o *DeploymentsRun) SetStatus(v string) {
+	o.Status = &v
 }
 
 // GetTaskId returns the TaskId field value if set, zero value otherwise.
@@ -220,6 +386,38 @@ func (o *DeploymentsRun) SetTaskId(v string) {
 	o.TaskId = &v
 }
 
+// GetTrigger returns the Trigger field value if set, zero value otherwise.
+func (o *DeploymentsRun) GetTrigger() string {
+	if o == nil || IsNil(o.Trigger) {
+		var ret string
+		return ret
+	}
+	return *o.Trigger
+}
+
+// GetTriggerOk returns a tuple with the Trigger field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsRun) GetTriggerOk() (*string, bool) {
+	if o == nil || IsNil(o.Trigger) {
+		return nil, false
+	}
+	return o.Trigger, true
+}
+
+// HasTrigger returns a boolean if a field has been set.
+func (o *DeploymentsRun) HasTrigger() bool {
+	if o != nil && !IsNil(o.Trigger) {
+		return true
+	}
+
+	return false
+}
+
+// SetTrigger gets a reference to the given string and assigns it to the Trigger field.
+func (o *DeploymentsRun) SetTrigger(v string) {
+	o.Trigger = &v
+}
+
 func (o DeploymentsRun) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -230,17 +428,35 @@ func (o DeploymentsRun) MarshalJSON() ([]byte, error) {
 
 func (o DeploymentsRun) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.AgentVersion) {
+		toSerialize["agent_version"] = o.AgentVersion
+	}
 	toSerialize["created_at"] = o.CreatedAt
 	toSerialize["deployment_id"] = o.DeploymentId
+	if !IsNil(o.DeploymentVersion) {
+		toSerialize["deployment_version"] = o.DeploymentVersion
+	}
+	if !IsNil(o.ErrorCode) {
+		toSerialize["error_code"] = o.ErrorCode
+	}
 	toSerialize["id"] = o.Id
 	if !IsNil(o.Reason) {
 		toSerialize["reason"] = o.Reason
 	}
+	if !IsNil(o.ScheduledAt) {
+		toSerialize["scheduled_at"] = o.ScheduledAt
+	}
 	if !IsNil(o.SessionId) {
 		toSerialize["session_id"] = o.SessionId
 	}
+	if !IsNil(o.Status) {
+		toSerialize["status"] = o.Status
+	}
 	if !IsNil(o.TaskId) {
 		toSerialize["task_id"] = o.TaskId
+	}
+	if !IsNil(o.Trigger) {
+		toSerialize["trigger"] = o.Trigger
 	}
 
 	for key, value := range o.AdditionalProperties {
@@ -287,12 +503,18 @@ func (o *DeploymentsRun) UnmarshalJSON(data []byte) (err error) {
 	additionalProperties := make(map[string]interface{})
 
 	if err = json.Unmarshal(data, &additionalProperties); err == nil {
+		delete(additionalProperties, "agent_version")
 		delete(additionalProperties, "created_at")
 		delete(additionalProperties, "deployment_id")
+		delete(additionalProperties, "deployment_version")
+		delete(additionalProperties, "error_code")
 		delete(additionalProperties, "id")
 		delete(additionalProperties, "reason")
+		delete(additionalProperties, "scheduled_at")
 		delete(additionalProperties, "session_id")
+		delete(additionalProperties, "status")
 		delete(additionalProperties, "task_id")
+		delete(additionalProperties, "trigger")
 		o.AdditionalProperties = additionalProperties
 	}
 

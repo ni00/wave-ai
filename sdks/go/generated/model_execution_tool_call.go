@@ -37,6 +37,7 @@ type ExecutionToolCall struct {
 	TaskId string `json:"task_id"`
 	Tool AgentsTool `json:"tool"`
 	UpdatedAt time.Time `json:"updated_at"`
+	WaitUntil *string `json:"wait_until,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -469,6 +470,38 @@ func (o *ExecutionToolCall) SetUpdatedAt(v time.Time) {
 	o.UpdatedAt = v
 }
 
+// GetWaitUntil returns the WaitUntil field value if set, zero value otherwise.
+func (o *ExecutionToolCall) GetWaitUntil() string {
+	if o == nil || IsNil(o.WaitUntil) {
+		var ret string
+		return ret
+	}
+	return *o.WaitUntil
+}
+
+// GetWaitUntilOk returns a tuple with the WaitUntil field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ExecutionToolCall) GetWaitUntilOk() (*string, bool) {
+	if o == nil || IsNil(o.WaitUntil) {
+		return nil, false
+	}
+	return o.WaitUntil, true
+}
+
+// HasWaitUntil returns a boolean if a field has been set.
+func (o *ExecutionToolCall) HasWaitUntil() bool {
+	if o != nil && !IsNil(o.WaitUntil) {
+		return true
+	}
+
+	return false
+}
+
+// SetWaitUntil gets a reference to the given string and assigns it to the WaitUntil field.
+func (o *ExecutionToolCall) SetWaitUntil(v string) {
+	o.WaitUntil = &v
+}
+
 func (o ExecutionToolCall) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -504,6 +537,9 @@ func (o ExecutionToolCall) ToMap() (map[string]interface{}, error) {
 	toSerialize["task_id"] = o.TaskId
 	toSerialize["tool"] = o.Tool
 	toSerialize["updated_at"] = o.UpdatedAt
+	if !IsNil(o.WaitUntil) {
+		toSerialize["wait_until"] = o.WaitUntil
+	}
 
 	for key, value := range o.AdditionalProperties {
 		toSerialize[key] = value
@@ -571,6 +607,7 @@ func (o *ExecutionToolCall) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "task_id")
 		delete(additionalProperties, "tool")
 		delete(additionalProperties, "updated_at")
+		delete(additionalProperties, "wait_until")
 		o.AdditionalProperties = additionalProperties
 	}
 

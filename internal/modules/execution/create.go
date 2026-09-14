@@ -18,7 +18,7 @@ import (
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
-func CreateTask(ctx context.Context, db *gorm.DB, p *auth.Principal, sid, agentID, text string, budget Budget) (Task, error) {
+func CreateTask(ctx context.Context, db *gorm.DB, p *auth.Principal, sid, agentID, text string, budget Budget, versions ...int) (Task, error) {
 	var out Task
 	if text == "" {
 		return out, apierr.Invalid("input is required")
@@ -31,7 +31,11 @@ func CreateTask(ctx context.Context, db *gorm.DB, p *auth.Principal, sid, agentI
 		if s.Archived {
 			return apierr.Invalid("session archived")
 		}
-		a, e := agents.Get(ctx, tx, p, agentID)
+		version := 0
+		if len(versions) > 0 {
+			version = versions[0]
+		}
+		a, e := agents.GetVersion(ctx, tx, p, agentID, version)
 		if e != nil {
 			return e
 		}
@@ -60,14 +64,14 @@ func CreateTask(ctx context.Context, db *gorm.DB, p *auth.Principal, sid, agentI
 		}
 		roster := ""
 		for _, id := range a.Config.ExpertIDs {
-			expert, e := agents.Get(ctx, tx, p, id)
+			expert, e := agents.GetVersion(ctx, tx, p, id, a.Config.ExpertVersions[id])
 			if e != nil {
 				return e
 			}
 			if expert.Archived {
 				return apierr.Invalid("expert is archived")
 			}
-			if e = validateResources(ctx, tx, p, agents.Restrict(a.Config, expert.Config), s); e != nil {
+			if e = validateResources(ctx, tx, p, agents.Delegated(a.Config, expert.Config), s); e != nil {
 				return e
 			}
 			out.Experts[id] = expert
@@ -111,6 +115,9 @@ func validateResources(ctx context.Context, db *gorm.DB, p *auth.Principal, cfg 
 		if tool.CredentialID != "" {
 			var credential vault.Credential
 			if e := auth.Owned(db.WithContext(ctx), p).Where(clause.And(eq("id", tool.CredentialID), eq("revoked", false))).Take(&credential).Error; e != nil {
+				return e
+			}
+			if e := vault.Authorize(ctx, db, p, credential, s.VaultIDs); e != nil {
 				return e
 			}
 			u, e := url.Parse(tool.ServerURL)

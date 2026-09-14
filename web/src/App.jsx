@@ -9,6 +9,8 @@ import React, {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconRobot,
+  IconWebhook,
+  IconLock,
   IconPuzzle,
   IconCalendarClock,
   IconServer,
@@ -58,6 +60,10 @@ import {
   Empty,
   DetailBoundary,
 } from "./ui.jsx";
+const Operations = lazy(() => import("./Operations.jsx"));
+const OperationCreate = lazy(() =>
+  import("./Operations.jsx").then((m) => ({ default: m.CreateAction })),
+);
 const Management = lazy(() => import("./Management.jsx"));
 const CreateAction = lazy(() =>
   import("./Management.jsx").then((m) => ({ default: m.CreateAction })),
@@ -73,6 +79,8 @@ const navigation = [
   ["logs", "Logs", IconTerminal2, "Monitoring"],
   ["agents", "Agents", IconRobot, "资源与执行"],
   ["skills", "Skills", IconPuzzle, "资源与执行"],
+  ["vaults", "Vaults", IconLock, "资源与执行"],
+  ["webhooks", "Webhooks", IconWebhook, "资源与执行"],
   ["deployments", "Deployments", IconCalendarClock, "资源与执行"],
   ["environments", "Environments", IconBox, "运行环境"],
   ["sandboxes", "Sandboxes", IconServer, "资源与执行"],
@@ -451,6 +459,11 @@ function Console({ api, logout }) {
                 icon={NavIcon}
                 count={`${rows.length}${list.data?.next_cursor ? "+" : ""}`}
               >
+                {["vaults", "webhooks"].includes(kind) && (
+                  <Suspense>
+                    <OperationCreate key={kind} kind={kind} />
+                  </Suspense>
+                )}
                 {["agents", "deployments"].includes(kind) && (
                   <Suspense>
                     <CreateAction key={kind} kind={kind} />
@@ -724,6 +737,12 @@ function Console({ api, logout }) {
                           id={selected}
                           live={live}
                           initialSpan={location.span}
+                        />
+                      ) : ["vaults", "webhooks"].includes(kind) ? (
+                        <Operations
+                          kind={kind}
+                          id={selected}
+                          key={kind + selected}
                         />
                       ) : [
                           "agents",

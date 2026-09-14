@@ -26,6 +26,9 @@ func Maintain(ctx context.Context, db *gorm.DB) {
 	}
 }
 func Expire(ctx context.Context, db *gorm.DB) error {
+	if e := WakeWaiters(ctx, db); e != nil {
+		return e
+	}
 	rows := []Task{}
 	if e := db.WithContext(ctx).Select("id", "started_at", "budget").Where(clause.And(eq("cancel_requested", false), eq("finished_at", nil), clause.Neq{Column: "started_at", Value: nil})).Limit(1000).Find(&rows).Error; e != nil {
 		return e

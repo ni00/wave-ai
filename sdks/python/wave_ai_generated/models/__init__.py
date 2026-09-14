@@ -13,6 +13,7 @@
 """  # noqa: E501
 
 # import models into model package
+from wave_ai_generated.models.agents_acceptance_check import AgentsAcceptanceCheck
 from wave_ai_generated.models.agents_agent import AgentsAgent
 from wave_ai_generated.models.agents_config import AgentsConfig
 from wave_ai_generated.models.agents_list_response import AgentsListResponse
@@ -30,11 +31,17 @@ from wave_ai_generated.models.deployments_list_response import DeploymentsListRe
 from wave_ai_generated.models.deployments_pause_request import DeploymentsPauseRequest
 from wave_ai_generated.models.deployments_run import DeploymentsRun
 from wave_ai_generated.models.deployments_runs_response import DeploymentsRunsResponse
+from wave_ai_generated.models.deployments_schedule_response import DeploymentsScheduleResponse
+from wave_ai_generated.models.deployments_update_request import DeploymentsUpdateRequest
+from wave_ai_generated.models.deployments_version import DeploymentsVersion
+from wave_ai_generated.models.deployments_versions_response import DeploymentsVersionsResponse
 from wave_ai_generated.models.environments_create_request import EnvironmentsCreateRequest
 from wave_ai_generated.models.environments_environment import EnvironmentsEnvironment
 from wave_ai_generated.models.environments_list_response import EnvironmentsListResponse
 from wave_ai_generated.models.execution_budget import ExecutionBudget
+from wave_ai_generated.models.execution_check_result import ExecutionCheckResult
 from wave_ai_generated.models.execution_create_session_request import ExecutionCreateSessionRequest
+from wave_ai_generated.models.execution_evaluation import ExecutionEvaluation
 from wave_ai_generated.models.execution_event import ExecutionEvent
 from wave_ai_generated.models.execution_events_response import ExecutionEventsResponse
 from wave_ai_generated.models.execution_generation import ExecutionGeneration
@@ -83,4 +90,16 @@ from wave_ai_generated.models.telemetry_value import TelemetryValue
 from wave_ai_generated.models.vault_create_request import VaultCreateRequest
 from wave_ai_generated.models.vault_credential import VaultCredential
 from wave_ai_generated.models.vault_list_response import VaultListResponse
+from wave_ai_generated.models.vault_rotate_request import VaultRotateRequest
+from wave_ai_generated.models.vault_validate_request import VaultValidateRequest
+from wave_ai_generated.models.vault_validation import VaultValidation
+from wave_ai_generated.models.vault_vault import VaultVault
+from wave_ai_generated.models.vault_vault_request import VaultVaultRequest
+from wave_ai_generated.models.vault_vaults_response import VaultVaultsResponse
+from wave_ai_generated.models.webhooks_create_request import WebhooksCreateRequest
+from wave_ai_generated.models.webhooks_deliveries_response import WebhooksDeliveriesResponse
+from wave_ai_generated.models.webhooks_delivery import WebhooksDelivery
+from wave_ai_generated.models.webhooks_list_response import WebhooksListResponse
+from wave_ai_generated.models.webhooks_subscription import WebhooksSubscription
+from wave_ai_generated.models.webhooks_update_request import WebhooksUpdateRequest
 

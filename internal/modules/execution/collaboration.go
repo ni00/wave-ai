@@ -25,7 +25,7 @@ func management(t *Task) []modelclient.ToolDef {
 		}{"agent_spawn", "Delegate to an owned expert agent; only one level is allowed", []string{"agent_id", "text"}}, struct {
 			name, desc string
 			fields     []string
-		}{"agent_wait", "Wait until all current children finish; yields execution without polling the model", []string{}}, struct {
+		}{"agent_wait", "Wait for selected child tasks, any or all, with an optional timeout; yields execution without polling the model", []string{}}, struct {
 			name, desc string
 			fields     []string
 		}{"agent_cancel", "Request cancellation of a child", []string{"task_id"}})
@@ -35,6 +35,11 @@ func management(t *Task) []modelclient.ToolDef {
 		props := map[string]any{}
 		for _, f := range spec.fields {
 			props[f] = map[string]any{"type": "string"}
+		}
+		if spec.name == "agent_wait" {
+			props["task_ids"] = map[string]any{"type": "array", "items": map[string]any{"type": "string"}}
+			props["mode"] = map[string]any{"type": "string", "enum": []string{"all", "any"}}
+			props["timeout_seconds"] = map[string]any{"type": "integer", "minimum": 0, "maximum": 3600}
 		}
 		if spec.name == "agent_spawn" {
 			props["budget"] = map[string]any{"type": "object", "properties": map[string]any{"max_tokens": map[string]any{"type": "integer"}, "max_tool_calls": map[string]any{"type": "integer"}, "max_seconds": map[string]any{"type": "integer"}}}

@@ -24,6 +24,12 @@ func Register(r *gin.RouterGroup, db *gorm.DB, box *secrets.Box) {
 	r.POST("/credentials", h.create)
 	r.GET("/credentials", h.list)
 	r.DELETE("/credentials/:id", h.revoke)
+	r.PUT("/credentials/:id", h.rotate)
+	r.POST("/credentials/:id/validate", h.validate)
+	r.POST("/vaults", h.createVault)
+	r.GET("/vaults", h.listVaults)
+	r.GET("/vaults/:id", h.getVault)
+	r.DELETE("/vaults/:id", h.archiveVault)
 }
 
 // create godoc
@@ -48,8 +54,12 @@ func (h handler) create(c *gin.Context) {
 		return
 	}
 	u, e := url.Parse("https://" + in.Host)
-	if e != nil || u.Host != in.Host || u.User != nil || u.Path != "" {
+	if e != nil || u.Host != in.Host || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.Hostname() == "" {
 		httpx.Error(c, apierr.Invalid("host must be an exact authority without path or user info"))
+		return
+	}
+	if len(in.Token) > 65536 {
+		httpx.Error(c, apierr.Invalid("token exceeds 65536 bytes"))
 		return
 	}
 	cipher, nonce, e := h.box.Seal([]byte(in.Token))
@@ -58,7 +68,18 @@ func (h handler) create(c *gin.Context) {
 		return
 	}
 	p := c.MustGet("principal").(*auth.Principal)
-	row := Credential{ID: xid.New("credential"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: in.Name, Host: in.Host, Ciphertext: cipher, Nonce: nonce}
+	if in.VaultID != "" {
+		v, e := Get(c.Request.Context(), h.db, p, in.VaultID)
+		if e != nil {
+			httpx.Error(c, e)
+			return
+		}
+		if v.Archived {
+			httpx.Error(c, apierr.Invalid("vault archived"))
+			return
+		}
+	}
+	row := Credential{VaultID: in.VaultID, Version: 1, ID: xid.New("credential"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: in.Name, Host: in.Host, Ciphertext: cipher, Nonce: nonce}
 	if e = h.db.WithContext(c.Request.Context()).Create(&row).Error; e != nil {
 		httpx.Error(c, e)
 		return
@@ -74,6 +95,7 @@ func (h handler) create(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param limit query int false "每页条数 || Items per page" minimum(1) maximum(200) default(100)
+// @Param vault_id query string false "凭据库 ID || Vault ID"
 // @Param offset query int false "偏移量 || Offset" minimum(0) default(0)
 // @Success 200 {object} ListResponse
 // @Failure 400 {object} apierr.Envelope "分页参数不合法 || Invalid pagination parameters"
@@ -83,7 +105,12 @@ func (h handler) create(c *gin.Context) {
 // @Router /v1/credentials [get]
 func (h handler) list(c *gin.Context) {
 	rows := []Credential{}
-	if e := auth.Owned(h.db.WithContext(c.Request.Context()), c.MustGet("principal").(*auth.Principal)).Scopes(httpx.Page(c)).Find(&rows).Error; e != nil {
+	if e := auth.Owned(h.db.WithContext(c.Request.Context()), c.MustGet("principal").(*auth.Principal)).Scopes(httpx.Page(c), func(db *gorm.DB) *gorm.DB {
+		if id := c.Query("vault_id"); id != "" {
+			return db.Where(clause.Eq{Column: "vault_id", Value: id})
+		}
+		return db
+	}).Find(&rows).Error; e != nil {
 		httpx.Error(c, e)
 		return
 	}

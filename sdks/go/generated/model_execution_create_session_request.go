@@ -23,6 +23,7 @@ type ExecutionCreateSessionRequest struct {
 	FileIds []string `json:"file_ids,omitempty"`
 	MemoryStoreIds []string `json:"memory_store_ids,omitempty"`
 	Title *string `json:"title,omitempty"`
+	VaultIds []string `json:"vault_ids,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -175,6 +176,38 @@ func (o *ExecutionCreateSessionRequest) SetTitle(v string) {
 	o.Title = &v
 }
 
+// GetVaultIds returns the VaultIds field value if set, zero value otherwise.
+func (o *ExecutionCreateSessionRequest) GetVaultIds() []string {
+	if o == nil || IsNil(o.VaultIds) {
+		var ret []string
+		return ret
+	}
+	return o.VaultIds
+}
+
+// GetVaultIdsOk returns a tuple with the VaultIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ExecutionCreateSessionRequest) GetVaultIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.VaultIds) {
+		return nil, false
+	}
+	return o.VaultIds, true
+}
+
+// HasVaultIds returns a boolean if a field has been set.
+func (o *ExecutionCreateSessionRequest) HasVaultIds() bool {
+	if o != nil && !IsNil(o.VaultIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetVaultIds gets a reference to the given []string and assigns it to the VaultIds field.
+func (o *ExecutionCreateSessionRequest) SetVaultIds(v []string) {
+	o.VaultIds = v
+}
+
 func (o ExecutionCreateSessionRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -196,6 +229,9 @@ func (o ExecutionCreateSessionRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Title) {
 		toSerialize["title"] = o.Title
+	}
+	if !IsNil(o.VaultIds) {
+		toSerialize["vault_ids"] = o.VaultIds
 	}
 
 	for key, value := range o.AdditionalProperties {
@@ -223,6 +259,7 @@ func (o *ExecutionCreateSessionRequest) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "file_ids")
 		delete(additionalProperties, "memory_store_ids")
 		delete(additionalProperties, "title")
+		delete(additionalProperties, "vault_ids")
 		o.AdditionalProperties = additionalProperties
 	}
 

@@ -23,6 +23,7 @@ type VaultCreateRequest struct {
 	Host string `json:"host"`
 	Name string `json:"name"`
 	Token string `json:"token"`
+	VaultId *string `json:"vault_id,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -120,6 +121,38 @@ func (o *VaultCreateRequest) SetToken(v string) {
 	o.Token = v
 }
 
+// GetVaultId returns the VaultId field value if set, zero value otherwise.
+func (o *VaultCreateRequest) GetVaultId() string {
+	if o == nil || IsNil(o.VaultId) {
+		var ret string
+		return ret
+	}
+	return *o.VaultId
+}
+
+// GetVaultIdOk returns a tuple with the VaultId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VaultCreateRequest) GetVaultIdOk() (*string, bool) {
+	if o == nil || IsNil(o.VaultId) {
+		return nil, false
+	}
+	return o.VaultId, true
+}
+
+// HasVaultId returns a boolean if a field has been set.
+func (o *VaultCreateRequest) HasVaultId() bool {
+	if o != nil && !IsNil(o.VaultId) {
+		return true
+	}
+
+	return false
+}
+
+// SetVaultId gets a reference to the given string and assigns it to the VaultId field.
+func (o *VaultCreateRequest) SetVaultId(v string) {
+	o.VaultId = &v
+}
+
 func (o VaultCreateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -133,6 +166,9 @@ func (o VaultCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize["host"] = o.Host
 	toSerialize["name"] = o.Name
 	toSerialize["token"] = o.Token
+	if !IsNil(o.VaultId) {
+		toSerialize["vault_id"] = o.VaultId
+	}
 
 	for key, value := range o.AdditionalProperties {
 		toSerialize[key] = value
@@ -181,6 +217,7 @@ func (o *VaultCreateRequest) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "host")
 		delete(additionalProperties, "name")
 		delete(additionalProperties, "token")
+		delete(additionalProperties, "vault_id")
 		o.AdditionalProperties = additionalProperties
 	}
 

@@ -526,6 +526,8 @@
             "skills",
             "agents",
             "deployments",
+            "vaults",
+            "webhooks",
             "files",
             "memory",
             "sessions",
@@ -1242,6 +1244,98 @@
     },
     "summary": "Create a deployment"
   },
+  "deploymentsGet": {
+    "authenticated": true,
+    "command": "deployments get",
+    "id": "deploymentsGet",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/deployments/{id}",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/deployments.Deployment"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Get a deployment"
+  },
   "deploymentsList": {
     "authenticated": true,
     "command": "deployments list",
@@ -1426,6 +1520,7 @@
     "authenticated": true,
     "command": "deployments run",
     "id": "deploymentsRun",
+    "idempotent": true,
     "method": "POST",
     "parameters": [
       {
@@ -1433,6 +1528,14 @@
         "in": "path",
         "name": "id",
         "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Retry deduplication key",
+        "in": "header",
+        "name": "Idempotency-Key",
         "schema": {
           "type": "string"
         }
@@ -1490,16 +1593,6 @@
           }
         },
         "description": "Deployment not found or outside the current owner's scope"
-      },
-      "409": {
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/apierr.Envelope"
-            }
-          }
-        },
-        "description": "Deployment is paused"
       },
       "500": {
         "content": {
@@ -1620,6 +1713,317 @@
       }
     },
     "summary": "Deployment run records"
+  },
+  "deploymentsSchedule": {
+    "authenticated": true,
+    "command": "deployments schedule",
+    "id": "deploymentsSchedule",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/deployments/{id}/schedule",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/deployments.ScheduleResponse"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Upcoming occurrences"
+  },
+  "deploymentsUpdate": {
+    "authenticated": true,
+    "command": "deployments update",
+    "id": "deploymentsUpdate",
+    "method": "PUT",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/deployments/{id}",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/deployments.UpdateRequest"
+          }
+        }
+      },
+      "description": "Request",
+      "required": true
+    },
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/deployments.Deployment"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Update deployment configuration"
+  },
+  "deploymentsVersions": {
+    "authenticated": true,
+    "command": "deployments versions",
+    "id": "deploymentsVersions",
+    "method": "GET",
+    "pagination": {
+      "next": "next_offset",
+      "request": "offset"
+    },
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Items per page",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      {
+        "description": "Offset",
+        "in": "query",
+        "name": "offset",
+        "schema": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    ],
+    "path": "/v1/deployments/{id}/versions",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/deployments.VersionsResponse"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Deployment versions"
   },
   "environmentsArchive": {
     "authenticated": true,
@@ -2162,6 +2566,113 @@
       }
     },
     "summary": "Cancel a task"
+  },
+  "executionCollaboration": {
+    "authenticated": true,
+    "command": "tasks collaboration",
+    "id": "executionCollaboration",
+    "method": "GET",
+    "pagination": {
+      "next": "next_offset",
+      "request": "offset"
+    },
+    "parameters": [
+      {
+        "description": "Task ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Items per page",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      {
+        "description": "Offset",
+        "in": "query",
+        "name": "offset",
+        "schema": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    ],
+    "path": "/v1/tasks/{id}/collaboration",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/execution.TasksResponse"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Collaboration tasks"
   },
   "executionCreateSession": {
     "authenticated": true,
@@ -5516,6 +6027,14 @@
         }
       },
       {
+        "description": "Vault ID",
+        "in": "query",
+        "name": "vault_id",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
         "description": "Offset",
         "in": "query",
         "name": "offset",
@@ -5646,5 +6165,1205 @@
       }
     },
     "summary": "Revoke a credential"
+  },
+  "vaultRotate": {
+    "authenticated": true,
+    "command": "credentials rotate",
+    "id": "vaultRotate",
+    "method": "PUT",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/credentials/{id}",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/vault.RotateRequest"
+          }
+        }
+      },
+      "description": "Request",
+      "required": true
+    },
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/vault.Credential"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Rotate a credential"
+  },
+  "vaultValidate": {
+    "authenticated": true,
+    "command": "credentials validate",
+    "id": "vaultValidate",
+    "method": "POST",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/credentials/{id}/validate",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/vault.ValidateRequest"
+          }
+        }
+      },
+      "description": "Request",
+      "required": true
+    },
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/vault.Validation"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Validate credential binding and encryption"
+  },
+  "vaultsArchive": {
+    "authenticated": true,
+    "command": "vaults archive",
+    "id": "vaultsArchive",
+    "method": "DELETE",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/vaults/{id}",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/vault.Vault"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Archive a vault"
+  },
+  "vaultsCreate": {
+    "authenticated": true,
+    "command": "vaults create",
+    "id": "vaultsCreate",
+    "method": "POST",
+    "parameters": [],
+    "path": "/v1/vaults",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/vault.VaultRequest"
+          }
+        }
+      },
+      "description": "Request",
+      "required": true
+    },
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/vault.Vault"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Create a vault"
+  },
+  "vaultsGet": {
+    "authenticated": true,
+    "command": "vaults get",
+    "id": "vaultsGet",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/vaults/{id}",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/vault.Vault"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Get a vault"
+  },
+  "vaultsList": {
+    "authenticated": true,
+    "command": "vaults list",
+    "id": "vaultsList",
+    "method": "GET",
+    "pagination": {
+      "next": "next_offset",
+      "request": "offset"
+    },
+    "parameters": [
+      {
+        "description": "Items per page",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      {
+        "description": "Offset",
+        "in": "query",
+        "name": "offset",
+        "schema": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    ],
+    "path": "/v1/vaults",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/vault.VaultsResponse"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "List vaults"
+  },
+  "webhooksCreate": {
+    "authenticated": true,
+    "command": "webhooks create",
+    "id": "webhooksCreate",
+    "method": "POST",
+    "parameters": [],
+    "path": "/v1/webhooks",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/webhooks.CreateRequest"
+          }
+        }
+      },
+      "description": "Request",
+      "required": true
+    },
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/webhooks.Subscription"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Create a webhook"
+  },
+  "webhooksDeliveries": {
+    "authenticated": true,
+    "command": "webhooks deliveries",
+    "id": "webhooksDeliveries",
+    "method": "GET",
+    "pagination": {
+      "next": "next_offset",
+      "request": "offset"
+    },
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Items per page",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      {
+        "description": "Offset",
+        "in": "query",
+        "name": "offset",
+        "schema": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    ],
+    "path": "/v1/webhooks/{id}/deliveries",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/webhooks.DeliveriesResponse"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Webhook deliveries"
+  },
+  "webhooksGet": {
+    "authenticated": true,
+    "command": "webhooks get",
+    "id": "webhooksGet",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/webhooks/{id}",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/webhooks.Subscription"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Get a webhook"
+  },
+  "webhooksList": {
+    "authenticated": true,
+    "command": "webhooks list",
+    "id": "webhooksList",
+    "method": "GET",
+    "pagination": {
+      "next": "next_offset",
+      "request": "offset"
+    },
+    "parameters": [
+      {
+        "description": "Items per page",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      {
+        "description": "Offset",
+        "in": "query",
+        "name": "offset",
+        "schema": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    ],
+    "path": "/v1/webhooks",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/webhooks.ListResponse"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "List webhooks"
+  },
+  "webhooksRetry": {
+    "authenticated": true,
+    "command": "webhooks retry",
+    "id": "webhooksRetry",
+    "method": "POST",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "delivery",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/webhooks/{id}/deliveries/{delivery}/retry",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/webhooks.Delivery"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Retry delivery"
+  },
+  "webhooksUpdate": {
+    "authenticated": true,
+    "command": "webhooks update",
+    "id": "webhooksUpdate",
+    "method": "PATCH",
+    "parameters": [
+      {
+        "description": "Resource ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/webhooks/{id}",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/webhooks.UpdateRequest"
+          }
+        }
+      },
+      "description": "Request",
+      "required": true
+    },
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/webhooks.Subscription"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "409": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Request failed"
+      }
+    },
+    "summary": "Pause or resume a webhook"
   }
 }

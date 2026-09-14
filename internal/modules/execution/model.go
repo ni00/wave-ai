@@ -6,6 +6,7 @@ import (
 
 	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
+	"wave-ai.local/wave/internal/modules/webhooks"
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/telemetry"
 )
@@ -24,6 +25,7 @@ type Session struct {
 	MessageSeq    int64             `json:"message_sequence" validate:"required" format:"int64"`
 	EventSeq      int64             `json:"event_sequence" validate:"required" format:"int64"`
 	FileIDs       []string          `gorm:"serializer:json;type:jsonb" json:"file_ids" validate:"required" extensions:"x-nullable"`
+	VaultIDs      []string          `gorm:"serializer:json;type:jsonb" json:"vault_ids,omitempty"`
 	MemoryIDs     []string          `gorm:"serializer:json;type:jsonb" json:"memory_store_ids" validate:"required" extensions:"x-nullable"`
 	CreatedAt     time.Time         `json:"created_at" validate:"required" format:"date-time"`
 }
@@ -83,6 +85,7 @@ type Task struct {
 	PendingFinish   string                  `json:"-"`
 	Failures        int                     `json:"-"`
 	Attempts        int                     `json:"attempts" validate:"required"`
+	Evaluation      *Evaluation             `gorm:"serializer:json;type:jsonb" json:"evaluation,omitempty"`
 	Result          string                  `json:"result,omitempty"`
 	Error           string                  `json:"error,omitempty"`
 	CreatedAt       time.Time               `gorm:"index:task_queue,priority:2" json:"created_at" validate:"required" format:"date-time"`
@@ -120,6 +123,7 @@ type ToolCall struct {
 	Resolution *ToolResult `gorm:"serializer:json;type:jsonb" json:"-"`
 	StartedAt  *time.Time  `json:"started_at,omitempty" format:"date-time"`
 	FinishedAt *time.Time  `json:"finished_at,omitempty" format:"date-time"`
+	WaitUntil  *time.Time  `gorm:"index" json:"wait_until,omitempty"`
 	Delivered  bool        `json:"delivered" validate:"required"`
 	CreatedAt  time.Time   `json:"created_at" validate:"required" format:"date-time"`
 	UpdatedAt  time.Time   `json:"updated_at" validate:"required" format:"date-time"`
@@ -129,7 +133,7 @@ func Terminal(s string) bool {
 	return s == "succeeded" || s == "partial" || s == "failed" || s == "canceled"
 }
 func Models() []any {
-	return append([]any{&Session{}, &Task{}, &Input{}, &Event{}, &ToolCall{}, &Summary{}, &Receipt{}, &Message{}, &Generation{}}, telemetry.Models()...)
+	return append([]any{&webhooks.Subscription{}, &webhooks.Delivery{}, &Session{}, &Task{}, &Input{}, &Event{}, &ToolCall{}, &Summary{}, &Receipt{}, &Message{}, &Generation{}}, telemetry.Models()...)
 }
 
 type Workspace struct {
@@ -142,6 +146,7 @@ type Workspace struct {
 
 // CreateSessionRequest is the POST /v1/sessions request body.
 type CreateSessionRequest struct {
+	VaultIDs      []string `json:"vault_ids"`
 	Title         string   `json:"title"`
 	EnvironmentID string   `json:"environment_id"`
 	FileIDs       []string `json:"file_ids" extensions:"x-nullable"`
@@ -233,4 +238,16 @@ func (b Budget) Narrow(child Budget) Budget {
 	b.MaxAgents = 0
 	b.MaxConcurrentAgents = 0
 	return b
+}
+
+type CheckResult struct {
+	Kind   string `json:"kind"`
+	Path   string `json:"path,omitempty"`
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
+}
+type Evaluation struct {
+	Status      string        `json:"status"`
+	Checks      []CheckResult `json:"checks"`
+	EvaluatedAt time.Time     `json:"evaluated_at"`
 }

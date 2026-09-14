@@ -34,6 +34,13 @@ import {
     AgentsConfigToJSON,
     AgentsConfigToJSONTyped,
 } from './AgentsConfig.js';
+import type { ExecutionEvaluation } from './ExecutionEvaluation.js';
+import {
+    ExecutionEvaluationFromJSON,
+    ExecutionEvaluationFromJSONTyped,
+    ExecutionEvaluationToJSON,
+    ExecutionEvaluationToJSONTyped,
+} from './ExecutionEvaluation.js';
 
 /**
  * 
@@ -77,6 +84,10 @@ export interface ExecutionTask {
      * 
      */
     error?: string;
+    /**
+     * 
+     */
+    evaluation?: ExecutionEvaluation;
     /**
      * 
      */
@@ -190,6 +201,7 @@ export function ExecutionTaskFromJSONTyped(json: any, ignoreDiscriminator: boole
         'cancelRequested': json['cancel_requested'],
         'createdAt': (json['created_at'] == null ? json['created_at'] : parseDateTime(json['created_at'])),
         'error': json['error'] == null ? undefined : json['error'],
+        'evaluation': json['evaluation'] == null ? undefined : ExecutionEvaluationFromJSON(json['evaluation']),
         'experts': json['experts'] == null ? undefined : (mapValues(json['experts'], AgentsAgentFromJSON)),
         'finishedAt': json['finished_at'] == null ? undefined : (parseDateTime(json['finished_at'])),
         'id': json['id'],
@@ -226,6 +238,7 @@ export function ExecutionTaskToJSONTyped(value?: ExecutionTask | null, ignoreDis
         'cancel_requested': value['cancelRequested'],
         'created_at': value['createdAt'] == null ? value['createdAt'] : serializeDateTime(value['createdAt']),
         'error': value['error'],
+        'evaluation': ExecutionEvaluationToJSON(value['evaluation']),
         'experts': value['experts'] == null ? undefined : (mapValues(value['experts'], AgentsAgentToJSON)),
         'finished_at': value['finishedAt'] == null ? value['finishedAt'] : serializeDateTime(value['finishedAt']),
         'id': value['id'],

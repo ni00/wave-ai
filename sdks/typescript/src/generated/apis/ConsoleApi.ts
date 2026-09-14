@@ -602,6 +602,8 @@ export const ConsoleBrowseKindEnum = {
     Skills: 'skills',
     Agents: 'agents',
     Deployments: 'deployments',
+    Vaults: 'vaults',
+    Webhooks: 'webhooks',
     Files: 'files',
     Memory: 'memory',
     Sessions: 'sessions',

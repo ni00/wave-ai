@@ -29,6 +29,7 @@ import (
 	"wave-ai.local/wave/internal/modules/memory"
 	"wave-ai.local/wave/internal/modules/skills"
 	"wave-ai.local/wave/internal/modules/vault"
+	"wave-ai.local/wave/internal/modules/webhooks"
 	_ "wave-ai.local/wave/internal/platform/apidocs" // 生成的 OpenAPI spec，/swagger 路由依赖
 	"wave-ai.local/wave/internal/platform/apierr"
 	"wave-ai.local/wave/internal/platform/auth"
@@ -55,7 +56,7 @@ type App struct {
 
 func Models() []any {
 	out := auth.Models()
-	out = append(out, &agents.Agent{}, &agents.Version{}, &environments.Environment{}, &files.File{}, &vault.Credential{}, &skills.Skill{}, &deployments.Deployment{}, &deployments.Run{}, &sandbox.Record{}, &sandbox.Process{}, &Workspace{})
+	out = append(out, &agents.Agent{}, &agents.Version{}, &environments.Environment{}, &files.File{}, &vault.Credential{}, &vault.Vault{}, &skills.Skill{}, &deployments.Deployment{}, &deployments.Run{}, &deployments.Version{}, &sandbox.Record{}, &sandbox.Process{}, &Workspace{})
 	out = append(out, memory.Models()...)
 	return append(out, execution.Models()...)
 }
@@ -206,6 +207,7 @@ func (a *App) Handler() http.Handler {
 	vault.Register(v, a.DB, a.Box)
 	skills.Register(v, a.DB, a.Blobs)
 	deployments.Register(v, a.DB)
+	webhooks.Register(v, a.DB, a.Box)
 	return r
 }
 
@@ -235,6 +237,7 @@ func (a *App) Run(ctx context.Context) error {
 		group.Go(func() error { return a.serve(ctx) })
 	}
 	if role == "all" || role == "scheduler" {
+		group.Go(func() error { webhooks.Run(ctx, a.DB, a.Box); return nil })
 		group.Go(func() error { deployments.RunScheduler(ctx, a.DB); return nil })
 	}
 	if role == "all" || role == "worker" {
@@ -251,6 +254,7 @@ func (a *App) Run(ctx context.Context) error {
 					Execute:       a.execute,
 					Prepare:       a.prepare,
 					Finish:        a.finish,
+					Evaluate:      a.evaluate,
 					Admit:         a.admitSandbox,
 				}
 				worker.Run(ctx)

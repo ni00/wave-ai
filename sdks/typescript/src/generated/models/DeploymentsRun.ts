@@ -22,11 +22,23 @@ export interface DeploymentsRun {
     /**
      * 
      */
+    agentVersion?: number;
+    /**
+     * 
+     */
     createdAt: Date;
     /**
      * 
      */
     deploymentId: string;
+    /**
+     * 
+     */
+    deploymentVersion?: number;
+    /**
+     * 
+     */
+    errorCode?: string;
     /**
      * 
      */
@@ -38,11 +50,23 @@ export interface DeploymentsRun {
     /**
      * 
      */
+    scheduledAt?: string;
+    /**
+     * 
+     */
     sessionId?: string;
     /**
      * 
      */
+    status?: string;
+    /**
+     * 
+     */
     taskId?: string;
+    /**
+     * 
+     */
+    trigger?: string;
 }
 
 /**
@@ -65,12 +89,18 @@ export function DeploymentsRunFromJSONTyped(json: any, ignoreDiscriminator: bool
     }
     return {
         
+        'agentVersion': json['agent_version'] == null ? undefined : json['agent_version'],
         'createdAt': (json['created_at'] == null ? json['created_at'] : parseDateTime(json['created_at'])),
         'deploymentId': json['deployment_id'],
+        'deploymentVersion': json['deployment_version'] == null ? undefined : json['deployment_version'],
+        'errorCode': json['error_code'] == null ? undefined : json['error_code'],
         'id': json['id'],
         'reason': json['reason'] == null ? undefined : json['reason'],
+        'scheduledAt': json['scheduled_at'] == null ? undefined : json['scheduled_at'],
         'sessionId': json['session_id'] == null ? undefined : json['session_id'],
+        'status': json['status'] == null ? undefined : json['status'],
         'taskId': json['task_id'] == null ? undefined : json['task_id'],
+        'trigger': json['trigger'] == null ? undefined : json['trigger'],
     };
 }
 
@@ -85,12 +115,18 @@ export function DeploymentsRunToJSONTyped(value?: DeploymentsRun | null, ignoreD
 
     return {
         
+        'agent_version': value['agentVersion'],
         'created_at': value['createdAt'] == null ? value['createdAt'] : serializeDateTime(value['createdAt']),
         'deployment_id': value['deploymentId'],
+        'deployment_version': value['deploymentVersion'],
+        'error_code': value['errorCode'],
         'id': value['id'],
         'reason': value['reason'],
+        'scheduled_at': value['scheduledAt'],
         'session_id': value['sessionId'],
+        'status': value['status'],
         'task_id': value['taskId'],
+        'trigger': value['trigger'],
     };
 }
 

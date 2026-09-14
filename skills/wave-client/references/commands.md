@@ -33,6 +33,8 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | `wavectl credentials list` | — | — | List credentials |
 | `wavectl credentials create` | — | `--host`, `--name`, `--token` | Store a credential |
 | `wavectl credentials revoke` | `--id` | — | Revoke a credential |
+| `wavectl credentials rotate` | `--id` | `--token`, `--version` | Rotate a credential |
+| `wavectl credentials validate` | `--id` | `--target` | Validate credential binding and encryption |
 
 ## deployments
 
@@ -40,9 +42,13 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | --- | --- | --- | --- |
 | `wavectl deployments list` | — | — | List deployments |
 | `wavectl deployments create` | — | `--agent-id`, `--input`, `--name` | Create a deployment |
+| `wavectl deployments get` | `--id` | — | Get a deployment |
 | `wavectl deployments pause` | `--id` | `--paused` | Pause or resume a deployment |
+| `wavectl deployments update` | `--id` | `--config`, `--version` | Update deployment configuration |
 | `wavectl deployments run` | `--id` | — | Trigger a deployment manually |
 | `wavectl deployments runs` | `--id` | — | Deployment run records |
+| `wavectl deployments schedule` | `--id` | — | Upcoming occurrences |
+| `wavectl deployments versions` | `--id` | — | Deployment versions |
 
 ## environments
 
@@ -116,6 +122,7 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | `wavectl tasks get` | `--id` | — | Get a task |
 | `wavectl tasks delegate` | `--id` | `--agent-id`, `--input` | Delegate a child task |
 | `wavectl tasks cancel` | `--id` | — | Cancel a task |
+| `wavectl tasks collaboration` | `--id` | — | Collaboration tasks |
 | `wavectl tasks generations` | `--id` | — | Task model-call records |
 | `wavectl tasks inputs` | `--id` | — | List task inputs |
 | `wavectl tasks input` | `--id` | `--text` | Steer a task with additional input |
@@ -129,6 +136,26 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | --- | --- | --- | --- |
 | `wavectl tools list` | `--id` | — | List task tool calls |
 | `wavectl tools resolve` | `--id`, `--call` | — | Submit tool approval or result |
+
+## vaults
+
+| Command | Required path flags | Required body fields | Description |
+| --- | --- | --- | --- |
+| `wavectl vaults list` | — | — | List vaults |
+| `wavectl vaults create` | — | `--name` | Create a vault |
+| `wavectl vaults archive` | `--id` | — | Archive a vault |
+| `wavectl vaults get` | `--id` | — | Get a vault |
+
+## webhooks
+
+| Command | Required path flags | Required body fields | Description |
+| --- | --- | --- | --- |
+| `wavectl webhooks list` | — | — | List webhooks |
+| `wavectl webhooks create` | — | `--events`, `--name`, `--secret`, `--url` | Create a webhook |
+| `wavectl webhooks get` | `--id` | — | Get a webhook |
+| `wavectl webhooks update` | `--id` | `--paused` | Pause or resume a webhook |
+| `wavectl webhooks deliveries` | `--id` | — | Webhook deliveries |
+| `wavectl webhooks retry` | `--id`, `--delivery` | — | Retry delivery |
 
 Path IDs also accept positional arguments in the order shown by help; session/task IDs support `--session` / `--task` aliases.
 Choose field flags or full `--body @file.json`; do not combine them.

@@ -39,6 +39,18 @@ export interface VaultCredential {
      * 
      */
     revoked: boolean;
+    /**
+     * 
+     */
+    updatedAt?: string;
+    /**
+     * 
+     */
+    vaultId?: string;
+    /**
+     * 
+     */
+    version?: number;
 }
 
 /**
@@ -68,6 +80,9 @@ export function VaultCredentialFromJSONTyped(json: any, ignoreDiscriminator: boo
         'id': json['id'],
         'name': json['name'],
         'revoked': json['revoked'],
+        'updatedAt': json['updated_at'] == null ? undefined : json['updated_at'],
+        'vaultId': json['vault_id'] == null ? undefined : json['vault_id'],
+        'version': json['version'] == null ? undefined : json['version'],
     };
 }
 
@@ -87,6 +102,9 @@ export function VaultCredentialToJSONTyped(value?: VaultCredential | null, ignor
         'id': value['id'],
         'name': value['name'],
         'revoked': value['revoked'],
+        'updated_at': value['updatedAt'],
+        'vault_id': value['vaultId'],
+        'version': value['version'],
     };
 }
 

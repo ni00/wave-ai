@@ -18,7 +18,7 @@ import re  # noqa: F401
 import json
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
@@ -28,14 +28,20 @@ class DeploymentsRun(BaseModel):
     """
     DeploymentsRun
     """ # noqa: E501
+    agent_version: Optional[StrictInt] = None
     created_at: datetime
     deployment_id: StrictStr
+    deployment_version: Optional[StrictInt] = None
+    error_code: Optional[StrictStr] = None
     id: StrictStr
     reason: Optional[StrictStr] = None
+    scheduled_at: Optional[StrictStr] = None
     session_id: Optional[StrictStr] = None
+    status: Optional[StrictStr] = None
     task_id: Optional[StrictStr] = None
+    trigger: Optional[StrictStr] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["created_at", "deployment_id", "id", "reason", "session_id", "task_id"]
+    __properties: ClassVar[List[str]] = ["agent_version", "created_at", "deployment_id", "deployment_version", "error_code", "id", "reason", "scheduled_at", "session_id", "status", "task_id", "trigger"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -95,12 +101,18 @@ class DeploymentsRun(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
+            "agent_version": obj.get("agent_version"),
             "created_at": obj.get("created_at"),
             "deployment_id": obj.get("deployment_id"),
+            "deployment_version": obj.get("deployment_version"),
+            "error_code": obj.get("error_code"),
             "id": obj.get("id"),
             "reason": obj.get("reason"),
+            "scheduled_at": obj.get("scheduled_at"),
             "session_id": obj.get("session_id"),
-            "task_id": obj.get("task_id")
+            "status": obj.get("status"),
+            "task_id": obj.get("task_id"),
+            "trigger": obj.get("trigger")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

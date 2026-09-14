@@ -181,12 +181,19 @@ type ApiVaultListRequest struct {
 	ctx context.Context
 	ApiService *VaultAPIService
 	limit *int32
+	vaultId *string
 	offset *int32
 }
 
 // Items per page
 func (r ApiVaultListRequest) Limit(limit int32) ApiVaultListRequest {
 	r.limit = &limit
+	return r
+}
+
+// Vault ID
+func (r ApiVaultListRequest) VaultId(vaultId string) ApiVaultListRequest {
+	r.vaultId = &vaultId
 	return r
 }
 
@@ -242,6 +249,9 @@ func (a *VaultAPIService) VaultListExecute(r ApiVaultListRequest) (*VaultListRes
 		var defaultValue int32 = 100
 		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", defaultValue, "form", "")
 		r.limit = &defaultValue
+	}
+	if r.vaultId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "vault_id", r.vaultId, "form", "")
 	}
 	if r.offset != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "offset", r.offset, "form", "")

@@ -38,8 +38,9 @@ class ExecutionSession(BaseModel):
     memory_store_ids: Optional[List[StrictStr]]
     message_sequence: StrictInt
     title: StrictStr
+    vault_ids: Optional[List[StrictStr]] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["active_task_id", "archived", "created_at", "environment_id", "event_sequence", "file_ids", "id", "memory_store_ids", "message_sequence", "title"]
+    __properties: ClassVar[List[str]] = ["active_task_id", "archived", "created_at", "environment_id", "event_sequence", "file_ids", "id", "memory_store_ids", "message_sequence", "title", "vault_ids"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -118,7 +119,8 @@ class ExecutionSession(BaseModel):
             "id": obj.get("id"),
             "memory_store_ids": obj.get("memory_store_ids"),
             "message_sequence": obj.get("message_sequence"),
-            "title": obj.get("title")
+            "title": obj.get("title"),
+            "vault_ids": obj.get("vault_ids")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

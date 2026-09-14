@@ -94,8 +94,13 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 			return w.parkUnknown(ctx, claim, e)
 		}
 	}
+	var evaluation *Evaluation
+	if task.ParentID == "" && w.Evaluate != nil && (state == "succeeded" || state == "partial") {
+		evaluation = w.Evaluate(ctx, s, task)
+	}
 	e = fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, t *Task) error {
 		now := time.Now()
+		t.Evaluation = evaluation
 		t.State = state
 		t.FinishedAt = &now
 		t.Owner = ""

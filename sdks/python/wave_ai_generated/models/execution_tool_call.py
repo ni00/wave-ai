@@ -44,8 +44,9 @@ class ExecutionToolCall(BaseModel):
     task_id: StrictStr
     tool: AgentsTool
     updated_at: datetime
+    wait_until: Optional[StrictStr] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["approval", "arguments", "created_at", "delivered", "error_code", "finished_at", "id", "is_error", "model_call_id", "result", "started_at", "status", "task_id", "tool", "updated_at"]
+    __properties: ClassVar[List[str]] = ["approval", "arguments", "created_at", "delivered", "error_code", "finished_at", "id", "is_error", "model_call_id", "result", "started_at", "status", "task_id", "tool", "updated_at", "wait_until"]
 
     @field_validator('status')
     def status_validate_enum(cls, value):
@@ -129,7 +130,8 @@ class ExecutionToolCall(BaseModel):
             "status": obj.get("status"),
             "task_id": obj.get("task_id"),
             "tool": AgentsTool.from_dict(obj["tool"]) if obj.get("tool") is not None else None,
-            "updated_at": obj.get("updated_at")
+            "updated_at": obj.get("updated_at"),
+            "wait_until": obj.get("wait_until")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

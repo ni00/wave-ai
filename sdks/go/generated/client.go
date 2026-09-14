@@ -53,6 +53,8 @@ type APIClient struct {
 
 	ConsoleAPI *ConsoleAPIService
 
+	CredentialsAPI *CredentialsAPIService
+
 	DeploymentsAPI *DeploymentsAPIService
 
 	EnvironmentsAPI *EnvironmentsAPIService
@@ -68,6 +70,10 @@ type APIClient struct {
 	SystemAPI *SystemAPIService
 
 	VaultAPI *VaultAPIService
+
+	VaultsAPI *VaultsAPIService
+
+	WebhooksAPI *WebhooksAPIService
 }
 
 type service struct {
@@ -88,6 +94,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	// API Services
 	c.AgentsAPI = (*AgentsAPIService)(&c.common)
 	c.ConsoleAPI = (*ConsoleAPIService)(&c.common)
+	c.CredentialsAPI = (*CredentialsAPIService)(&c.common)
 	c.DeploymentsAPI = (*DeploymentsAPIService)(&c.common)
 	c.EnvironmentsAPI = (*EnvironmentsAPIService)(&c.common)
 	c.ExecutionAPI = (*ExecutionAPIService)(&c.common)
@@ -96,6 +103,8 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.SkillsAPI = (*SkillsAPIService)(&c.common)
 	c.SystemAPI = (*SystemAPIService)(&c.common)
 	c.VaultAPI = (*VaultAPIService)(&c.common)
+	c.VaultsAPI = (*VaultsAPIService)(&c.common)
+	c.WebhooksAPI = (*WebhooksAPIService)(&c.common)
 
 	return c
 }

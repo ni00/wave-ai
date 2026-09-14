@@ -20,8 +20,11 @@ var _ MappedNullable = &AgentsConfig{}
 
 // AgentsConfig struct for AgentsConfig
 type AgentsConfig struct {
+	Acceptance []AgentsAcceptanceCheck `json:"acceptance,omitempty"`
+	DelegationPolicy *string `json:"delegation_policy,omitempty"`
 	Effort *string `json:"effort,omitempty"`
 	ExpertIds []string `json:"expert_ids,omitempty"`
+	ExpertVersions *map[string]int32 `json:"expert_versions,omitempty"`
 	Instructions *string `json:"instructions,omitempty"`
 	Model string `json:"model"`
 	Name string `json:"name"`
@@ -49,6 +52,70 @@ func NewAgentsConfig(model string, name string) *AgentsConfig {
 func NewAgentsConfigWithDefaults() *AgentsConfig {
 	this := AgentsConfig{}
 	return &this
+}
+
+// GetAcceptance returns the Acceptance field value if set, zero value otherwise.
+func (o *AgentsConfig) GetAcceptance() []AgentsAcceptanceCheck {
+	if o == nil || IsNil(o.Acceptance) {
+		var ret []AgentsAcceptanceCheck
+		return ret
+	}
+	return o.Acceptance
+}
+
+// GetAcceptanceOk returns a tuple with the Acceptance field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AgentsConfig) GetAcceptanceOk() ([]AgentsAcceptanceCheck, bool) {
+	if o == nil || IsNil(o.Acceptance) {
+		return nil, false
+	}
+	return o.Acceptance, true
+}
+
+// HasAcceptance returns a boolean if a field has been set.
+func (o *AgentsConfig) HasAcceptance() bool {
+	if o != nil && !IsNil(o.Acceptance) {
+		return true
+	}
+
+	return false
+}
+
+// SetAcceptance gets a reference to the given []AgentsAcceptanceCheck and assigns it to the Acceptance field.
+func (o *AgentsConfig) SetAcceptance(v []AgentsAcceptanceCheck) {
+	o.Acceptance = v
+}
+
+// GetDelegationPolicy returns the DelegationPolicy field value if set, zero value otherwise.
+func (o *AgentsConfig) GetDelegationPolicy() string {
+	if o == nil || IsNil(o.DelegationPolicy) {
+		var ret string
+		return ret
+	}
+	return *o.DelegationPolicy
+}
+
+// GetDelegationPolicyOk returns a tuple with the DelegationPolicy field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AgentsConfig) GetDelegationPolicyOk() (*string, bool) {
+	if o == nil || IsNil(o.DelegationPolicy) {
+		return nil, false
+	}
+	return o.DelegationPolicy, true
+}
+
+// HasDelegationPolicy returns a boolean if a field has been set.
+func (o *AgentsConfig) HasDelegationPolicy() bool {
+	if o != nil && !IsNil(o.DelegationPolicy) {
+		return true
+	}
+
+	return false
+}
+
+// SetDelegationPolicy gets a reference to the given string and assigns it to the DelegationPolicy field.
+func (o *AgentsConfig) SetDelegationPolicy(v string) {
+	o.DelegationPolicy = &v
 }
 
 // GetEffort returns the Effort field value if set, zero value otherwise.
@@ -114,6 +181,38 @@ func (o *AgentsConfig) HasExpertIds() bool {
 // SetExpertIds gets a reference to the given []string and assigns it to the ExpertIds field.
 func (o *AgentsConfig) SetExpertIds(v []string) {
 	o.ExpertIds = v
+}
+
+// GetExpertVersions returns the ExpertVersions field value if set, zero value otherwise.
+func (o *AgentsConfig) GetExpertVersions() map[string]int32 {
+	if o == nil || IsNil(o.ExpertVersions) {
+		var ret map[string]int32
+		return ret
+	}
+	return *o.ExpertVersions
+}
+
+// GetExpertVersionsOk returns a tuple with the ExpertVersions field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AgentsConfig) GetExpertVersionsOk() (*map[string]int32, bool) {
+	if o == nil || IsNil(o.ExpertVersions) {
+		return nil, false
+	}
+	return o.ExpertVersions, true
+}
+
+// HasExpertVersions returns a boolean if a field has been set.
+func (o *AgentsConfig) HasExpertVersions() bool {
+	if o != nil && !IsNil(o.ExpertVersions) {
+		return true
+	}
+
+	return false
+}
+
+// SetExpertVersions gets a reference to the given map[string]int32 and assigns it to the ExpertVersions field.
+func (o *AgentsConfig) SetExpertVersions(v map[string]int32) {
+	o.ExpertVersions = &v
 }
 
 // GetInstructions returns the Instructions field value if set, zero value otherwise.
@@ -272,11 +371,20 @@ func (o AgentsConfig) MarshalJSON() ([]byte, error) {
 
 func (o AgentsConfig) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Acceptance) {
+		toSerialize["acceptance"] = o.Acceptance
+	}
+	if !IsNil(o.DelegationPolicy) {
+		toSerialize["delegation_policy"] = o.DelegationPolicy
+	}
 	if !IsNil(o.Effort) {
 		toSerialize["effort"] = o.Effort
 	}
 	if o.ExpertIds != nil {
 		toSerialize["expert_ids"] = o.ExpertIds
+	}
+	if !IsNil(o.ExpertVersions) {
+		toSerialize["expert_versions"] = o.ExpertVersions
 	}
 	if !IsNil(o.Instructions) {
 		toSerialize["instructions"] = o.Instructions
@@ -333,8 +441,11 @@ func (o *AgentsConfig) UnmarshalJSON(data []byte) (err error) {
 	additionalProperties := make(map[string]interface{})
 
 	if err = json.Unmarshal(data, &additionalProperties); err == nil {
+		delete(additionalProperties, "acceptance")
+		delete(additionalProperties, "delegation_policy")
 		delete(additionalProperties, "effort")
 		delete(additionalProperties, "expert_ids")
+		delete(additionalProperties, "expert_versions")
 		delete(additionalProperties, "instructions")
 		delete(additionalProperties, "model")
 		delete(additionalProperties, "name")

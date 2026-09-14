@@ -18,7 +18,7 @@ import re  # noqa: F401
 import json
 
 from pydantic import BaseModel, ConfigDict, StrictStr
-from typing import Any, ClassVar, Dict, List
+from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
@@ -30,8 +30,9 @@ class VaultCreateRequest(BaseModel):
     host: StrictStr
     name: StrictStr
     token: StrictStr
+    vault_id: Optional[StrictStr] = None
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["host", "name", "token"]
+    __properties: ClassVar[List[str]] = ["host", "name", "token", "vault_id"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -93,7 +94,8 @@ class VaultCreateRequest(BaseModel):
         _obj = cls.model_validate({
             "host": obj.get("host"),
             "name": obj.get("name"),
-            "token": obj.get("token")
+            "token": obj.get("token"),
+            "vault_id": obj.get("vault_id")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

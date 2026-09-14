@@ -11,9 +11,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"wave-ai.local/wave/internal/modules/environments"
-	"wave-ai.local/wave/internal/modules/files"
-	"wave-ai.local/wave/internal/modules/memory"
 	"wave-ai.local/wave/internal/platform/apierr"
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/httpx"
@@ -40,6 +37,7 @@ func Register(r *gin.RouterGroup, db *gorm.DB) {
 	r.POST("/tasks/:id/cancel", h.cancelTask)
 	r.POST("/tasks/:id/resume", h.resumeTask)
 	r.POST("/tasks/:id/agents", h.delegateTask)
+	r.GET("/tasks/:id/collaboration", h.collaboration)
 	r.GET("/tasks/:id/inputs", h.listInputs)
 	r.GET("/tasks/:id/tools", h.listTools)
 	r.POST("/tasks/:id/tools/:call/result", h.resolveToolResult)
@@ -218,36 +216,9 @@ func (h handler) createSession(c *gin.Context) {
 		return
 	}
 	p := c.MustGet("principal").(*auth.Principal)
-	if in.EnvironmentID != "" {
-		env, e := environments.Get(c.Request.Context(), h.db, p, in.EnvironmentID)
-		if e != nil {
-			httpx.Error(c, e)
-			return
-		}
-		if env.Archived {
-			httpx.Error(c, apierr.Invalid("environment archived"))
-			return
-		}
-	}
-	if (len(in.FileIDs) > 0 || len(in.MemoryIDs) > 0) && in.EnvironmentID == "" {
-		httpx.Error(c, apierr.Invalid("mounted resources require an environment"))
+	if e := ValidateSessionResources(c.Request.Context(), h.db, p, in.EnvironmentID, in.FileIDs, in.MemoryIDs, in.VaultIDs); e != nil {
+		httpx.Error(c, e)
 		return
-	}
-	if len(in.FileIDs) > 100 || len(in.MemoryIDs) > 20 {
-		httpx.Error(c, apierr.Invalid("too many mounted resources"))
-		return
-	}
-	for _, id := range in.FileIDs {
-		if _, e := files.Get(c.Request.Context(), h.db, p, id); e != nil {
-			httpx.Error(c, e)
-			return
-		}
-	}
-	for _, id := range in.MemoryIDs {
-		if _, e := memory.Get(c.Request.Context(), h.db, p, id); e != nil {
-			httpx.Error(c, e)
-			return
-		}
 	}
 	s := Session{
 		ID:            xid.New("session"),
@@ -257,6 +228,7 @@ func (h handler) createSession(c *gin.Context) {
 		EnvironmentID: in.EnvironmentID,
 		FileIDs:       in.FileIDs,
 		MemoryIDs:     in.MemoryIDs,
+		VaultIDs:      in.VaultIDs,
 	}
 	if e := h.db.WithContext(c.Request.Context()).Create(&s).Error; e != nil {
 		httpx.Error(c, e)
@@ -773,4 +745,39 @@ func cursor(c *gin.Context) (int64, error) {
 		return 0, apierr.Invalid("after/Last-Event-ID must be a nonnegative event sequence")
 	}
 	return n, nil
+}
+
+// collaboration godoc
+// @ID executionCollaboration
+// @Summary 协作任务 || Collaboration tasks
+// @Tags execution
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "任务 ID || Task ID"
+// @Param limit query int false "每页条数 || Items per page" minimum(1) maximum(200) default(100)
+// @Param offset query int false "偏移量 || Offset" minimum(0) default(0)
+// @Success 200 {object} TasksResponse
+// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
+// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
+// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
+// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
+// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
+// @Router /v1/tasks/{id}/collaboration [get]
+func (h handler) collaboration(c *gin.Context) {
+	p := c.MustGet("principal").(*auth.Principal)
+	var t Task
+	e := h.db.WithContext(c.Request.Context()).Where(eq("id", c.Param("id"))).Take(&t).Error
+	if e == nil {
+		_, e = session(c.Request.Context(), h.db, p, t.SessionID)
+	}
+	if e != nil {
+		httpx.Error(c, e)
+		return
+	}
+	rows := []Task{}
+	if e = h.db.WithContext(c.Request.Context()).Omit("messages").Where(eq("root_id", t.RootID)).Scopes(httpx.Page(c)).Find(&rows).Error; e != nil {
+		httpx.Error(c, e)
+		return
+	}
+	httpx.List(c, rows)
 }

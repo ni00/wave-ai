@@ -41,7 +41,7 @@ func Register(r *gin.RouterGroup, db *gorm.DB, blobs *blobstore.Store) {
 // @Produce json
 // @Security BearerAuth
 // @Description 按当前所有者过滤。列表只含元数据，以不透明游标倒序分页；logs 是结构化应用日志，events 是执行事件（排除 token delta）。 || Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
-// @Param kind path string true "资源类型 || Resource kind" Enums(traces,logs,events,environments,sandboxes,skills,agents,deployments,files,memory,sessions,tasks,benchmarks)
+// @Param kind path string true "资源类型 || Resource kind" Enums(traces,logs,events,environments,sandboxes,skills,agents,deployments,vaults,webhooks,files,memory,sessions,tasks,benchmarks)
 // @Param q query string false "名称或 ID（最多 128 字节） || Name or ID (maximum 128 bytes)"
 // @Param state query string false "状态；日志级别；事件类型 || State, log level, or event type"
 // @Param module query string false "日志模块 || Log module"

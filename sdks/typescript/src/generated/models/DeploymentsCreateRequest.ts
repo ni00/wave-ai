@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime.js';
+import type { ExecutionBudget } from './ExecutionBudget.js';
+import {
+    ExecutionBudgetFromJSON,
+    ExecutionBudgetFromJSONTyped,
+    ExecutionBudgetToJSON,
+    ExecutionBudgetToJSONTyped,
+} from './ExecutionBudget.js';
+
 /**
  * 
  * @export
@@ -26,6 +34,14 @@ export interface DeploymentsCreateRequest {
     /**
      * 
      */
+    agentVersion?: number;
+    /**
+     * 
+     */
+    budget?: ExecutionBudget;
+    /**
+     * 
+     */
     cron?: string;
     /**
      * 
@@ -34,12 +50,60 @@ export interface DeploymentsCreateRequest {
     /**
      * 
      */
+    fileIds?: Array<string>;
+    /**
+     * 
+     */
+    followLatest?: boolean;
+    /**
+     * 
+     */
     input: string;
     /**
      * 
      */
+    memoryStoreIds?: Array<string>;
+    /**
+     * 
+     */
+    misfirePolicy?: DeploymentsCreateRequestMisfirePolicyEnum;
+    /**
+     * 
+     */
     name: string;
+    /**
+     * 
+     */
+    overlapPolicy?: DeploymentsCreateRequestOverlapPolicyEnum;
+    /**
+     * 
+     */
+    timezone?: string;
+    /**
+     * 
+     */
+    vaultIds?: Array<string>;
 }
+
+
+/**
+ * @export
+ */
+export const DeploymentsCreateRequestMisfirePolicyEnum = {
+    Skip: 'skip',
+    RunOnce: 'run_once',
+} as const;
+export type DeploymentsCreateRequestMisfirePolicyEnum = typeof DeploymentsCreateRequestMisfirePolicyEnum[keyof typeof DeploymentsCreateRequestMisfirePolicyEnum];
+
+/**
+ * @export
+ */
+export const DeploymentsCreateRequestOverlapPolicyEnum = {
+    Skip: 'skip',
+    Allow: 'allow',
+} as const;
+export type DeploymentsCreateRequestOverlapPolicyEnum = typeof DeploymentsCreateRequestOverlapPolicyEnum[keyof typeof DeploymentsCreateRequestOverlapPolicyEnum];
+
 
 /**
  * Check if a given object implements the DeploymentsCreateRequest interface.
@@ -62,10 +126,19 @@ export function DeploymentsCreateRequestFromJSONTyped(json: any, ignoreDiscrimin
     return {
         
         'agentId': json['agent_id'],
+        'agentVersion': json['agent_version'] == null ? undefined : json['agent_version'],
+        'budget': json['budget'] == null ? undefined : ExecutionBudgetFromJSON(json['budget']),
         'cron': json['cron'] == null ? undefined : json['cron'],
         'environmentId': json['environment_id'] == null ? undefined : json['environment_id'],
+        'fileIds': json['file_ids'] == null ? undefined : json['file_ids'],
+        'followLatest': json['follow_latest'] == null ? undefined : json['follow_latest'],
         'input': json['input'],
+        'memoryStoreIds': json['memory_store_ids'] == null ? undefined : json['memory_store_ids'],
+        'misfirePolicy': json['misfire_policy'] == null ? undefined : json['misfire_policy'],
         'name': json['name'],
+        'overlapPolicy': json['overlap_policy'] == null ? undefined : json['overlap_policy'],
+        'timezone': json['timezone'] == null ? undefined : json['timezone'],
+        'vaultIds': json['vault_ids'] == null ? undefined : json['vault_ids'],
     };
 }
 
@@ -81,10 +154,19 @@ export function DeploymentsCreateRequestToJSONTyped(value?: DeploymentsCreateReq
     return {
         
         'agent_id': value['agentId'],
+        'agent_version': value['agentVersion'],
+        'budget': ExecutionBudgetToJSON(value['budget']),
         'cron': value['cron'],
         'environment_id': value['environmentId'],
+        'file_ids': value['fileIds'],
+        'follow_latest': value['followLatest'],
         'input': value['input'],
+        'memory_store_ids': value['memoryStoreIds'],
+        'misfire_policy': value['misfirePolicy'],
         'name': value['name'],
+        'overlap_policy': value['overlapPolicy'],
+        'timezone': value['timezone'],
+        'vault_ids': value['vaultIds'],
     };
 }
 

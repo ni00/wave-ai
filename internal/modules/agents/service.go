@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"net/url"
+	"path"
 	"strings"
 
 	"gorm.io/gorm"
@@ -18,7 +19,82 @@ func Get(ctx context.Context, db *gorm.DB, p *auth.Principal, id string) (Agent,
 	err := auth.Owned(db.WithContext(ctx), p).Where(clause.Eq{Column: "id", Value: id}).Take(&a).Error
 	return a, err
 }
+
+// GetVersion resolves an immutable configuration within the current owner's scope.
+func GetVersion(ctx context.Context, db *gorm.DB, p *auth.Principal, id string, version int) (Agent, error) {
+	a, err := Get(ctx, db, p, id)
+	if err != nil || version == 0 || version == a.Version {
+		return a, err
+	}
+	var v Version
+	err = db.WithContext(ctx).Where(clause.And(clause.Eq{Column: "agent_id", Value: id}, clause.Eq{Column: "number", Value: version})).Take(&v).Error
+	if err == nil {
+		a.Version = v.Number
+		a.Config = v.Config
+	}
+	return a, err
+}
+
+func pinExperts(ctx context.Context, db *gorm.DB, p *auth.Principal, self string, c *Config) error {
+	versions := map[string]int{}
+	for _, id := range c.ExpertIDs {
+		if id == "" {
+			return apierr.Invalid("invalid expert ID")
+		}
+		if _, exists := versions[id]; exists {
+			return apierr.Invalid("duplicate expert ID")
+		}
+		a, err := GetVersion(ctx, db, p, id, c.ExpertVersions[id])
+		if err != nil {
+			return err
+		}
+		if a.Archived {
+			return apierr.Invalid("expert is archived")
+		}
+		versions[id] = a.Version
+	}
+	c.ExpertVersions = versions
+	return nil
+}
+
 func Validate(c Config) error {
+	if len(c.Acceptance) > 20 {
+		return apierr.Invalid("at most 20 acceptance checks")
+	}
+	for _, check := range c.Acceptance {
+		if check.Kind != "file_exists" && check.Kind != "json" {
+			return apierr.Invalid("invalid acceptance check kind")
+		}
+		if check.Kind == "file_exists" && check.Path == "" {
+			return apierr.Invalid("file_exists requires a path")
+		}
+		if check.Path != "" && (path.IsAbs(check.Path) || path.Clean(check.Path) != check.Path || check.Path == ".." || strings.HasPrefix(check.Path, "../") || strings.ContainsAny(check.Path, "\\\x00")) {
+			return apierr.Invalid("acceptance path must be relative to outputs")
+		}
+		if len(check.Required) > 100 || len(check.Types) > 100 {
+			return apierr.Invalid("too many acceptance fields")
+		}
+		for _, kind := range check.Types {
+			switch kind {
+			case "string", "number", "boolean", "object", "array", "null":
+			default:
+				return apierr.Invalid("invalid JSON field type")
+			}
+		}
+	}
+
+	if len(c.ExpertIDs) > 16 {
+		return apierr.Invalid("at most 16 configured experts")
+	}
+	if c.DelegationPolicy != "" && c.DelegationPolicy != "intersection" && c.DelegationPolicy != "explicit" {
+		return apierr.Invalid("invalid delegation_policy")
+	}
+	for _, version := range c.ExpertVersions {
+		if version < 0 {
+			return apierr.Invalid("expert version cannot be negative")
+		}
+	}
+
 	if strings.TrimSpace(c.Name) == "" || strings.TrimSpace(c.Model) == "" {
 		return apierr.Invalid("name and model are required")
 	}
@@ -59,6 +135,10 @@ func Create(ctx context.Context, db *gorm.DB, p *auth.Principal, c Config) (Agen
 		return a, err
 	}
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := pinExperts(ctx, tx, p, a.ID, &c); err != nil {
+			return err
+		}
+		a.Config = c
 		if err := tx.Create(&a).Error; err != nil {
 			return err
 		}
@@ -83,6 +163,9 @@ func Update(ctx context.Context, db *gorm.DB, p *auth.Principal, id string, expe
 		if a.Archived {
 			return apierr.Invalid("agent is archived")
 		}
+		if err := pinExperts(ctx, tx, p, id, &c); err != nil {
+			return err
+		}
 		a.Version++
 		a.Config = c
 		if err = tx.Save(&a).Error; err != nil {
@@ -91,6 +174,17 @@ func Update(ctx context.Context, db *gorm.DB, p *auth.Principal, id string, expe
 		return tx.Create(&Version{AgentID: id, Number: a.Version, Config: c}).Error
 	})
 	return a, err
+}
+
+// Delegated applies the coordinator's explicit delegation policy. Expert IDs are
+// an authorization roster; delegated configurations cannot delegate again.
+func Delegated(parent, expert Config) Config {
+	if parent.DelegationPolicy != "explicit" {
+		return Restrict(parent, expert)
+	}
+	expert.ExpertIDs = nil
+	expert.ExpertVersions = nil
+	return expert
 }
 
 // Restrict retains only capabilities that both parent and expert authorize.
@@ -103,6 +197,7 @@ func Restrict(parent, expert Config) Config {
 	out.Tools = nil
 	out.SkillIDs = nil
 	out.ExpertIDs = nil
+	out.ExpertVersions = nil
 	for _, id := range expert.SkillIDs {
 		for _, allowed := range parent.SkillIDs {
 			if id == allowed {

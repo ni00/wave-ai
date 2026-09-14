@@ -330,6 +330,7 @@ class VaultApi:
     def vault_list(
         self,
         limit: Annotated[Optional[Annotated[int, Field(le=200, strict=True, ge=1)]], Field(description="Items per page")] = None,
+        vault_id: Annotated[Optional[StrictStr], Field(description="Vault ID")] = None,
         offset: Annotated[Optional[Annotated[int, Field(strict=True, ge=0)]], Field(description="Offset")] = None,
         _request_timeout: Union[
             None,
@@ -350,6 +351,8 @@ class VaultApi:
 
         :param limit: Items per page
         :type limit: int
+        :param vault_id: Vault ID
+        :type vault_id: str
         :param offset: Offset
         :type offset: int
         :param _request_timeout: timeout setting for this request. If one
@@ -376,6 +379,7 @@ class VaultApi:
 
         _param = self._vault_list_serialize(
             limit=limit,
+            vault_id=vault_id,
             offset=offset,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -405,6 +409,7 @@ class VaultApi:
     def vault_list_with_http_info(
         self,
         limit: Annotated[Optional[Annotated[int, Field(le=200, strict=True, ge=1)]], Field(description="Items per page")] = None,
+        vault_id: Annotated[Optional[StrictStr], Field(description="Vault ID")] = None,
         offset: Annotated[Optional[Annotated[int, Field(strict=True, ge=0)]], Field(description="Offset")] = None,
         _request_timeout: Union[
             None,
@@ -425,6 +430,8 @@ class VaultApi:
 
         :param limit: Items per page
         :type limit: int
+        :param vault_id: Vault ID
+        :type vault_id: str
         :param offset: Offset
         :type offset: int
         :param _request_timeout: timeout setting for this request. If one
@@ -451,6 +458,7 @@ class VaultApi:
 
         _param = self._vault_list_serialize(
             limit=limit,
+            vault_id=vault_id,
             offset=offset,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -480,6 +488,7 @@ class VaultApi:
     def vault_list_without_preload_content(
         self,
         limit: Annotated[Optional[Annotated[int, Field(le=200, strict=True, ge=1)]], Field(description="Items per page")] = None,
+        vault_id: Annotated[Optional[StrictStr], Field(description="Vault ID")] = None,
         offset: Annotated[Optional[Annotated[int, Field(strict=True, ge=0)]], Field(description="Offset")] = None,
         _request_timeout: Union[
             None,
@@ -500,6 +509,8 @@ class VaultApi:
 
         :param limit: Items per page
         :type limit: int
+        :param vault_id: Vault ID
+        :type vault_id: str
         :param offset: Offset
         :type offset: int
         :param _request_timeout: timeout setting for this request. If one
@@ -526,6 +537,7 @@ class VaultApi:
 
         _param = self._vault_list_serialize(
             limit=limit,
+            vault_id=vault_id,
             offset=offset,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -550,6 +562,7 @@ class VaultApi:
     def _vault_list_serialize(
         self,
         limit,
+        vault_id,
         offset,
         _request_auth,
         _content_type,
@@ -576,6 +589,10 @@ class VaultApi:
         if limit is not None:
             
             _query_params.append(('limit', limit))
+            
+        if vault_id is not None:
+            
+            _query_params.append(('vault_id', vault_id))
             
         if offset is not None:
             

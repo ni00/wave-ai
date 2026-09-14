@@ -31,6 +31,7 @@ type ExecutionSession struct {
 	MemoryStoreIds []string `json:"memory_store_ids"`
 	MessageSequence int64 `json:"message_sequence"`
 	Title string `json:"title"`
+	VaultIds []string `json:"vault_ids,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -321,6 +322,38 @@ func (o *ExecutionSession) SetTitle(v string) {
 	o.Title = v
 }
 
+// GetVaultIds returns the VaultIds field value if set, zero value otherwise.
+func (o *ExecutionSession) GetVaultIds() []string {
+	if o == nil || IsNil(o.VaultIds) {
+		var ret []string
+		return ret
+	}
+	return o.VaultIds
+}
+
+// GetVaultIdsOk returns a tuple with the VaultIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ExecutionSession) GetVaultIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.VaultIds) {
+		return nil, false
+	}
+	return o.VaultIds, true
+}
+
+// HasVaultIds returns a boolean if a field has been set.
+func (o *ExecutionSession) HasVaultIds() bool {
+	if o != nil && !IsNil(o.VaultIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetVaultIds gets a reference to the given []string and assigns it to the VaultIds field.
+func (o *ExecutionSession) SetVaultIds(v []string) {
+	o.VaultIds = v
+}
+
 func (o ExecutionSession) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -349,6 +382,9 @@ func (o ExecutionSession) ToMap() (map[string]interface{}, error) {
 	}
 	toSerialize["message_sequence"] = o.MessageSequence
 	toSerialize["title"] = o.Title
+	if !IsNil(o.VaultIds) {
+		toSerialize["vault_ids"] = o.VaultIds
+	}
 
 	for key, value := range o.AdditionalProperties {
 		toSerialize[key] = value
@@ -409,6 +445,7 @@ func (o *ExecutionSession) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "memory_store_ids")
 		delete(additionalProperties, "message_sequence")
 		delete(additionalProperties, "title")
+		delete(additionalProperties, "vault_ids")
 		o.AdditionalProperties = additionalProperties
 	}
 

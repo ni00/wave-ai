@@ -23,6 +23,7 @@ from typing import Any, ClassVar, Dict, List, Optional
 from wave_ai_generated.models.agents_agent import AgentsAgent
 from wave_ai_generated.models.agents_config import AgentsConfig
 from wave_ai_generated.models.execution_budget import ExecutionBudget
+from wave_ai_generated.models.execution_evaluation import ExecutionEvaluation
 from typing import Optional, Set
 from typing_extensions import Self
 from pydantic_core import to_jsonable_python
@@ -40,6 +41,7 @@ class ExecutionTask(BaseModel):
     cancel_requested: StrictBool
     created_at: datetime
     error: Optional[StrictStr] = None
+    evaluation: Optional[ExecutionEvaluation] = None
     experts: Optional[Dict[str, AgentsAgent]] = None
     finished_at: Optional[datetime] = None
     id: StrictStr
@@ -54,7 +56,7 @@ class ExecutionTask(BaseModel):
     usage_known: StrictBool
     used_tokens: StrictInt
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["agent", "agent_count", "agent_id", "agent_version", "attempts", "budget", "cancel_requested", "created_at", "error", "experts", "finished_at", "id", "parent_id", "result", "root_id", "session_id", "started_at", "state", "tool_calls", "updated_at", "usage_known", "used_tokens"]
+    __properties: ClassVar[List[str]] = ["agent", "agent_count", "agent_id", "agent_version", "attempts", "budget", "cancel_requested", "created_at", "error", "evaluation", "experts", "finished_at", "id", "parent_id", "result", "root_id", "session_id", "started_at", "state", "tool_calls", "updated_at", "usage_known", "used_tokens"]
 
     @field_validator('state')
     def state_validate_enum(cls, value):
@@ -110,6 +112,9 @@ class ExecutionTask(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of budget
         if self.budget:
             _dict['budget'] = self.budget.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of evaluation
+        if self.evaluation:
+            _dict['evaluation'] = self.evaluation.to_dict()
         # override the default output from pydantic by calling `to_dict()` of each value in experts (dict)
         _field_dict = {}
         if self.experts:
@@ -142,6 +147,7 @@ class ExecutionTask(BaseModel):
             "cancel_requested": obj.get("cancel_requested"),
             "created_at": obj.get("created_at"),
             "error": obj.get("error"),
+            "evaluation": ExecutionEvaluation.from_dict(obj["evaluation"]) if obj.get("evaluation") is not None else None,
             "experts": dict(
                 (_k, AgentsAgent.from_dict(_v))
                 for _k, _v in obj["experts"].items()

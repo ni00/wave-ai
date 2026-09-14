@@ -21,10 +21,19 @@ var _ MappedNullable = &DeploymentsCreateRequest{}
 // DeploymentsCreateRequest struct for DeploymentsCreateRequest
 type DeploymentsCreateRequest struct {
 	AgentId string `json:"agent_id"`
+	AgentVersion *int32 `json:"agent_version,omitempty"`
+	Budget *ExecutionBudget `json:"budget,omitempty"`
 	Cron *string `json:"cron,omitempty"`
 	EnvironmentId *string `json:"environment_id,omitempty"`
+	FileIds []string `json:"file_ids,omitempty"`
+	FollowLatest *bool `json:"follow_latest,omitempty"`
 	Input string `json:"input"`
+	MemoryStoreIds []string `json:"memory_store_ids,omitempty"`
+	MisfirePolicy *string `json:"misfire_policy,omitempty"`
 	Name string `json:"name"`
+	OverlapPolicy *string `json:"overlap_policy,omitempty"`
+	Timezone *string `json:"timezone,omitempty"`
+	VaultIds []string `json:"vault_ids,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -72,6 +81,70 @@ func (o *DeploymentsCreateRequest) GetAgentIdOk() (*string, bool) {
 // SetAgentId sets field value
 func (o *DeploymentsCreateRequest) SetAgentId(v string) {
 	o.AgentId = v
+}
+
+// GetAgentVersion returns the AgentVersion field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetAgentVersion() int32 {
+	if o == nil || IsNil(o.AgentVersion) {
+		var ret int32
+		return ret
+	}
+	return *o.AgentVersion
+}
+
+// GetAgentVersionOk returns a tuple with the AgentVersion field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetAgentVersionOk() (*int32, bool) {
+	if o == nil || IsNil(o.AgentVersion) {
+		return nil, false
+	}
+	return o.AgentVersion, true
+}
+
+// HasAgentVersion returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasAgentVersion() bool {
+	if o != nil && !IsNil(o.AgentVersion) {
+		return true
+	}
+
+	return false
+}
+
+// SetAgentVersion gets a reference to the given int32 and assigns it to the AgentVersion field.
+func (o *DeploymentsCreateRequest) SetAgentVersion(v int32) {
+	o.AgentVersion = &v
+}
+
+// GetBudget returns the Budget field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetBudget() ExecutionBudget {
+	if o == nil || IsNil(o.Budget) {
+		var ret ExecutionBudget
+		return ret
+	}
+	return *o.Budget
+}
+
+// GetBudgetOk returns a tuple with the Budget field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetBudgetOk() (*ExecutionBudget, bool) {
+	if o == nil || IsNil(o.Budget) {
+		return nil, false
+	}
+	return o.Budget, true
+}
+
+// HasBudget returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasBudget() bool {
+	if o != nil && !IsNil(o.Budget) {
+		return true
+	}
+
+	return false
+}
+
+// SetBudget gets a reference to the given ExecutionBudget and assigns it to the Budget field.
+func (o *DeploymentsCreateRequest) SetBudget(v ExecutionBudget) {
+	o.Budget = &v
 }
 
 // GetCron returns the Cron field value if set, zero value otherwise.
@@ -138,6 +211,70 @@ func (o *DeploymentsCreateRequest) SetEnvironmentId(v string) {
 	o.EnvironmentId = &v
 }
 
+// GetFileIds returns the FileIds field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetFileIds() []string {
+	if o == nil || IsNil(o.FileIds) {
+		var ret []string
+		return ret
+	}
+	return o.FileIds
+}
+
+// GetFileIdsOk returns a tuple with the FileIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetFileIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.FileIds) {
+		return nil, false
+	}
+	return o.FileIds, true
+}
+
+// HasFileIds returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasFileIds() bool {
+	if o != nil && !IsNil(o.FileIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetFileIds gets a reference to the given []string and assigns it to the FileIds field.
+func (o *DeploymentsCreateRequest) SetFileIds(v []string) {
+	o.FileIds = v
+}
+
+// GetFollowLatest returns the FollowLatest field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetFollowLatest() bool {
+	if o == nil || IsNil(o.FollowLatest) {
+		var ret bool
+		return ret
+	}
+	return *o.FollowLatest
+}
+
+// GetFollowLatestOk returns a tuple with the FollowLatest field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetFollowLatestOk() (*bool, bool) {
+	if o == nil || IsNil(o.FollowLatest) {
+		return nil, false
+	}
+	return o.FollowLatest, true
+}
+
+// HasFollowLatest returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasFollowLatest() bool {
+	if o != nil && !IsNil(o.FollowLatest) {
+		return true
+	}
+
+	return false
+}
+
+// SetFollowLatest gets a reference to the given bool and assigns it to the FollowLatest field.
+func (o *DeploymentsCreateRequest) SetFollowLatest(v bool) {
+	o.FollowLatest = &v
+}
+
 // GetInput returns the Input field value
 func (o *DeploymentsCreateRequest) GetInput() string {
 	if o == nil {
@@ -160,6 +297,70 @@ func (o *DeploymentsCreateRequest) GetInputOk() (*string, bool) {
 // SetInput sets field value
 func (o *DeploymentsCreateRequest) SetInput(v string) {
 	o.Input = v
+}
+
+// GetMemoryStoreIds returns the MemoryStoreIds field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetMemoryStoreIds() []string {
+	if o == nil || IsNil(o.MemoryStoreIds) {
+		var ret []string
+		return ret
+	}
+	return o.MemoryStoreIds
+}
+
+// GetMemoryStoreIdsOk returns a tuple with the MemoryStoreIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetMemoryStoreIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.MemoryStoreIds) {
+		return nil, false
+	}
+	return o.MemoryStoreIds, true
+}
+
+// HasMemoryStoreIds returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasMemoryStoreIds() bool {
+	if o != nil && !IsNil(o.MemoryStoreIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetMemoryStoreIds gets a reference to the given []string and assigns it to the MemoryStoreIds field.
+func (o *DeploymentsCreateRequest) SetMemoryStoreIds(v []string) {
+	o.MemoryStoreIds = v
+}
+
+// GetMisfirePolicy returns the MisfirePolicy field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetMisfirePolicy() string {
+	if o == nil || IsNil(o.MisfirePolicy) {
+		var ret string
+		return ret
+	}
+	return *o.MisfirePolicy
+}
+
+// GetMisfirePolicyOk returns a tuple with the MisfirePolicy field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetMisfirePolicyOk() (*string, bool) {
+	if o == nil || IsNil(o.MisfirePolicy) {
+		return nil, false
+	}
+	return o.MisfirePolicy, true
+}
+
+// HasMisfirePolicy returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasMisfirePolicy() bool {
+	if o != nil && !IsNil(o.MisfirePolicy) {
+		return true
+	}
+
+	return false
+}
+
+// SetMisfirePolicy gets a reference to the given string and assigns it to the MisfirePolicy field.
+func (o *DeploymentsCreateRequest) SetMisfirePolicy(v string) {
+	o.MisfirePolicy = &v
 }
 
 // GetName returns the Name field value
@@ -186,6 +387,102 @@ func (o *DeploymentsCreateRequest) SetName(v string) {
 	o.Name = v
 }
 
+// GetOverlapPolicy returns the OverlapPolicy field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetOverlapPolicy() string {
+	if o == nil || IsNil(o.OverlapPolicy) {
+		var ret string
+		return ret
+	}
+	return *o.OverlapPolicy
+}
+
+// GetOverlapPolicyOk returns a tuple with the OverlapPolicy field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetOverlapPolicyOk() (*string, bool) {
+	if o == nil || IsNil(o.OverlapPolicy) {
+		return nil, false
+	}
+	return o.OverlapPolicy, true
+}
+
+// HasOverlapPolicy returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasOverlapPolicy() bool {
+	if o != nil && !IsNil(o.OverlapPolicy) {
+		return true
+	}
+
+	return false
+}
+
+// SetOverlapPolicy gets a reference to the given string and assigns it to the OverlapPolicy field.
+func (o *DeploymentsCreateRequest) SetOverlapPolicy(v string) {
+	o.OverlapPolicy = &v
+}
+
+// GetTimezone returns the Timezone field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetTimezone() string {
+	if o == nil || IsNil(o.Timezone) {
+		var ret string
+		return ret
+	}
+	return *o.Timezone
+}
+
+// GetTimezoneOk returns a tuple with the Timezone field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetTimezoneOk() (*string, bool) {
+	if o == nil || IsNil(o.Timezone) {
+		return nil, false
+	}
+	return o.Timezone, true
+}
+
+// HasTimezone returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasTimezone() bool {
+	if o != nil && !IsNil(o.Timezone) {
+		return true
+	}
+
+	return false
+}
+
+// SetTimezone gets a reference to the given string and assigns it to the Timezone field.
+func (o *DeploymentsCreateRequest) SetTimezone(v string) {
+	o.Timezone = &v
+}
+
+// GetVaultIds returns the VaultIds field value if set, zero value otherwise.
+func (o *DeploymentsCreateRequest) GetVaultIds() []string {
+	if o == nil || IsNil(o.VaultIds) {
+		var ret []string
+		return ret
+	}
+	return o.VaultIds
+}
+
+// GetVaultIdsOk returns a tuple with the VaultIds field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *DeploymentsCreateRequest) GetVaultIdsOk() ([]string, bool) {
+	if o == nil || IsNil(o.VaultIds) {
+		return nil, false
+	}
+	return o.VaultIds, true
+}
+
+// HasVaultIds returns a boolean if a field has been set.
+func (o *DeploymentsCreateRequest) HasVaultIds() bool {
+	if o != nil && !IsNil(o.VaultIds) {
+		return true
+	}
+
+	return false
+}
+
+// SetVaultIds gets a reference to the given []string and assigns it to the VaultIds field.
+func (o *DeploymentsCreateRequest) SetVaultIds(v []string) {
+	o.VaultIds = v
+}
+
 func (o DeploymentsCreateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -197,14 +494,41 @@ func (o DeploymentsCreateRequest) MarshalJSON() ([]byte, error) {
 func (o DeploymentsCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	toSerialize["agent_id"] = o.AgentId
+	if !IsNil(o.AgentVersion) {
+		toSerialize["agent_version"] = o.AgentVersion
+	}
+	if !IsNil(o.Budget) {
+		toSerialize["budget"] = o.Budget
+	}
 	if !IsNil(o.Cron) {
 		toSerialize["cron"] = o.Cron
 	}
 	if !IsNil(o.EnvironmentId) {
 		toSerialize["environment_id"] = o.EnvironmentId
 	}
+	if !IsNil(o.FileIds) {
+		toSerialize["file_ids"] = o.FileIds
+	}
+	if !IsNil(o.FollowLatest) {
+		toSerialize["follow_latest"] = o.FollowLatest
+	}
 	toSerialize["input"] = o.Input
+	if !IsNil(o.MemoryStoreIds) {
+		toSerialize["memory_store_ids"] = o.MemoryStoreIds
+	}
+	if !IsNil(o.MisfirePolicy) {
+		toSerialize["misfire_policy"] = o.MisfirePolicy
+	}
 	toSerialize["name"] = o.Name
+	if !IsNil(o.OverlapPolicy) {
+		toSerialize["overlap_policy"] = o.OverlapPolicy
+	}
+	if !IsNil(o.Timezone) {
+		toSerialize["timezone"] = o.Timezone
+	}
+	if !IsNil(o.VaultIds) {
+		toSerialize["vault_ids"] = o.VaultIds
+	}
 
 	for key, value := range o.AdditionalProperties {
 		toSerialize[key] = value
@@ -251,10 +575,19 @@ func (o *DeploymentsCreateRequest) UnmarshalJSON(data []byte) (err error) {
 
 	if err = json.Unmarshal(data, &additionalProperties); err == nil {
 		delete(additionalProperties, "agent_id")
+		delete(additionalProperties, "agent_version")
+		delete(additionalProperties, "budget")
 		delete(additionalProperties, "cron")
 		delete(additionalProperties, "environment_id")
+		delete(additionalProperties, "file_ids")
+		delete(additionalProperties, "follow_latest")
 		delete(additionalProperties, "input")
+		delete(additionalProperties, "memory_store_ids")
+		delete(additionalProperties, "misfire_policy")
 		delete(additionalProperties, "name")
+		delete(additionalProperties, "overlap_policy")
+		delete(additionalProperties, "timezone")
+		delete(additionalProperties, "vault_ids")
 		o.AdditionalProperties = additionalProperties
 	}
 

@@ -20,6 +20,7 @@ __version__ = "0.1.0"
 __all__ = [
     "AgentsApi",
     "ConsoleApi",
+    "CredentialsApi",
     "DeploymentsApi",
     "EnvironmentsApi",
     "ExecutionApi",
@@ -28,6 +29,8 @@ __all__ = [
     "SkillsApi",
     "SystemApi",
     "VaultApi",
+    "VaultsApi",
+    "WebhooksApi",
     "ApiResponse",
     "ApiClient",
     "Configuration",
@@ -37,6 +40,7 @@ __all__ = [
     "ApiKeyError",
     "ApiAttributeError",
     "ApiException",
+    "AgentsAcceptanceCheck",
     "AgentsAgent",
     "AgentsConfig",
     "AgentsListResponse",
@@ -54,11 +58,17 @@ __all__ = [
     "DeploymentsPauseRequest",
     "DeploymentsRun",
     "DeploymentsRunsResponse",
+    "DeploymentsScheduleResponse",
+    "DeploymentsUpdateRequest",
+    "DeploymentsVersion",
+    "DeploymentsVersionsResponse",
     "EnvironmentsCreateRequest",
     "EnvironmentsEnvironment",
     "EnvironmentsListResponse",
     "ExecutionBudget",
+    "ExecutionCheckResult",
     "ExecutionCreateSessionRequest",
+    "ExecutionEvaluation",
     "ExecutionEvent",
     "ExecutionEventsResponse",
     "ExecutionGeneration",
@@ -107,11 +117,24 @@ __all__ = [
     "VaultCreateRequest",
     "VaultCredential",
     "VaultListResponse",
+    "VaultRotateRequest",
+    "VaultValidateRequest",
+    "VaultValidation",
+    "VaultVault",
+    "VaultVaultRequest",
+    "VaultVaultsResponse",
+    "WebhooksCreateRequest",
+    "WebhooksDeliveriesResponse",
+    "WebhooksDelivery",
+    "WebhooksListResponse",
+    "WebhooksSubscription",
+    "WebhooksUpdateRequest",
 ]
 
 # import apis into sdk package
 from wave_ai_generated.api.agents_api import AgentsApi as AgentsApi
 from wave_ai_generated.api.console_api import ConsoleApi as ConsoleApi
+from wave_ai_generated.api.credentials_api import CredentialsApi as CredentialsApi
 from wave_ai_generated.api.deployments_api import DeploymentsApi as DeploymentsApi
 from wave_ai_generated.api.environments_api import EnvironmentsApi as EnvironmentsApi
 from wave_ai_generated.api.execution_api import ExecutionApi as ExecutionApi
@@ -120,6 +143,8 @@ from wave_ai_generated.api.memory_api import MemoryApi as MemoryApi
 from wave_ai_generated.api.skills_api import SkillsApi as SkillsApi
 from wave_ai_generated.api.system_api import SystemApi as SystemApi
 from wave_ai_generated.api.vault_api import VaultApi as VaultApi
+from wave_ai_generated.api.vaults_api import VaultsApi as VaultsApi
+from wave_ai_generated.api.webhooks_api import WebhooksApi as WebhooksApi
 
 # import ApiClient
 from wave_ai_generated.api_response import ApiResponse as ApiResponse
@@ -133,6 +158,7 @@ from wave_ai_generated.exceptions import ApiAttributeError as ApiAttributeError
 from wave_ai_generated.exceptions import ApiException as ApiException
 
 # import models into sdk package
+from wave_ai_generated.models.agents_acceptance_check import AgentsAcceptanceCheck as AgentsAcceptanceCheck
 from wave_ai_generated.models.agents_agent import AgentsAgent as AgentsAgent
 from wave_ai_generated.models.agents_config import AgentsConfig as AgentsConfig
 from wave_ai_generated.models.agents_list_response import AgentsListResponse as AgentsListResponse
@@ -150,11 +176,17 @@ from wave_ai_generated.models.deployments_list_response import DeploymentsListRe
 from wave_ai_generated.models.deployments_pause_request import DeploymentsPauseRequest as DeploymentsPauseRequest
 from wave_ai_generated.models.deployments_run import DeploymentsRun as DeploymentsRun
 from wave_ai_generated.models.deployments_runs_response import DeploymentsRunsResponse as DeploymentsRunsResponse
+from wave_ai_generated.models.deployments_schedule_response import DeploymentsScheduleResponse as DeploymentsScheduleResponse
+from wave_ai_generated.models.deployments_update_request import DeploymentsUpdateRequest as DeploymentsUpdateRequest
+from wave_ai_generated.models.deployments_version import DeploymentsVersion as DeploymentsVersion
+from wave_ai_generated.models.deployments_versions_response import DeploymentsVersionsResponse as DeploymentsVersionsResponse
 from wave_ai_generated.models.environments_create_request import EnvironmentsCreateRequest as EnvironmentsCreateRequest
 from wave_ai_generated.models.environments_environment import EnvironmentsEnvironment as EnvironmentsEnvironment
 from wave_ai_generated.models.environments_list_response import EnvironmentsListResponse as EnvironmentsListResponse
 from wave_ai_generated.models.execution_budget import ExecutionBudget as ExecutionBudget
+from wave_ai_generated.models.execution_check_result import ExecutionCheckResult as ExecutionCheckResult
 from wave_ai_generated.models.execution_create_session_request import ExecutionCreateSessionRequest as ExecutionCreateSessionRequest
+from wave_ai_generated.models.execution_evaluation import ExecutionEvaluation as ExecutionEvaluation
 from wave_ai_generated.models.execution_event import ExecutionEvent as ExecutionEvent
 from wave_ai_generated.models.execution_events_response import ExecutionEventsResponse as ExecutionEventsResponse
 from wave_ai_generated.models.execution_generation import ExecutionGeneration as ExecutionGeneration
@@ -203,4 +235,16 @@ from wave_ai_generated.models.telemetry_value import TelemetryValue as Telemetry
 from wave_ai_generated.models.vault_create_request import VaultCreateRequest as VaultCreateRequest
 from wave_ai_generated.models.vault_credential import VaultCredential as VaultCredential
 from wave_ai_generated.models.vault_list_response import VaultListResponse as VaultListResponse
+from wave_ai_generated.models.vault_rotate_request import VaultRotateRequest as VaultRotateRequest
+from wave_ai_generated.models.vault_validate_request import VaultValidateRequest as VaultValidateRequest
+from wave_ai_generated.models.vault_validation import VaultValidation as VaultValidation
+from wave_ai_generated.models.vault_vault import VaultVault as VaultVault
+from wave_ai_generated.models.vault_vault_request import VaultVaultRequest as VaultVaultRequest
+from wave_ai_generated.models.vault_vaults_response import VaultVaultsResponse as VaultVaultsResponse
+from wave_ai_generated.models.webhooks_create_request import WebhooksCreateRequest as WebhooksCreateRequest
+from wave_ai_generated.models.webhooks_deliveries_response import WebhooksDeliveriesResponse as WebhooksDeliveriesResponse
+from wave_ai_generated.models.webhooks_delivery import WebhooksDelivery as WebhooksDelivery
+from wave_ai_generated.models.webhooks_list_response import WebhooksListResponse as WebhooksListResponse
+from wave_ai_generated.models.webhooks_subscription import WebhooksSubscription as WebhooksSubscription
+from wave_ai_generated.models.webhooks_update_request import WebhooksUpdateRequest as WebhooksUpdateRequest
 

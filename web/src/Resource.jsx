@@ -27,6 +27,7 @@ import {
   Empty,
   Metric,
 } from "./ui.jsx";
+import { TaskControls, ToolControls } from "./TaskControls.jsx";
 export default function Resource({ kind, id, record }) {
   if (kind === "tasks") return <Task id={id} />;
   if (kind === "sessions") return <Session id={id} />;
@@ -81,6 +82,9 @@ function Task({ id }) {
         items={[
           ["overview", "Overview"],
           ["inputs", "Inputs"],
+          ["messages", "Messages"],
+          ["collaboration", "协作"],
+          ["acceptance", "验收"],
           ["tools", "Tools"],
           ["generations", "Model calls"],
           ["events", "Events"],
@@ -117,6 +121,63 @@ function Task({ id }) {
                   </Jump>
                 </div>
               </div>
+              <TaskControls task={t} />
+              {tab === "acceptance" && (
+                <Section title="验收结果">
+                  <Badge
+                    state={
+                      t.evaluation?.status ||
+                      (t.agent?.acceptance?.length ? "未执行" : "未配置")
+                    }
+                  />
+                  {t.evaluation ? (
+                    <>
+                      <p>{date(t.evaluation.evaluated_at)}</p>
+                      {t.evaluation.checks.map((c, i) => (
+                        <div className="package-row" key={i}>
+                          <strong>{c.path || "最终输出"}</strong> · {c.kind} ·{" "}
+                          {c.status}
+                          {c.error && <p className="error">{c.error}</p>}
+                        </div>
+                      ))}
+                    </>
+                  ) : null}
+                </Section>
+              )}
+              {tab === "collaboration" && (
+                <Paged
+                  op="executionCollaboration"
+                  id={id}
+                  render={(rows) =>
+                    rows.map((child) => (
+                      <Section
+                        key={child.id}
+                        title={`${child.parent_id ? "专家" : "协调者"} · ${child.agent?.name || child.id}`}
+                      >
+                        <Badge state={child.state} />
+                        <Fields
+                          values={{
+                            ID: child.id,
+                            "Agent 版本": child.agent_version,
+                            Tokens: child.used_tokens,
+                            "Token 上限": child.budget.max_tokens,
+                            "Tool calls": child.tool_calls,
+                            最大并发: child.budget.max_concurrent_agents,
+                          }}
+                        />
+                        <div className="actions">
+                          <Jump kind="tasks" id={child.id}>
+                            Task
+                          </Jump>
+                          <Jump kind="traces" id={child.id}>
+                            Trace
+                          </Jump>
+                        </div>
+                      </Section>
+                    ))
+                  }
+                />
+              )}
               {tab === "overview" && (
                 <>
                   <div className="metric-grid wide">
@@ -166,6 +227,7 @@ function Task({ id }) {
                   </Section>
                 </>
               )}
+              {tab === "messages" && <Messages id={t.session_id} task={id} />}
               {tab === "events" && <Events session={t.session_id} task={id} />}
               {tab === "inputs" && (
                 <Paged
@@ -217,6 +279,10 @@ function ToolCalls({ id }) {
               title={`${t.tool?.name || t.id} · ${t.status}`}
               open={false}
             >
+              <ToolControls taskID={id} call={t} />
+              {t.wait_until && (
+                <Fields values={{ 等待截止: date(t.wait_until) }} />
+              )}
               <h4>Input</h4>
               <Code green value={t.arguments} />
               <h4>Output</h4>
@@ -307,6 +373,15 @@ function Session({ id }) {
                         ))
                       : "没有关联文件"}
                   </Section>
+                  <Section title="Vaults">
+                    {s.vault_ids?.length
+                      ? s.vault_ids.map((id) => (
+                          <Jump key={id} kind="vaults" id={id}>
+                            {id}
+                          </Jump>
+                        ))
+                      : "没有绑定凭据库"}
+                  </Section>
                   <Section title="Memory stores">
                     {s.memory_store_ids?.length
                       ? s.memory_store_ids.map((id) => (
@@ -325,10 +400,14 @@ function Session({ id }) {
     </>
   );
 }
-function Messages({ id }) {
+function Messages({ id, task }) {
   const [cursor, setCursor] = useState(0),
     [history, setHistory] = useState([]);
-  const q = useResource("executionMessages", id, { after: cursor, limit: 20 });
+  const q = useResource("executionMessages", id, {
+    after: cursor,
+    limit: 20,
+    task_id: task || undefined,
+  });
   return (
     <Load query={q}>
       {(d) => (
@@ -339,6 +418,11 @@ function Messages({ id }) {
                 key={m.sequence}
                 title={`${m.role} · ${date(m.created_at)}`}
               >
+                {m.source_task_id && (
+                  <Jump kind="tasks" id={m.source_task_id}>
+                    来自 {m.source_task_id}
+                  </Jump>
+                )}
                 <Code
                   green
                   value={
@@ -732,7 +816,13 @@ function BenchReport({ report: r, id }) {
               <th>P95</th>
               <th>P99</th>
               <th>Tasks/s</th>
-              {valid && <th>P95 Δ</th>}
+              <th>验收通过率</th>
+              {valid && (
+                <>
+                  <th>P95 Δ</th>
+                  <th>验收 Δ</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -756,11 +846,31 @@ function BenchReport({ report: r, id }) {
                   <td>{duration(p.end_to_end?.p95_ms)}</td>
                   <td>{duration(p.end_to_end?.p99_ms)}</td>
                   <td>{number(p.successful_tasks_per_second)}</td>
+                  <td>
+                    {p.acceptance_rate == null
+                      ? "—"
+                      : `${(p.acceptance_rate * 100).toFixed(1)}% (${p.acceptance_passed}/${p.evaluated})`}
+                  </td>
+
                   {valid && (
                     <td className={delta > 0 ? "regression" : "improvement"}>
                       {delta == null
                         ? "—"
                         : `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`}
+                    </td>
+                  )}
+                  {valid && (
+                    <td
+                      className={
+                        p.acceptance_rate < prior?.acceptance_rate
+                          ? "regression"
+                          : "improvement"
+                      }
+                    >
+                      {p.acceptance_rate == null ||
+                      prior?.acceptance_rate == null
+                        ? "—"
+                        : `${((p.acceptance_rate - prior.acceptance_rate) * 100).toFixed(1)} pp`}
                     </td>
                   )}
                 </tr>
@@ -786,6 +896,12 @@ function BenchReport({ report: r, id }) {
                   : (p.error_rate * 100).toFixed(1) + "%",
             }}
           />
+          {p.acceptance_rate != null && (
+            <Metric
+              label="验收通过率"
+              value={`${(p.acceptance_rate * 100).toFixed(1)}% (${p.acceptance_passed}/${p.evaluated})`}
+            />
+          )}
           {p.phase_error && <Code value={p.phase_error} />}
           <BenchTasks tasks={p.tasks || []} />
         </Section>
