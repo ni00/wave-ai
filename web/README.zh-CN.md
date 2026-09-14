@@ -53,7 +53,3 @@ npm run dev --prefix web
 make web-build
 make web-test
 ```
-
-修改前端时，同时提交 `internal/platform/webui/static/` 中重建的资源。Go 构建直接嵌入这些文件，Docker 构建会重新生成。不要提交 `web/dist`；保留用于可选 Sites 构建的打包文件。
-
-静态资源使用 gzip 和内容 hash，HTML 使用 ETag 校验。Metrics、Logs、Traces 和资源详情分包加载。修改 API 时，还需运行 `make integration`、`make clients-check clients-test` 和 `make check`。

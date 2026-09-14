@@ -70,11 +70,3 @@ The proxy defaults to `http://127.0.0.1:8080`; override it with `WAVE_WEB_API_UR
 make web-build
 make web-test
 ```
-
-Commit rebuilt assets under `internal/platform/webui/static/` with frontend
-changes. Go builds embed these files; Docker builds regenerate them. Do not commit
-`web/dist`. Keep the Sites packaging files for optional Sites builds.
-
-Assets use gzip and content hashes; HTML uses ETag validation. Metrics, Logs,
-Traces, and resource details load in separate chunks. For API changes, also run
-`make integration`, `make clients-check clients-test`, and `make check`.

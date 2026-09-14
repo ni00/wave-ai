@@ -17,3 +17,5 @@ Use “Benchmarks” for the console navigation and page name. Keep the CLI comm
 Use the shared `PageHeader` for every workspace page. Take its title and icon from navigation; keep heading typography, icon size, spacing, and alignment consistent across resource and monitoring pages.
 
 Use consistent, slim native scrollbars across workspace panels: rounded gray thumbs, transparent tracks, and darker hover/drag states. Preserve native scrolling and system high-contrast styling.
+
+Keep build artifacts, Git submission rules, asset caching, and optional hosting internals out of user guides. Put contributor instructions in `AGENTS.md`.
