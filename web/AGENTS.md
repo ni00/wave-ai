@@ -11,3 +11,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 ## Console copy
 
 Keep interface text concise and functional. Do not add slogans, promotional copy, decorative subtitles, or explanations that repeat a page title or action. Use short labels and empty states; retain brief error, data-limit, and operational notices only where they affect the user's next action or interpretation of data.
+
+Use “Benchmarks” for the console navigation and page name. Keep the CLI command `wave bench`.

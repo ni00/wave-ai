@@ -60,7 +60,7 @@ const navigation = [
   ["memory", "Memory", IconBrain, "持久记忆"],
   ["sessions", "Sessions", IconMessages, "会话"],
   ["tasks", "Tasks", IconChecklist, "任务"],
-  ["benchmarks", "Bench", IconChartHistogram, "性能压测"],
+  ["benchmarks", "Benchmarks", IconChartHistogram, "性能压测"],
 ];
 export default function App() {
   const [apiKey, setAPIKey] = useState("");

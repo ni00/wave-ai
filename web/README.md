@@ -1,6 +1,6 @@
 # Wave AI Console
 
-Wave 原生后台，入口是 `/console/`。按 Monitoring（Overview、Metrics、Traces、Logs）、资源与执行（Environment、File、Memory、Session、Task）、性能测试（Bench）分组。
+Wave 原生后台，入口是 `/console/`。按 Monitoring（Overview、Metrics、Traces、Logs）、资源与执行（Environment、File、Memory、Session、Task）、性能测试（Benchmarks）分组。
 
 ## 运行
 
@@ -31,8 +31,8 @@ npm run dev --prefix web
 - Overview 展示完成任务、成功率、任务 P95、Token 用量与趋势。Metrics 还提供 P50/P95/P99、模型首 Token 延迟、首次队列等待、沙箱启动和模型调用耗时。选择图表时间点（也支持左右方向键），可跳到该时段完成的任务、失败任务或日志。支持最近 1 小时至 30 天和自定义时间范围。
 - Environment 展示沙箱 backend、profile 与包配置。Memory 可查看条目、历史版本、冲突；Session 可查看任务、消息及关联资源。
 - File 提供文本预览和下载，预览最多 128 KiB。HTML 等内容仅当文本展示，不执行。浏览器内存下载上限 64 MiB，更大文件使用 `wavectl files download` 流式下载。
-- 在 Bench 右上角导入 `wave bench` / `wave bench live` 生成的 **v2 JSON**（最大 16 MiB）。报告作为带专用 MIME 的文件保存，重启后仍可查询，不需要新数据库表。CLI 报告不会自动上传；同一报告重复导入会得到新的文件记录。
-- Bench 展示各并发档位的吞吐量、成功率、P50/P95/P99 与任务 Trace；可选择最近 200 份报告作为基线。仅在工作负载、负载配置、模型和 worker 档位一致时计算差异。少量样本或失败/不完整采集不能作为优化通过的依据，正式回归判定使用 `wave bench compare`。
+- 在 Benchmarks 右上角导入 `wave bench` / `wave bench live` 生成的 **v2 JSON**（最大 16 MiB）。报告作为带专用 MIME 的文件保存，重启后仍可查询，不需要新数据库表。CLI 报告不会自动上传；同一报告重复导入会得到新的文件记录。
+- Benchmarks 展示各并发档位的吞吐量、成功率、P50/P95/P99 与任务 Trace；可选择最近 200 份报告作为基线。仅在工作负载、负载配置、模型和 worker 档位一致时计算差异。少量样本或失败/不完整采集不能作为优化通过的依据，正式回归判定使用 `wave bench compare`。
 
 ## 性能与验证
 
