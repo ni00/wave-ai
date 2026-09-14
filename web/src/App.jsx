@@ -97,13 +97,7 @@ function Login({ connect }) {
           </span>
           Wave<span className="brand-light">AI</span>
         </div>
-        <div className="eyebrow">WORKSPACE CONSOLE</div>
-        <h1>每次执行，都有迹可循。</h1>
-        <p>
-          从模型调用到沙箱执行，在一个工作台查看
-          <br />
-          你的 traces、任务与运行资源。
-        </p>
+        <h1>登录</h1>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -135,7 +129,7 @@ function Login({ connect }) {
               type="password"
               value={key}
               onChange={(e) => setKey(e.target.value)}
-              placeholder="输入你的 Wave API Key"
+              placeholder="输入 API Key"
               autoComplete="off"
               required
             />
@@ -146,13 +140,12 @@ function Login({ connect }) {
             </div>
           )}
           <button className="primary" disabled={busy || !key.trim()}>
-            {busy ? "正在连接…" : "进入工作台"}
+            {busy ? "正在连接…" : "连接"}
             <IconArrowRight size={17} />
           </button>
         </form>
-        <small>密钥仅保存在当前页面内存，刷新后需要重新连接。</small>
+        <small>刷新后需重新登录。</small>
       </div>
-      <span className="login-footer">Wave AI / Observe. Inspect. Improve.</span>
     </main>
   );
 }
@@ -310,10 +303,6 @@ function Console({ api, logout }) {
           ))}
         </nav>
         <div className="side-bottom">
-          <div className="workspace-note">
-            <span className="online-dot" /> 原生可观测性
-            <small>Logs · Traces · Benchmarks</small>
-          </div>
           <a href="/swagger/index.html" target="_blank" rel="noreferrer">
             <IconBook2 size={18} />
             <span>API 文档</span>
@@ -327,7 +316,6 @@ function Console({ api, logout }) {
             <span className="avatar">W</span>
             <div>
               <b>Wave workspace</b>
-              <small>当前 API Key 的资源</small>
             </div>
           </div>
         </div>
@@ -595,9 +583,7 @@ function Console({ api, logout }) {
                 </DetailBoundary>
               </>
             ) : (
-              <Empty title={"选择一条" + nav[1] + "记录"}>
-                在左侧列表选择，查看完整详情与关联资源。
-              </Empty>
+              <Empty title="选择一条记录" />
             )}
           </section>
         </div>

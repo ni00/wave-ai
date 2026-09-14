@@ -376,7 +376,6 @@ function Environment({ id }) {
               </div>
               <h2>{e.name}</h2>
               <Badge state={e.archived ? "archived" : "active"} />
-              <p>隔离执行环境与依赖配置</p>
             </div>
             <div className="metric-grid">
               <Metric
@@ -399,9 +398,7 @@ function Environment({ id }) {
                   </div>
                 ))
               ) : (
-                <span className="subtle">
-                  没有额外依赖，使用沙箱镜像内置工具。
-                </span>
+                <span className="subtle">无额外依赖</span>
               )}
             </Section>
             <Section title="Metadata">
@@ -413,10 +410,6 @@ function Environment({ id }) {
                 }}
               />
             </Section>
-            <p className="hint">
-              这里展示环境配置。沙箱启动、回收与实际执行耗时可在任务 Trace
-              中查看。
-            </p>
           </>
         )}
       </Load>
@@ -576,7 +569,6 @@ function Memory({ id, name }) {
       <div className="resource-scroll">
         <div className="resource-heading">
           <h2>{name || "Memory store"}</h2>
-          <p>持久记忆 · 内容与版本记录</p>
         </div>
         <Paged
           key={tab}
@@ -641,10 +633,7 @@ function Log({ id }) {
             <Section title="Payload" copy={l.data}>
               <Code value={l.data} />
             </Section>
-            <p className="hint">
-              来源：Wave 持久化执行事件。逐 token 的 message.delta
-              不出现在列表中；进程 stdout 仍由部署日志系统保存。
-            </p>
+            <p className="hint">仅含执行事件，不含进程日志。</p>
           </>
         )}
       </Load>

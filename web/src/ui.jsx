@@ -47,7 +47,7 @@ export function Empty({ title = "暂无数据", children }) {
     <div className="empty">
       <IconDatabaseOff size={28} stroke={1.3} />
       <strong>{title}</strong>
-      <p>{children || "调整筛选条件，或等待新的执行记录。"}</p>
+      {children && <p>{children}</p>}
     </div>
   );
 }

@@ -343,7 +343,6 @@ function TraceView({ trace }) {
                   <IconArrowUpRight size={15} />
                 </button>
                 <strong>{duration(longest.duration_ms)}</strong>
-                <p>点击查看此阶段的详情与输入输出。</p>
               </div>
             )}
             <h3>关联资源</h3>
@@ -482,9 +481,6 @@ function SpanDetail({ span, trace }) {
               <Metric label="首字延迟" value={duration(span.first_delta_ms)} />
               <Metric label="总耗时" value={duration(span.duration_ms)} />
             </div>
-            <p className="hint">
-              Trace 保存调用元数据。任务输入、结果与工具参数在关联 Task 中查看。
-            </p>
             <button
               className="button"
               onClick={() => route("tasks", trace.task_id)}
