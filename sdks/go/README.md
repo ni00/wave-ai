@@ -5,7 +5,7 @@ English | [简体中文](README.zh-CN.md)
 Go client for Wave AI. Module: `github.com/ni00/wave-ai/sdks/go`; package: `wave`.
 Requires Go 1.23+.
 
-## 1. Install
+## Install
 
 Add the local SDK to your application's `go.mod`. Replace the path with your
 checkout location:
@@ -16,9 +16,9 @@ require github.com/ni00/wave-ai/sdks/go v0.0.0
 replace github.com/ni00/wave-ai/sdks/go => /path/to/wave-ai/sdks/go
 ```
 
-## 2. Create and wait for a task
+## Create and wait for a task
 
-[Start Wave](../../README.md#2-quick-start), set `WAVE_API_KEY`, and replace
+[Start Wave](../../README.md#quick-start), set `WAVE_API_KEY`, and replace
 `YOUR_MODEL` with a model supported by your provider.
 
 ```go
@@ -75,13 +75,13 @@ func create(ctx context.Context, c *wave.Client, op string, path map[string]stri
 credentials, a query, or a fragment. Set `HTTPClient` to customize the transport
 or proxy, and `MaxRetries` to change the retry limit.
 
-## 3. Call the API
+## Call the API
 
 `Call` invokes JSON endpoints by their OpenAPI `operationId`. `Options` accepts
 path values, query parameters, headers, and a request body. Use dedicated methods
 for uploads, downloads, and event streams.
 
-For typed models and endpoints, use the generated client:
+For typed endpoints, use the generated client:
 
 ```go
 agents, response, err := client.Raw().AgentsAPI.AgentsList(ctx).Execute()
@@ -89,7 +89,7 @@ agents, response, err := client.Raw().AgentsAPI.AgentsList(ctx).Execute()
 
 Generated calls bypass wrapper validation, automatic pagination, and retries.
 
-### 3.1 Method reference
+### Method reference
 
 | Method | Purpose |
 | --- | --- |
@@ -102,7 +102,7 @@ Generated calls bypass wrapper validation, automatic pagination, and retries.
 | `Download` | Stream file bytes into an `io.Writer` |
 | `Upload` | Stream a multipart upload from an `io.Reader` |
 
-## 4. Resolve required actions
+## Resolve required actions
 
 When `Wait` returns `Reason: "terminal"`, check `Task["state"]` for success.
 For `Reason: "action"`, handle `RequiredActions`:
@@ -116,7 +116,7 @@ For `Reason: "action"`, handle `RequiredActions`:
 Approved client tools still require a result submission. Call `Wait` again after
 resolving an action.
 
-## 5. Read events
+## Read events
 
 ```go
 err = client.Events(ctx, sessionID,
@@ -128,14 +128,13 @@ err = client.Events(ctx, sessionID,
 ```
 
 `savedCursor` is the last event ID saved for this session; use an empty string
-for the first read. Reconnection is disabled by default. Set `MaxReconnects` to
-allow a bounded number of retries. Cancel `ctx` or return an error from the
-callback to stop reading.
+for the first read. Set `MaxReconnects` to enable bounded reconnection (default:
+disabled). Cancel `ctx` or return an error from the callback to stop reading.
 
 `After` and `LastEventID` are mutually exclusive. Deduplicate event IDs
 after reconnecting.
 
-## 6. Transfer files
+## Transfer files
 
 `Download` streams into an `io.Writer`; `Upload` streams multipart data from an
 `io.Reader`. The caller closes files and decides how to persist results.
@@ -145,19 +144,18 @@ after reconnecting.
 - Interrupted transfers can leave partial data. Uploads and downloads are not
   retried automatically.
 
-## 7. Errors, retries, and timeouts
+## Errors, retries, and timeouts
 
 HTTP API failures return `*wave.APIError` with `StatusCode`, `Code`, `Message`,
 and `RequestID`. Validation, transport, and context errors retain their own types.
 
-Automatic retries apply to `GET` requests and writes marked idempotent in the
-contract that carry an `Idempotency-Key`. Network errors and HTTP 429, 502, 503,
-and 504 are retried up to 2 times by default.
+The client retries network errors and HTTP 429, 502, 503, and 504 up to twice.
+Retries apply only to `GET` and contract-marked idempotent writes with an
+`Idempotency-Key`.
 
-Neither the client nor its default `http.Client` sets an overall timeout. Use
-`context` to set deadlines for requests, retries, and waits. A client timeout
-does not cancel the remote task.
+Set request, retry, and wait deadlines with `context`; there is no default overall
+timeout. A client timeout does not cancel the remote task.
 
-## 8. Related documentation
+## Related documentation
 
 [English API contract](../../api/openapi.json) · [Chinese API contract](../../api/openapi.zh-CN.json) · [CLI guide](../../cli/README.md) · [Generation and releases](../../tools/clients/README.md)

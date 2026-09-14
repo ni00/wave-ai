@@ -4,7 +4,7 @@
 
 Wave AI 的 Python 客户端，支持同步和异步调用。需要 Python 3.10+；安装包名为 `wave-ai-client`，导入包名为 `wave_ai`。
 
-## 1. 安装
+## 安装
 
 在仓库根目录执行：
 
@@ -12,9 +12,9 @@ Wave AI 的 Python 客户端，支持同步和异步调用。需要 Python 3.10+
 python -m pip install ./sdks/python
 ```
 
-## 2. 创建并等待任务
+## 创建并等待任务
 
-先[启动 Wave](../../README.zh-CN.md#2-快速开始)，设置 `WAVE_API_KEY`，并将 `YOUR_MODEL` 替换为供应商支持的模型。
+先[启动 Wave](../../README.zh-CN.md#快速开始)，设置 `WAVE_API_KEY`，并将 `YOUR_MODEL` 替换为供应商支持的模型。
 
 ```python
 import os
@@ -38,7 +38,7 @@ with Client(api_key=os.environ["WAVE_API_KEY"]) as wave:
 
 默认地址为 `http://localhost:8080`，通过 `base_url` 修改。可设置 `timeout`、`max_retries`，或注入自定义 `http_client`。上下文管理器只关闭 SDK 创建的连接，注入的客户端由调用方关闭。
 
-## 3. API 参考
+## API 参考
 
 `call` 按 OpenAPI 的 `operationId` 调用 JSON 接口；事件流和文件传输使用专用方法。后续片段中的 `wave` 均为已打开的客户端。
 
@@ -53,7 +53,7 @@ with Client(api_key=os.environ["WAVE_API_KEY"]) as wave:
 | `download` | 把文件字节流写入二进制文件对象 |
 | `upload` | 从文件对象流式发送 multipart 上传 |
 
-需要带类型的模型和端点时，使用 `wave_ai_generated`：
+需要类型化端点时，使用 `wave_ai_generated`：
 
 ```python
 from wave_ai_generated import AgentsApi
@@ -65,7 +65,7 @@ with Client(api_key=os.environ["WAVE_API_KEY"]) as wave:
 
 生成 API 不提供封装层的请求校验、自动分页和重试，错误类型为 `OpenApiException` 的子类。
 
-## 4. 处理待办动作
+## 处理待办动作
 
 `wait` 返回后，`reason` 为 `terminal` 时检查 `task["state"]` 是否成功；为 `action` 时按 `required_actions` 处理：
 
@@ -77,7 +77,7 @@ with Client(api_key=os.environ["WAVE_API_KEY"]) as wave:
 
 客户端工具获批后仍需提交执行结果。处理动作后，再调用 `wait`。
 
-## 5. 读取事件与传输文件
+## 读取事件与传输文件
 
 ```python
 from contextlib import closing
@@ -91,7 +91,7 @@ with closing(wave.events(session_id, max_reconnects=3)) as events:
 
 `download` 增量写入二进制文件对象，`upload` 从文件对象上传。调用方负责关闭文件，并按 HTTP 206 响应的 `Content-Range` 保存部分内容。HTTP 304 不写入目标；传输中断可能留下部分数据。两种传输均不自动重试。
 
-## 6. 使用异步客户端
+## 使用异步客户端
 
 `AsyncClient` 提供对应的异步方法，分页与事件流通过异步生成器读取：
 
@@ -107,11 +107,11 @@ async def read_events(session_id: str):
                 print(event.id, event.type, event.data)
 ```
 
-## 7. 错误、重试与超时
+## 错误、重试与超时
 
 HTTP API 错误抛出 `APIError`，包含 `status`、`code`、`message` 和 `request_id`。本地校验及传输错误保留各自类型。
 
-自动重试仅适用于 `GET`，或契约标记为幂等且携带 `Idempotency-Key` 的写请求。对网络错误及 HTTP 429、502、503、504，默认最多重试 2 次。
+网络错误和 HTTP 429、502、503、504 默认最多重试两次，仅限 `GET` 和契约标记为幂等、带 `Idempotency-Key` 的写请求。
 
 | 配置 | 含义 |
 | --- | --- |
@@ -122,6 +122,6 @@ HTTP API 错误抛出 `APIError`，包含 `status`、`code`、`message` 和 `req
 
 `wait` 超过等待预算会抛出 `TimeoutError`，底层请求也可能先抛出 HTTPX 超时异常。客户端超时不会取消远端任务；继续查询已有任务 ID，重试同一次提交时复用幂等键。
 
-## 8. 相关文档
+## 相关文档
 
 [中文 API 契约](../../api/openapi.zh-CN.json) · [英文 API 契约](../../api/openapi.json) · [CLI 指南](../../cli/README.zh-CN.md) · [生成与发布](../../tools/clients/README.zh-CN.md)

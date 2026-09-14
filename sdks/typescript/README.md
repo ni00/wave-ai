@@ -9,7 +9,7 @@ Supports Node.js 22+ and browsers with Fetch, Streams, `AbortSignal.timeout`, an
 `AbortSignal.any`. Direct browser access requires CORS configuration. Keep Wave
 API keys in a trusted backend.
 
-## 1. Install
+## Install
 
 Build from a local checkout, then install in your application:
 
@@ -22,9 +22,9 @@ npm run build --prefix sdks/typescript
 npm install /path/to/wave-ai/sdks/typescript
 ```
 
-## 2. Create and wait for a task
+## Create and wait for a task
 
-[Start Wave](../../README.md#2-quick-start), set `WAVE_API_KEY`, and replace
+[Start Wave](../../README.md#quick-start), set `WAVE_API_KEY`, and replace
 `YOUR_MODEL` with a model supported by your provider. This example runs in Node.js.
 
 ```typescript
@@ -50,7 +50,7 @@ console.log(result.reason, result.task.state);
 The constructor accepts `baseURL` (default `http://localhost:8080`), `apiKey`,
 `fetch`, and `maxRetries` (default 2). Inject `fetch` to customize the transport.
 
-## 3. API reference
+## API reference
 
 `call<T>` invokes JSON endpoints by their OpenAPI `operationId` and returns an
 `APIResponse<T>` with `status`, `headers`, and `data`. The type parameter `T`
@@ -67,7 +67,7 @@ provides static typing; it does not validate response data.
 | `download` | Stream file bytes into a callback |
 | `upload` | Stream a multipart upload from a `Blob` or async iterable |
 
-For typed models and endpoints, use the `generated` export:
+For typed endpoints, use `generated`:
 
 ```typescript
 import { generated } from '@wave-ai/client';
@@ -79,7 +79,7 @@ const agents = await api.agentsList();
 Generated calls bypass wrapper validation, automatic pagination, retries, and
 safe-integer checks.
 
-## 4. Resolve required actions
+## Resolve required actions
 
 When `wait` returns `reason: "terminal"`, check `task.state` for success.
 For `reason: "action"`, handle `required_actions`:
@@ -93,7 +93,7 @@ For `reason: "action"`, handle `required_actions`:
 Approved client tools still require a result submission. Call `wait` again after
 resolving an action.
 
-## 5. Read events
+## Read events
 
 ```typescript
 const signal = AbortSignal.timeout(60_000);
@@ -102,14 +102,13 @@ for await (const event of wave.events(sessionID, { maxReconnects: 3, signal })) 
 }
 ```
 
-Pass an `AbortSignal` to stop a stream, or use `break` to close the response when
-leaving the loop early. Reconnection is disabled by default; set `maxReconnects`
-for bounded retries.
+Stop a stream with `AbortSignal` or `break`. Set `maxReconnects` to enable
+bounded reconnection (default: disabled).
 
 To resume, pass the session's saved `lastEventID`; do not combine it with `after`.
 Deduplicate event IDs after reconnecting.
 
-## 6. Transfer files
+## Transfer files
 
 ```typescript
 const response = await wave.download('filesContent', fileID, writeChunk);
@@ -125,16 +124,16 @@ await wave.upload('filesUpload', 'report.txt', source);
 - Interrupted transfers can leave partial data. Uploads and downloads are not
   retried automatically.
 
-## 7. Errors, retries, and timeouts
+## Errors, retries, and timeouts
 
 HTTP API failures throw `APIError` with `status`, `code`, `message`, and
 `requestID`. Invalid parameters, unknown operations, or a missing request body
 throw `TypeError`. JSON integers outside the safe range throw `RangeError` to
 prevent silent rounding of int64 values.
 
-Automatic retries apply to `GET` requests and writes marked idempotent in the
-contract that carry an `Idempotency-Key`. Network errors and HTTP 429, 502, 503,
-and 504 are retried up to 2 times by default.
+The client retries network errors and HTTP 429, 502, 503, and 504 up to twice.
+Retries apply only to `GET` and contract-marked idempotent writes with an
+`Idempotency-Key`.
 
 Use an `AbortSignal` to set a request deadline. `wait` defaults to a 300,000 ms
 timeout and a 1,000 ms polling interval. Both `timeout` and `interval` use
@@ -142,6 +141,6 @@ milliseconds; pass `signal` to stop earlier. A client timeout does not cancel th
 remote task. Keep the task ID, and reuse the idempotency key when retrying the
 same submission.
 
-## 8. Related documentation
+## Related documentation
 
 [English API contract](../../api/openapi.json) · [Chinese API contract](../../api/openapi.zh-CN.json) · [CLI guide](../../cli/README.md) · [Generation and releases](../../tools/clients/README.md)

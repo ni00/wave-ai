@@ -5,7 +5,7 @@ English | [简体中文](README.zh-CN.md)
 Python client for Wave AI with synchronous and asynchronous APIs. Requires
 Python 3.10+. Install `wave-ai-client` and import `wave_ai`.
 
-## 1. Install
+## Install
 
 From the repository root:
 
@@ -13,9 +13,9 @@ From the repository root:
 python -m pip install ./sdks/python
 ```
 
-## 2. Create and wait for a task
+## Create and wait for a task
 
-[Start Wave](../../README.md#2-quick-start), set `WAVE_API_KEY`, and replace
+[Start Wave](../../README.md#quick-start), set `WAVE_API_KEY`, and replace
 `YOUR_MODEL` with a model supported by your provider.
 
 ```python
@@ -42,7 +42,7 @@ The default URL is `http://localhost:8080`; set `base_url` to change it. Configu
 `timeout` and `max_retries`, or inject an `http_client`. The context manager closes
 SDK-created connections; you close injected clients.
 
-## 3. API reference
+## API reference
 
 `call` invokes JSON endpoints by their OpenAPI `operationId`. Use dedicated
 methods for event streams and file transfers. The following snippets assume an
@@ -59,7 +59,7 @@ open `wave` client.
 | `download` | Stream file bytes into a binary file object |
 | `upload` | Stream a multipart upload from a file object |
 
-For typed models and endpoints, use `wave_ai_generated`:
+For typed endpoints, use `wave_ai_generated`:
 
 ```python
 from wave_ai_generated import AgentsApi
@@ -72,7 +72,7 @@ with Client(api_key=os.environ["WAVE_API_KEY"]) as wave:
 Generated calls bypass wrapper validation, automatic pagination, and retries,
 and raise subclasses of `OpenApiException`.
 
-## 4. Resolve required actions
+## Resolve required actions
 
 When `wait` returns `reason: "terminal"`, check `task["state"]` for success.
 For `reason: "action"`, handle `required_actions`:
@@ -86,7 +86,7 @@ For `reason: "action"`, handle `required_actions`:
 Approved client tools still require a result submission. Call `wait` again after
 resolving an action.
 
-## 5. Read events and transfer files
+## Read events and transfer files
 
 ```python
 from contextlib import closing
@@ -106,7 +106,7 @@ file object. The caller closes files and uses `Content-Range` to persist HTTP 20
 responses. HTTP 304 leaves the destination untouched. Interrupted transfers can
 leave partial data. Neither transfer is retried automatically.
 
-## 6. Use the asynchronous client
+## Use the asynchronous client
 
 `AsyncClient` provides asynchronous methods, with async generators for pagination
 and event streams:
@@ -123,14 +123,14 @@ async def read_events(session_id: str):
                 print(event.id, event.type, event.data)
 ```
 
-## 7. Errors, retries, and timeouts
+## Errors, retries, and timeouts
 
 HTTP API failures raise `APIError` with `status`, `code`, `message`, and
 `request_id`. Validation and transport errors retain their own types.
 
-Automatic retries apply to `GET` requests and writes marked idempotent in the
-contract that carry an `Idempotency-Key`. Network errors and HTTP 429, 502, 503,
-and 504 are retried up to 2 times by default.
+The client retries network errors and HTTP 429, 502, 503, and 504 up to twice.
+Retries apply only to `GET` and contract-marked idempotent writes with an
+`Idempotency-Key`.
 
 | Option | Scope |
 | --- | --- |
@@ -141,8 +141,9 @@ and 504 are retried up to 2 times by default.
 
 `wait` raises `TimeoutError` when its budget expires. An underlying request can
 raise an HTTPX timeout first. A client timeout does not cancel the remote task.
-Keep the task ID, and reuse the idempotency key when retrying the same submission.
+Retain the task ID and reuse the submission
+idempotency key on retries.
 
-## 8. Related documentation
+## Related documentation
 
 [English API contract](../../api/openapi.json) · [Chinese API contract](../../api/openapi.zh-CN.json) · [CLI guide](../../cli/README.md) · [Generation and releases](../../tools/clients/README.md)

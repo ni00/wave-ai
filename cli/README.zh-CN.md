@@ -2,11 +2,11 @@
 
 [English](README.md) | 简体中文
 
-`wavectl` 用于连接 Wave AI、管理 Agent 和任务。服务启动与运维使用 [`wave`](#6-服务管理)。
+`wavectl` 用于连接 Wave AI、管理 Agent 和任务。服务启动与运维使用 [`wave`](#服务管理)。
 
-## 1. 安装与连接
+## 安装与连接
 
-先[启动 Wave 并取得 API 密钥](../README.zh-CN.md#2-快速开始)。构建 CLI 需要 Go 1.23+ 和 Make，在仓库根目录执行：
+先[启动 Wave 并取得 API 密钥](../README.zh-CN.md#快速开始)。构建 CLI 需要 Go 1.23+ 和 Make，在仓库根目录执行：
 
 ```bash
 make cli-build
@@ -21,7 +21,7 @@ wavectl doctor
 
 `doctor` 检查数据库连通性和 API 认证；`doctor --offline` 只检查连接配置。模型和 worker 是否可用需通过实际任务验证。
 
-### 1.1 连接配置
+### 连接配置
 
 每个 profile 保存一组连接配置，文件位于用户配置目录下的 `wave-ai/config.json`。
 
@@ -33,7 +33,7 @@ wavectl doctor
 
 通过 `config list`、`show`、`use`、`remove` 和 `unset-key` 管理配置。本地移除密钥不会撤销服务端密钥。
 
-## 2. 提交与跟踪任务
+## 提交与跟踪任务
 
 ```bash
 wavectl agents create --name assistant --model YOUR_MODEL
@@ -42,7 +42,7 @@ wavectl tasks create --session SESSION --agent AGENT --input-file task.txt \
   --idempotency-key research-001 --wait
 ```
 
-将 `YOUR_MODEL` 替换为供应商支持的模型，`AGENT` 和 `SESSION` 替换为前两条命令返回的 ID。先将任务输入保存到 `task.txt`；已有 Agent 或会话时可直接复用。
+将 `YOUR_MODEL` 设为支持的模型，`AGENT`/`SESSION` 设为已有或新建资源的 ID。提交前将任务输入保存到 `task.txt`。
 
 `--wait` 输出 `{task, reason, required_actions}`；根据退出码和 `task.state` 判断结果。超时后继续等待已有任务：
 
@@ -53,7 +53,7 @@ wavectl tasks wait TASK --timeout 10m
 
 同一次提交重试时复用幂等键，新任务使用新键。保持同一会话可延续对话历史和固定文件。
 
-### 2.1 处理待办动作
+### 处理待办动作
 
 退出码 6 表示需要处理动作。读取 `required_actions` 中的 `type`、`task_id` 和 `call_id`，再选择命令：
 
@@ -78,7 +78,7 @@ wavectl tools result CALL --task TASK --result-file result.txt
 
 失败结果使用 `--is-error`，可附加 `--error-code`。重复决策不重复生效，冲突决策返回 HTTP 409。处理后重新等待。
 
-## 3. 查询命令与参数
+## 查询命令与参数
 
 ```bash
 wavectl schema                          # 契约、操作列表和版本。
@@ -87,11 +87,11 @@ wavectl schema agents create --example  # 请求体模板。
 wavectl tasks create --help             # 命令参数。
 ```
 
-每个操作都提供 `--help`。`completion bash|zsh|fish|powershell` 输出对应 shell 的补全脚本。
+`completion bash|zsh|fish|powershell` 输出 shell 补全脚本。
 
 必填参数标注 `(required)`。路径值可用具名参数或位置参数，两者不能重复指定。
 
-## 4. 输入、输出与文件
+## 输入、输出与文件
 
 ```bash
 wavectl tasks create SESSION --body @request.json --dry-run
@@ -108,7 +108,7 @@ JSON 与文本输入上限为 2 MiB，`false` 和空字符串均为有效值。s
 
 普通请求默认超时 30 秒，任务等待 5 分钟，事件流不限时，均可用 `--timeout` 覆盖。事件游标文件只对应一个会话，重连后按事件 ID 去重。文件下载成功后才替换目标；`--output -` 输出原始字节。
 
-## 5. 退出码
+## 退出码
 
 | 退出码 | 含义 |
 | --- | --- |
@@ -123,9 +123,9 @@ JSON 与文本输入上限为 2 MiB，`false` 和空字符串均为有效值。s
 
 错误以 JSON 写入 stderr，包含 `message`、`exit_code`，以及可用的 `hint`、`status` 和 `request_id`。使用 `set -e` 的脚本需显式处理任务等待的非零退出码，尤其是 6 和 7。
 
-## 6. 服务管理
+## 服务管理
 
-`wave` 读取环境变量，用于服务启动和管理。
+`wave` 从环境变量读取配置。
 
 | 命令 | 用途 |
 | --- | --- |
@@ -137,6 +137,6 @@ JSON 与文本输入上限为 2 MiB，`false` 和空字符串均为有效值。s
 
 `wave bootstrap -format key` 只输出原始密钥，可传给 `wavectl config set NAME --key-stdin`。完整部署、备份和诊断流程见 [wave-admin](../skills/wave-admin/SKILL.md)。
 
-## 7. 相关文档
+## 相关文档
 
 [任务与工具流程](../skills/wave-client/SKILL.md) · [客户端工具链](../tools/clients/README.zh-CN.md) · [中文 API 契约](../api/openapi.zh-CN.json) · [英文 API 契约](../api/openapi.json)

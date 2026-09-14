@@ -5,7 +5,7 @@ English | [简体中文](README.zh-CN.md)
 Generate OpenAPI contracts, Go / Python / TypeScript SDKs, CLI metadata, and
 command references from server types and annotations.
 
-## 1. Generate and check
+## Generate and check
 
 Requires Go 1.27+, Node.js 22+, Docker, and Python 3.10+ with uv for the Python
 SDK. From the repository root:
@@ -20,29 +20,29 @@ After API or workflow behavior changes, run `make clients-integration` to verify
 workflows such as approval, tool results, and file transfers. For README-only
 changes, run `go run ./tools/clients check`.
 
-## 2. Edit generation sources
+## Edit generation sources
 
 Edit server types and Swagger annotations, then regenerate. Do not edit generated
 output directly. Add metadata to `operations.json` for every new `operationId`,
 including pagination, transport, idempotency, and command naming. `config.json`
 controls generator versions, package names, and the release version.
 
-Generation preserves handwritten code. To check whether generated files are current:
+Generation preserves handwritten code. Check generated files:
 
 ```bash
 go run ./tools/clients generate --check
 ```
 
-To compare compatibility with an earlier version:
+Compare with an earlier contract:
 
 ```bash
 go run ./tools/clients compat BASELINE_SPEC BASELINE_OPERATIONS
 ```
 
-Replace the placeholders with the baseline OpenAPI and operation metadata paths.
-Compatibility checks do not replace behavior tests.
+Replace the placeholders with baseline OpenAPI and operation metadata paths.
+Run behavior tests as well as compatibility checks.
 
-## 3. Bilingual documentation
+## Bilingual documentation
 
 Use `中文 || English` for translatable summaries, descriptions, parameters,
 response headers, and field comments:
@@ -58,10 +58,11 @@ translations fail generation.
 
 `api/openapi.json` is the SDK/CLI generation input; `api/openapi.zh-CN.json` is the
 Chinese version. Only documentation text may differ; identifiers, types, examples,
-and defaults stay identical. Update both README languages together, with matching
-examples and links.
+and defaults stay identical. User guides use English `NAME.md` and Chinese
+`NAME.zh-CN.md`, with reciprocal language links and matching examples. Keep skill
+instructions and generated command references in English.
 
-## 4. Build release packages
+## Build release packages
 
 ```bash
 make clients-package

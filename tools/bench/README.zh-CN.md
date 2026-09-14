@@ -8,10 +8,13 @@
 | --- | --- | --- |
 | `wave bench` | 真实 HTTP API、worker、PostgreSQL 和本地模拟模型 | Docker CLI 与本机 Docker daemon |
 | `wave bench sandbox` | 沙箱创建、命令执行、停止和重启 | Docker 与选定的沙箱后端 |
+| `wave bench live` | 已部署服务与真实模型 | Wave API 密钥、Agent 和含断言的 case |
 
-无需现有 Wave 部署或模型密钥。以下 Make 命令在仓库根目录执行，需要 Go 1.27+；已有二进制时可直接运行 `wave bench`。服务镜像不包含 Docker CLI，请在宿主机运行。
+合成与沙箱模式无需现有部署或模型密钥。Live 模式会消耗模型额度，见[真实模型测试](OBSERVABILITY.zh-CN.md#测试真实模型)。
 
-## 1. 运行基础压测
+以下 Make 命令在仓库根目录执行，需要 Go 1.27+；已有二进制时可直接运行 `wave`。合成与沙箱模式需在具备 Docker CLI 的宿主机上运行。
+
+## 运行基础压测
 
 ```bash
 make bench
@@ -21,7 +24,7 @@ make -s bench BENCH_ARGS='-format json' > bench.json
 
 基础模式使用临时数据库和本地模拟模型，忽略部署的 `WAVE_*` 配置，无需 `make setup`。
 
-### 1.1 参数
+### 参数
 
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
@@ -36,11 +39,11 @@ make -s bench BENCH_ARGS='-format json' > bench.json
 
 模拟模型只输出文本，token 用量为合成数据。`-model-delay 0` 侧重服务开销；较长延迟（如 `2s`）用于观察模型等待下的并发扩展。响应大小等其他参数见 `wave bench --help`。
 
-### 1.2 负载与计时
+### 负载与计时
 
 每档 worker 数使用全新数据库。每个客户端等当前任务完成后再提交下一个，每个任务使用独立会话。计时包含创建会话、提交任务和状态轮询，不包含建表与预热。
 
-### 1.3 指标
+### 指标
 
 | 指标 | 口径 |
 | --- | --- |
@@ -56,7 +59,7 @@ make -s bench BENCH_ARGS='-format json' > bench.json
 
 报告写入 stdout，进度写入 stderr。失败、超时或未完成的阶段返回非零退出码，保留已有统计，并停止后续阶段。
 
-## 2. 比较结果
+## 比较结果
 
 1. 固定客户端数、模型参数、轮询间隔和任务数，只改变 worker 数。客户端太少也会限制吞吐。
 2. 比较时使用至少 500 个任务并重复运行，减少尾部延迟估计的波动。
@@ -65,9 +68,9 @@ make -s bench BENCH_ARGS='-format json' > bench.json
 
 基础压测不覆盖真实供应商的限流与网络、沙箱、浏览器、文件传输、S3、调度器、SSE 订阅者或多轮长上下文。结果用于比较主机和版本，不能直接换算成真实用户数或沙箱容量。
 
-## 3. 运行沙箱压测
+## 运行沙箱压测
 
-先按[沙箱部署指南](../../deploy/sandbox-resources.md)准备后端，再执行：
+先按[沙箱部署指南](../../deploy/sandbox-resources.zh-CN.md)准备后端，再执行：
 
 ```bash
 make bench-sandbox
@@ -87,10 +90,10 @@ make bench-sandbox BENCH_ARGS='-backend gvisor -verify -concurrency 1,2'
 
 镜像、自定义命令等参数见 `wave bench sandbox --help`。
 
-## 4. 清理与验证
+## 清理与验证
 
 正常退出或 Ctrl-C 后自动清理测试资源。异常终止后，按启动日志中的容器名执行 `docker rm -fv <容器名>` 清理残留容器。
 
 修改压测代码后，运行 `make bench-test`，执行需要 Docker 的竞态检测与集成测试。
 
-日志、任务 Trace、真实模型压测与回归对比，见[观测与压测说明](OBSERVABILITY.zh-CN.md)。
+使用 `wave bench compare baseline.json candidate.json` 检查回归，见[报告对比](OBSERVABILITY.zh-CN.md#比较报告)。

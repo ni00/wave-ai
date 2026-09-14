@@ -8,12 +8,15 @@ Measure task throughput, latency, and sandbox performance on a target host.
 | --- | --- | --- |
 | `wave bench` | Real HTTP API, workers, PostgreSQL, and a local synthetic model | Docker CLI and a local Docker daemon |
 | `wave bench sandbox` | Sandbox creation, command execution, stop, and restart | Docker and the selected sandbox backend |
+| `wave bench live` | Deployed service and real model | Wave API key, agent, and a case with assertions |
 
-Neither mode requires an existing Wave deployment or a model key. Run the Make
-commands from the repository root with Go 1.27+, or use a built `wave` binary
-directly. Run on the host; the service image does not include the Docker CLI.
+Synthetic and sandbox modes need no existing deployment or model key. Live mode
+consumes model quota; see [real model tests](OBSERVABILITY.md#benchmark-a-real-model).
 
-## 1. Run the runtime benchmark
+Run Make commands from the repository root with Go 1.27+, or use a built `wave`
+binary. Synthetic and sandbox modes require a host with the Docker CLI.
+
+## Run the runtime benchmark
 
 ```bash
 make bench
@@ -24,7 +27,7 @@ make -s bench BENCH_ARGS='-format json' > bench.json
 The runtime benchmark uses a temporary database and a local synthetic model. It
 ignores deployment `WAVE_*` settings and does not require `make setup`.
 
-### 1.1 Parameters
+### Parameters
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
@@ -41,13 +44,13 @@ The model emits text only and reports synthetic token usage. Use `-model-delay 0
 to measure service overhead, or a longer delay such as `2s` to compare concurrency
 while waiting for the model. See `wave bench --help` for response sizing and other options.
 
-### 1.2 Workload and timing
+### Workload and timing
 
 Each worker count uses a fresh database. Each client waits for its current task to finish before
 submitting the next, in a separate session. Timing includes session creation, task submission, and
 status polling; it excludes schema initialization and warmup.
 
-### 1.3 Metrics
+### Metrics
 
 | Metric | Definition |
 | --- | --- |
@@ -68,7 +71,7 @@ Reports go to stdout and progress to stderr. A failed, timed-out, or incomplete
 phase returns a nonzero exit code, retains available statistics, and stops later
 phases.
 
-## 2. Compare results
+## Compare results
 
 1. Keep client count, model settings, polling interval, and task count fixed while
    changing worker count. Too few clients also limit throughput.
@@ -84,7 +87,7 @@ browsers, file transfers, S3, the scheduler, SSE subscribers, and long multi-tur
 contexts. Use results to compare hosts and revisions; they do not directly
 predict user or sandbox capacity.
 
-## 3. Run the sandbox benchmark
+## Run the sandbox benchmark
 
 Prepare a backend with the [sandbox setup guide](../../deploy/sandbox-resources.md),
 then run:
@@ -109,7 +112,7 @@ This mode does not measure host RSS or peak guest memory.
 
 See `wave bench sandbox --help` for image selection, custom commands, and other options.
 
-## 4. Cleanup and verification
+## Cleanup and verification
 
 Test resources are cleaned up on normal exit or Ctrl-C. After abnormal
 termination, use the container name from startup logs with `docker rm -fv <name>`
@@ -118,4 +121,5 @@ to remove leftover containers.
 After changing benchmark code, run `make bench-test` for race-enabled tests and
 Docker integration checks.
 
-Native observability: `wave trace -task ID -format json|chrome`, `wave bench live -case case.json`, and `wave bench compare baseline.json candidate.json`. Live cases require deterministic result/artifact assertions and use `WAVE_API_KEY` or `-key-file`. Reports retain content-free task traces. See the [observability guide (Chinese)](OBSERVABILITY.zh-CN.md) for timing semantics, limits and examples.
+Use `wave bench compare baseline.json candidate.json` for regression checks.
+See [report comparison](OBSERVABILITY.md#compare-reports).

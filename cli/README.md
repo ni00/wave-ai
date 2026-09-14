@@ -3,11 +3,11 @@
 English | [简体中文](README.zh-CN.md)
 
 Use `wavectl` to connect to Wave AI and manage agents and tasks. Use
-[`wave`](#6-service-administration) to start and administer the service.
+[`wave`](#service-administration) to start and administer the service.
 
-## 1. Install and connect
+## Install and connect
 
-[Start Wave and obtain an API key](../README.md#2-quick-start). Building the CLI
+[Start Wave and obtain an API key](../README.md#quick-start). Building the CLI
 requires Go 1.23+ and Make. From the repository root:
 
 ```bash
@@ -24,7 +24,7 @@ Replace `/secure/path/wave-api-key` with the file containing your Wave API key.
 `doctor` checks database connectivity and API authentication. `doctor --offline`
 checks connection settings only. Submit a task to verify the model and workers.
 
-### 1.1 Connection profiles
+### Connection profiles
 
 Each profile stores a connection configuration in `wave-ai/config.json` under
 your user configuration directory.
@@ -38,7 +38,7 @@ your user configuration directory.
 Manage profiles with `config list`, `show`, `use`, `remove`, and `unset-key`.
 Removing a key locally does not revoke it on the server.
 
-## 2. Submit and follow a task
+## Submit and follow a task
 
 ```bash
 wavectl agents create --name assistant --model YOUR_MODEL
@@ -47,9 +47,8 @@ wavectl tasks create --session SESSION --agent AGENT --input-file task.txt \
   --idempotency-key research-001 --wait
 ```
 
-Replace `YOUR_MODEL` with a supported model, and `AGENT` and `SESSION` with IDs
-returned by the first two commands. Save the task input in `task.txt` first.
-You can also use an existing agent or session.
+Set `YOUR_MODEL` to a supported model and `AGENT`/`SESSION` to existing or newly
+created IDs. Save the task input in `task.txt` before submitting.
 
 `--wait` prints `{task, reason, required_actions}`. Check the exit code and
 `task.state` for the outcome.
@@ -63,7 +62,7 @@ wavectl tasks wait TASK --timeout 10m
 Reuse an idempotency key when retrying the same submission; use a new key for a
 new task. Reusing a session preserves conversation context and pinned files.
 
-### 2.1 Resolve required actions
+### Resolve required actions
 
 Exit code 6 means the task requires action. Read `type`, `task_id`, and `call_id`
 in `required_actions` to choose the next command:
@@ -92,7 +91,7 @@ Use `--is-error` for failures, with an optional `--error-code`. Repeated decisio
 have no additional effect; conflicts return HTTP 409. Wait again after resolving
 each action.
 
-## 3. Find commands and parameters
+## Find commands and parameters
 
 ```bash
 wavectl schema                          # Contract, operations, and version.
@@ -101,13 +100,12 @@ wavectl schema agents create --example  # Request body template.
 wavectl tasks create --help             # Command flags.
 ```
 
-Every operation provides `--help`. `completion bash|zsh|fish|powershell` prints
-a completion script for the selected shell.
+`completion bash|zsh|fish|powershell` prints shell completion scripts.
 
 Required flags are marked `(required)`. Supply path values as flags or positional
 arguments, but not both.
 
-## 4. Input, output, and files
+## Input, output, and files
 
 ```bash
 wavectl tasks create SESSION --body @request.json --dry-run
@@ -132,7 +130,7 @@ limit for event streams. Override them with `--timeout`. A cursor file belongs
 to one session; deduplicate event IDs after reconnecting. Downloads replace the
 destination only on success. `--output -` writes raw bytes.
 
-## 5. Exit codes
+## Exit codes
 
 | Exit | Meaning |
 | --- | --- |
@@ -149,9 +147,9 @@ Errors go to stderr as JSON with `message`, `exit_code`, and, when available,
 `hint`, `status`, and `request_id`. Scripts using `set -e` should explicitly handle
 nonzero task-wait results, especially codes 6 and 7.
 
-## 6. Service administration
+## Service administration
 
-`wave` reads environment variables to start and administer the service.
+`wave` reads configuration from environment variables.
 
 | Command | Purpose |
 | --- | --- |
@@ -165,6 +163,6 @@ nonzero task-wait results, especially codes 6 and 7.
 `wavectl config set NAME --key-stdin`. See [wave-admin](../skills/wave-admin/SKILL.md)
 for deployment, backup, and diagnostics.
 
-## 7. Related documentation
+## Related documentation
 
 [Task and tool workflows](../skills/wave-client/SKILL.md) · [Client tooling](../tools/clients/README.md) · [English API contract](../api/openapi.json) · [Chinese API contract](../api/openapi.zh-CN.json)
