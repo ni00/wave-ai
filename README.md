@@ -2,83 +2,156 @@
 
 English | [简体中文](README.zh-CN.md)
 
-A Go service for managed AI agents, with durable tasks, tool approval, streaming events, file storage and optional sandboxes. One binary runs the API, worker and scheduler.
+Wave AI is a self-hosted Agent as a Service platform. Define agents and submit
+tasks through an API. The platform manages agent execution, scheduling, and state.
 
-## Quick start
+## 1. Capabilities
 
-Requires Docker Compose, `make` and OpenSSL. From the repository root:
+- **Task recovery.** Save progress and resume recoverable work after restarts.
+  Uncertain tool outcomes require confirmation.
+- **Tool approval.** Pause for approval before key operations, or let clients
+  execute tools and submit results.
+- **Progress tracking.** Read events over SSE or polling and resume from a cursor.
+- **Sandboxed execution.** Isolate shell and file tools. Stop compute when tasks
+  finish while retaining files.
+- **Files, skills, and memory.** Supply inputs, reusable skills, and cross-task
+  memory, and collect output artifacts.
+- **Versions and schedules.** Pin each task to an agent version and schedule runs
+  with cron.
+
+## 2. Quick start
+
+You need Docker Compose, Make, OpenSSL, and a model endpoint compatible with the
+OpenAI Chat Completions API. Run commands from the repository root.
+
+1. Generate the deployment configuration:
+
+   ```bash
+   make setup
+   ```
+
+2. Edit `deploy/.env`. Set `WAVE_DB_PASSWORD`, `WAVE_MODEL_BASE_URL`, and
+   `WAVE_MODEL_API_KEY`. The model endpoint must support streaming
+   `POST /chat/completions` requests.
+
+3. Start the service and create a Wave API key:
+
+   ```bash
+   make up
+   docker compose --project-directory deploy exec wave wave bootstrap -org demo -user admin
+   ```
+
+   Save the printed key; it is shown only once. Clients use this **Wave API key**
+   to access Wave. `WAVE_MODEL_API_KEY` authenticates Wave to the model provider.
+
+4. Open [Swagger UI](http://localhost:8080/swagger/index.html). In **Authorize**,
+   enter the Wave API key without the `Bearer` prefix.
+
+`make down` stops the containers and retains data volumes. Database initialization
+creates the current schema in an empty database. Historical schema migrations
+are not provided; see [database initialization](deploy/sandbox-resources.md#database-initialization--数据库初始化)
+before changing versions.
+
+### 2.1 Submit a task
+
+This Bash example requires `curl` and `jq`. Set `WAVE_API_KEY` to the key from
+`bootstrap` and replace `YOUR_MODEL` with a model supported by your provider.
 
 ```bash
-make setup
-# Edit deploy/.env: set a database password, model API URL/key and the settings below.
-make up
-docker compose --project-directory deploy exec wave wave bootstrap -org demo -user admin
+BASE=http://localhost:8080
+auth=(-H "Authorization: Bearer ${WAVE_API_KEY:?Set WAVE_API_KEY first}" \
+  -H 'Content-Type: application/json')
+
+agent=$(curl -fsS "$BASE/v1/agents" "${auth[@]}" \
+  -d '{"name":"assistant","model":"YOUR_MODEL"}' | jq -er .id)
+
+session=$(curl -fsS "$BASE/v1/sessions" "${auth[@]}" \
+  -d '{"title":"first run"}' | jq -er .id)
+
+task=$(curl -fsS "$BASE/v1/sessions/$session/tasks" "${auth[@]}" \
+  -H "Idempotency-Key: first-run-$session" \
+  -d "$(jq -n --arg agent "$agent" '{agent_id: $agent, input: "Say hello"}')" | jq -er .id)
+
+curl -fsS "$BASE/v1/tasks/$task" "${auth[@]}" | jq '{id,state,result}'
 ```
 
-Save the Wave API Key displayed by `bootstrap`; it is separate from your model-provider key. The API listens on port 8080. `make down` stops containers while retaining data volumes. Initialize an empty database on first use; historical schema migrations are not provided.
+Task creation returns HTTP 202; execution continues asynchronously. Repeat the
+last request to check progress, or use the [CLI](cli/README.md) or an SDK to wait
+for completion. Reuse the task ID after a client timeout. For retries of the same
+submission, reuse its idempotency key.
 
-## Recommended configuration
+## 3. Execution model
 
-For a small single-host deployment using an external model API:
-
-| Item | Starting recommendation |
+| Concept | Purpose |
 | --- | --- |
-| Host | 4 vCPU, 8 GiB RAM, 50 GB SSD; size disk for file retention |
-| Services | Bundled Compose: Wave, PostgreSQL 16 and SeaweedFS (S3) |
-| Worker concurrency | Start with 2; raise after measuring queue latency, memory and provider limits |
-| Sandboxes | Optional; default guest allocation 1 vCPU / 1 GiB; at most 2 active/reserved sandboxes and 4 GiB total guest memory |
-| External access | HTTPS reverse proxy; keep database and storage on the private network |
+| Agent | Versioned model, instructions, tools, and skills. |
+| Session | Conversation and workspace context; one active root task at a time. |
+| Task | One execution using a fixed agent version, bounded by token, tool-call, time, and other budgets. |
+| Environment | Sandbox backend, resource profile, and packages. |
+| Deployment | An agent's execution schedule and run history. |
 
-These are initial sizing estimates, not benchmarked capacity guarantees; local model hosting and sandbox resources are additional. Set these overrides in `deploy/.env`:
+A `waiting` task may need approval or a tool result. An `unknown` task requires
+verification of its execution. Inspect required actions through the CLI or an SDK,
+then follow the [tool workflow](skills/wave-client/references/tools.md) or
+[recovery workflow](skills/wave-client/references/recovery.md).
 
-```dotenv
-WAVE_WORKER_CONCURRENCY=2
-WAVE_CONTEXT_TOKENS=32000
-WAVE_MODEL_TIMEOUT_SEC=300
-WAVE_LEASE_SECONDS=30
-```
+## 4. Deployment
 
-Use a model supported by your provider when creating an Agent, and keep the context budget within that model's limits. Tasks without an environment need no sandbox. Sandboxed work defaults to Docker + gVisor; see [sandbox backends and host setup](deploy/sandbox-resources.md) to switch to sbx or rootless Podman; the `local` backend is for trusted development only.
+### 4.1 Model and worker configuration
 
-Sandbox capacity is separate from worker concurrency. See [sandbox sizing, profiles and initialization](deploy/sandbox-resources.md). Development databases are recreated directly with the current schema.
+Compose reads `deploy/.env`; directly started processes read environment
+variables. Common settings are listed below; see the [full configuration example](deploy/.env.example).
 
-Keep the storage credentials and `WAVE_MASTER_KEY` generated by `make setup`. Back up `.env`, PostgreSQL, stored files and sandbox data; replacing the master key makes existing credentials unreadable. See [all settings](deploy/.env.example). Compose reads `deploy/.env`; local processes read environment variables only.
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `WAVE_WORKER_CONCURRENCY` | `10` | Concurrent task workers per process |
+| `WAVE_CONTEXT_TOKENS` | `32000` | Context token budget; keep within the model's limit |
+| `WAVE_MODEL_TIMEOUT_SEC` | `300` | Model request timeout in seconds |
 
-For local development without Compose, use Go 1.27+, PostgreSQL 16+ and `WAVE_STORAGE_BACKEND=local`; see [setup details](skills/wave-admin/references/setup.md).
+Adjust concurrency for provider limits and queue latency. Use the
+[benchmarks](tools/bench/README.md) to measure host capacity. Use HTTPS for external
+access and keep the database and storage on a private network.
 
-## Benchmarking
+### 4.2 Sandboxes and backups
 
-Run `make bench` on the target host (local Docker and Go required), or `wave bench` with a built binary. The tool creates disposable PostgreSQL and a local synthetic model, exercising authentication, task admission, workers, model streaming and persistence through real HTTP APIs. It ignores deployment `WAVE_*` configuration and needs no API keys. Test containers, volumes and temporary files are removed on exit or Ctrl-C.
+Docker with gVisor is the default; rootless Podman and sbx are also supported.
+Follow the [sandbox setup guide](deploy/sandbox-resources.md) before running
+sandboxed tasks. The `local` backend uses the service user's host permissions and
+is intended for trusted development.
 
-```bash
-make bench
-make bench BENCH_ARGS='-workers 2,5,10,20 -clients 32 -tasks 500 -warmup 20 -timeout 5m'
-# JSON reports compare hosts or revisions; build and benchmark progress goes to stderr.
-make -s bench BENCH_ARGS='-format json' > bench.json
-```
+Each sandbox defaults to 1 vCPU and 1 GiB of memory. Replicas share default limits
+of 2 active or reserved sandboxes and 4 GiB of guest memory. Sandbox quotas and
+task concurrency are configured separately.
 
-Each worker count uses a fresh database; warmup is excluded. Reports include successful tasks/second, error rate, queue/execution/end-to-end P50/P95/P99, database pool waits and sampled process Go heap peak. Use `-model-delay 2s` for slower model responses, and `-chunks` / `-chunk-bytes` to vary streaming load. See `wave bench --help` and the [benchmark guide](tools/bench/README.md).
+Back up `deploy/.env`, the database, file storage, and sandbox data. Keep
+`WAVE_MASTER_KEY` and storage credentials; replacing the master key makes existing
+encrypted credentials unreadable.
 
-This baseline excludes sandboxes, browsers, real providers and S3/file workloads; it is not a production Agent capacity guarantee. Hold `-clients` constant while increasing workers, looking for throughput saturation, P95 growth, failures and resource use. Use at least 500 tasks and repeated runs for longer comparisons. `-clients` controls in-flight test tasks; `-workers` controls server workers.
+For development without Compose, see the [local setup instructions](skills/wave-admin/references/setup.md).
 
-## Clients and API
+## 5. Clients and documentation
 
-- [CLI](cli/README.md): `make cli-build`; use `wavectl` for remote operations and `wave` for local administration.
-- SDKs: [Go](sdks/go/README.md), [Python](sdks/python/README.md), [TypeScript](sdks/typescript/README.md).
-- Agent skills: [wave-client](skills/wave-client/SKILL.md), [wave-admin](skills/wave-admin/SKILL.md).
-- [Swagger UI](http://localhost:8080/swagger/index.html) defaults to English; select Chinese in the dropdown or use [`?lang=zh-CN`](http://localhost:8080/swagger/index.html?lang=zh-CN).
-- OpenAPI: [English](api/openapi.json) at `/swagger/openapi.json`; [Chinese](api/openapi.zh-CN.json) at `/swagger/openapi.zh-CN.json`.
+| Use case | Guide |
+| --- | --- |
+| Manage resources and follow tasks | [wavectl](cli/README.md) |
+| Integrate an application | [Go SDK](sdks/go/README.md), [Python SDK](sdks/python/README.md), [TypeScript SDK](sdks/typescript/README.md) |
+| Give an external agent Wave workflows | [wave-client skill](skills/wave-client/SKILL.md) |
+| Operate a deployment | [wave-admin skill](skills/wave-admin/SKILL.md) |
+| Inspect API requests and responses | [English OpenAPI](api/openapi.json), [Chinese OpenAPI](api/openapi.zh-CN.json) |
+| Measure runtime and sandbox performance | [Benchmarks](tools/bench/README.md) |
 
-Create an Agent, create a Session, then submit a Task with `agent_id` and `input`. Authenticate with `Authorization: Bearer <Wave API Key>`; in Swagger Authorize, enter the raw key. `/health` returns 204 when the database is available.
+Swagger UI supports English and Chinese. Use the language menu or open
+[the Chinese view](http://localhost:8080/swagger/index.html?lang=zh-CN).
 
-## Development
+## 6. Development
 
 ```bash
 make build                       # Build the service.
-make test                        # Unit and architecture tests.
-make check                       # Contract checks, vet and build.
-make docs clients-generate       # Regenerate Swagger, localized OpenAPI and clients.
+make test                        # Run unit and architecture tests.
+make check                       # Check contracts, vet, verify modules, and build.
+make docs clients-generate       # Regenerate API documentation and clients.
 make clients-check clients-test  # Check generated clients and behavior.
 ```
 
-Service code lives in `cmd/` and `internal/`; contracts in `api/`; clients in `cli/` and `sdks/`. See [client tooling](tools/clients/README.md) for integration tests, compatibility checks and packaging. Maintain English `README.md` and Chinese `README.zh-CN.md` together; API annotations use `中文 || English`.
+See [client tooling](tools/clients/README.md) for dependencies, integration tests,
+and packaging.

@@ -2,11 +2,13 @@
 
 English | [简体中文](README.zh-CN.md)
 
-Remote CLI for all Wave AI API operations, with task waiting, tool approval, resumable events and streaming files. Use `wave` for local service administration.
+Use `wavectl` to connect to Wave AI and manage agents and tasks. Use
+[`wave`](#6-service-administration) to start and administer the service.
 
-## Install and connect
+## 1. Install and connect
 
-From the repository root (Go only):
+[Start Wave and obtain an API key](../README.md#2-quick-start). Building the CLI
+requires Go 1.23+ and Make. From the repository root:
 
 ```bash
 make cli-build
@@ -17,28 +19,97 @@ wavectl config use local
 wavectl doctor
 ```
 
-Profiles live in the user configuration directory under `wave-ai/config.json`, written atomically with mode `0600`. `WAVE_PROFILE` overrides the active profile; `WAVE_BASE_URL` and `WAVE_API_KEY` override saved values; explicit `--profile`/`--url` take precedence. Use `config list/show/use/remove/unset-key` to manage connections. Inspection never prints saved keys; local removal does not revoke server credentials.
+Replace `/secure/path/wave-api-key` with the file containing your Wave API key.
 
-`doctor` checks database health and API authentication; `doctor --offline` only checks connection settings. Neither proves model or worker readiness.
+`doctor` checks database connectivity and API authentication. `doctor --offline`
+checks connection settings only. Submit a task to verify the model and workers.
 
-## Submit and follow work
+### 1.1 Connection profiles
+
+Each profile stores a connection configuration in `wave-ai/config.json` under
+your user configuration directory.
+
+| Setting | Precedence, highest first |
+| --- | --- |
+| Profile | `--profile` → `WAVE_PROFILE` → saved active profile → `default` |
+| URL | `--url` → `WAVE_BASE_URL` → profile URL |
+| API key | `WAVE_API_KEY` → profile key |
+
+Manage profiles with `config list`, `show`, `use`, `remove`, and `unset-key`.
+Removing a key locally does not revoke it on the server.
+
+## 2. Submit and follow a task
 
 ```bash
-wavectl agents list --format table
 wavectl agents create --name assistant --model YOUR_MODEL
 wavectl sessions create --title research
 wavectl tasks create --session SESSION --agent AGENT --input-file task.txt \
   --idempotency-key research-001 --wait
+```
+
+Replace `YOUR_MODEL` with a supported model, and `AGENT` and `SESSION` with IDs
+returned by the first two commands. Save the task input in `task.txt` first.
+You can also use an existing agent or session.
+
+`--wait` prints `{task, reason, required_actions}`. Check the exit code and
+`task.state` for the outcome.
+After a timeout, keep waiting on the existing task:
+
+```bash
 wavectl tasks get TASK --pretty
 wavectl tasks wait TASK --timeout 10m
 ```
 
-Reuse existing IDs where available. `--wait` returns `{task, reason, required_actions}`; an action returns exit code `6`. Submit an authorized decision with `tools approve/reject CALL --task TASK`, or an actual tool result with `tools result CALL --task TASK --result-file result.txt`. Approval does not execute a client tool. After a timeout, continue waiting on the saved task ID rather than creating another task.
+Reuse an idempotency key when retrying the same submission; use a new key for a
+new task. Reusing a session preserves conversation context and pinned files.
 
-## Inputs, output and files
+### 2.1 Resolve required actions
+
+Exit code 6 means the task requires action. Read `type`, `task_id`, and `call_id`
+in `required_actions` to choose the next command:
+
+| Action | Response |
+| --- | --- |
+| `approve_tool` | Use `tools approve` after authorizing execution, or `tools reject` to deny it |
+| `submit_tool_result` | Execute the client tool, then submit its actual result with `tools result` |
+| `confirm_tool_outcome`, `reconcile_task` | Verify external execution and follow the [recovery workflow](../skills/wave-client/references/recovery.md) |
+
+To allow execution:
 
 ```bash
-wavectl schema tasks create --request
+wavectl tools approve CALL --task TASK
+wavectl tasks wait TASK
+```
+
+For a `submit_tool_result` action, execute the client tool and submit its actual
+result:
+
+```bash
+wavectl tools result CALL --task TASK --result-file result.txt
+```
+
+Use `--is-error` for failures, with an optional `--error-code`. Repeated decisions
+have no additional effect; conflicts return HTTP 409. Wait again after resolving
+each action.
+
+## 3. Find commands and parameters
+
+```bash
+wavectl schema                          # Contract, operations, and version.
+wavectl schema tasks create --request   # Request fields.
+wavectl schema agents create --example  # Request body template.
+wavectl tasks create --help             # Command flags.
+```
+
+Every operation provides `--help`. `completion bash|zsh|fish|powershell` prints
+a completion script for the selected shell.
+
+Required flags are marked `(required)`. Supply path values as flags or positional
+arguments, but not both.
+
+## 4. Input, output, and files
+
+```bash
 wavectl tasks create SESSION --body @request.json --dry-run
 wavectl tasks get TASK --select /state --raw
 wavectl agents list --all --format jsonl
@@ -47,18 +118,53 @@ wavectl files upload --file report.txt
 wavectl files download FILE --output report.txt
 ```
 
-Use typed flags or full `--body` JSON, never both. Objects/arrays accept JSON or `@file`; text-file flags accept `-` for stdin. Explicit false and empty strings are preserved. `--dry-run` validates and redacts a preview without contacting the service; JSON/text input is limited to 2 MiB.
+`--body` accepts JSON, `@file`, or `-`, and cannot be combined with field flags.
+Object and array fields accept `@file`. File flags accept `-` for stdin; uploads
+also require `--filename NAME`. `--dry-run` validates and previews locally.
+`--select` uses a JSON Pointer.
 
-stdout defaults to JSON; diagnostics go to stderr. Use `--format table` for reading, `--select` (JSON Pointer) with `--raw` for scalar extraction, and `--all --format jsonl` for incremental pagination. Deadlines default to 30 seconds for requests, 5 minutes for waiting and unlimited for events; override with `--timeout`.
+JSON and text input is limited to 2 MiB; `false` and empty strings are valid.
+Results go to stdout as JSON, diagnostics to stderr. Use `--format table` for
+table output.
+
+Default timeouts are 30 seconds for requests, 5 minutes for task waits, and no
+limit for event streams. Override them with `--timeout`. A cursor file belongs
+to one session; deduplicate event IDs after reconnecting. Downloads replace the
+destination only on success. `--output -` writes raw bytes.
+
+## 5. Exit codes
 
 | Exit | Meaning |
 | --- | --- |
-| 0 | Operation or awaited task succeeded |
-| 1–4 | Local/network error, invalid input, authentication error, other API error (respectively) |
-| 5 | Timeout/interruption; remote work may continue |
+| 0 | The operation, or the awaited task, succeeded |
+| 1 | Local or network error |
+| 2 | Invalid input or usage |
+| 3 | Authentication or authorization error |
+| 4 | Any other API error |
+| 5 | Timeout or interruption; remote work may still be running |
 | 6 | Task requires action; inspect stdout |
-| 7 | Task ended without success; inspect stdout |
+| 7 | Task ended without success; read stdout |
 
-Handle nonzero wait outcomes explicitly in scripts using `set -e`. Cursor files belong to one session; deduplicate replayed event IDs. Downloads replace the destination only on success; `--output -` emits bytes. Stdin uploads use `--file - --filename NAME`.
+Errors go to stderr as JSON with `message`, `exit_code`, and, when available,
+`hint`, `status`, and `request_id`. Scripts using `set -e` should explicitly handle
+nonzero task-wait results, especially codes 6 and 7.
 
-See the [client skill](../skills/wave-client/SKILL.md) for approvals, recovery and artifacts, [administration](../skills/wave-admin/SKILL.md) for deployment, and [tooling](../tools/clients/README.md) for checks and release builds. API contracts: [English](../api/openapi.json), [Chinese](../api/openapi.zh-CN.json).
+## 6. Service administration
+
+`wave` reads environment variables to start and administer the service.
+
+| Command | Purpose |
+| --- | --- |
+| `wave serve` | Run the service; `-role all\|api\|worker\|scheduler` overrides `WAVE_ROLE` |
+| `wave bootstrap` | Create an organization, user, and API key; requires `-org` |
+| `wave init-db` | Create the current schema in an empty database |
+| `wave config check` | Validate configuration and print a summary without secrets |
+| `wave bench`, `wave bench sandbox` | Capacity baselines; see the [benchmark guide](../tools/bench/README.md) |
+
+`wave bootstrap -format key` prints only the raw key, which can be piped into
+`wavectl config set NAME --key-stdin`. See [wave-admin](../skills/wave-admin/SKILL.md)
+for deployment, backup, and diagnostics.
+
+## 7. Related documentation
+
+[Task and tool workflows](../skills/wave-client/SKILL.md) · [Client tooling](../tools/clients/README.md) · [English API contract](../api/openapi.json) · [Chinese API contract](../api/openapi.zh-CN.json)

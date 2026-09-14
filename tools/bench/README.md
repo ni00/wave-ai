@@ -1,23 +1,30 @@
-# Wave bench
+# Wave benchmarks
 
 English | [简体中文](README.zh-CN.md)
 
-For real microVM lifecycle and shell workloads, use `make bench-sandbox` or
-`wave bench sandbox`. See [sandbox benchmark and sizing](../../deploy/sandbox-resources.md#benchmark--压测).
-That mode supports gVisor (default), Podman and sbx and deletes its temporary sandboxes; it is separate from the synthetic baseline below.
+Measure task throughput, latency, and sandbox performance on a target host.
 
-`wave bench` runs an isolated end-to-end baseline on the target host. It starts disposable PostgreSQL 16, the real Wave HTTP API and workers, and a deterministic streaming model in place of an external provider. No existing deployment, model account, storage account or sandbox is required.
+| Mode | Measures | Requires |
+| --- | --- | --- |
+| `wave bench` | Real HTTP API, workers, PostgreSQL, and a local synthetic model | Docker CLI and a local Docker daemon |
+| `wave bench sandbox` | Sandbox creation, command execution, stop, and restart | Docker and the selected sandbox backend |
 
-## Running
+Neither mode requires an existing Wave deployment or a model key. Run the Make
+commands from the repository root with Go 1.27+, or use a built `wave` binary
+directly. Run on the host; the service image does not include the Docker CLI.
+
+## 1. Run the runtime benchmark
 
 ```bash
 make bench
 make bench BENCH_ARGS='-workers 2,5,10,20 -tasks 500 -clients 32 -warmup 20 -timeout 5m'
-make -s bench BENCH_ARGS='-workers 2,5,10,20 -format json' > bench.json
-make bench-test
+make -s bench BENCH_ARGS='-format json' > bench.json
 ```
 
-A built `wave` binary can run `wave bench` directly on the host. A local Docker daemon must be available; the first run may pull `postgres:16-alpine`. Compose, `make setup` and a running service are unnecessary. The service image has no Docker CLI; run this tool on the host.
+The runtime benchmark uses a temporary database and a local synthetic model. It
+ignores deployment `WAVE_*` settings and does not require `make setup`.
+
+### 1.1 Parameters
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
@@ -26,33 +33,87 @@ A built `wave` binary can run `wave bench` directly on the host. A local Docker 
 | `-tasks` | `100` | Measured tasks per worker count |
 | `-warmup` | `10` | Additional warmup tasks per worker count; 0 disables |
 | `-model-delay` | `100ms` | Total simulated streaming delay per model response, distributed across chunks |
-| `-chunks` | `8` | Chunks per synthetic response |
-| `-chunk-bytes` | `128` | ASCII bytes per chunk |
 | `-poll` | `100ms` | Client task status polling interval |
 | `-timeout` | `2m` | Separate total deadline for each warmup and measured phase, including queue time |
 | `-format` | `human` | `human` table or full `json` report |
 
-Responses are capped at 4096 chunks and 1 MiB total. The model emits only text and never invokes tools. A zero model delay emphasizes scheduling, HTTP and database overhead; longer delays such as 2s explore worker scaling with model I/O. Token usage is synthetic, with no real tokenization.
+The model emits text only and reports synthetic token usage. Use `-model-delay 0`
+to measure service overhead, or a longer delay such as `2s` to compare concurrency
+while waiting for the model. See `wave bench --help` for response sizing and other options.
 
-## Workload and metrics
+### 1.2 Workload and timing
 
-Each worker count gets a fresh database, followed by warmup and a timed phase. Clients submit a new task only after their previous task completes: this is closed-loop concurrency. Each task gets a new Session to avoid session serialization. Timing includes session creation, task submission and status polling, but excludes schema initialization and warmup.
+Each worker count uses a fresh database. Each client waits for its current task to finish before
+submitting the next, in a separate session. Timing includes session creation, task submission, and
+status polling; it excludes schema initialization and warmup.
 
-- `successful_tasks_per_second`: successful tasks divided by the entire measured phase duration. Failures do not contribute throughput.
-- `error_rate`: failed / attempted tasks, including client HTTP errors and timeouts. Requested minus attempted tasks were never attempted.
-- `end_to_end`: session creation start to observed completion, including polling delay.
-- `queue`: server `started_at - created_at`.
-- `execution`: server `finished_at - started_at`, including synthetic model delay and persistence.
-- Latency distributions contain successful tasks only and use nearest-rank percentiles. A JSON distribution with `count: 0` has no valid samples. P99 from 100 tasks is coarse; use at least 500 and repeat comparisons.
-- `process_peak_sampled_go_heap_mib`: whole-process heap sampled every 100ms, including Wave, the load generator, mock and statistics. This is not RSS, excludes PostgreSQL and is not a host memory peak.
-- `db_pool_wait_count` / `db_pool_wait_ms`: cumulative connection acquisition waits during measurement, using the existing service pool limit of 32 connections.
+### 1.3 Metrics
 
-stdout contains only the report; progress goes to stderr. Failures, incomplete runs and timeouts return a nonzero exit code while preserving available measured results. Testing stops after the first failed phase. Zero latency with no successful samples is not a good result.
+| Metric | Definition |
+| --- | --- |
+| `successful_tasks_per_second` | Successful tasks / measured phase duration |
+| `error_rate` | Failed tasks / attempted tasks, including HTTP errors and timeouts |
+| `end_to_end` | Session creation start to observed completion, including polling delay |
+| `queue` | Server `started_at - created_at` |
+| `execution` | Server `finished_at - started_at`, including model delay and persistence |
+| `process_peak_sampled_go_heap_mib` | Whole-process Go heap peak sampled every 100 ms, including Wave, clients, the model, and statistics |
+| `db_pool_wait_count`, `db_pool_wait_ms` | Cumulative connection acquisition waits during measurement, with a pool limit of 32 |
 
-## Interpreting results
+Latency distributions include successful tasks only and use nearest-rank
+percentiles. `count: 0` means no valid samples; `requested - attempted` counts
+unattempted tasks. Heap samples exclude PostgreSQL and do not measure process RSS
+or host memory peaks.
 
-Keep clients, model settings, polling interval and task count fixed while comparing worker counts. Too few clients cap throughput. A throughput plateau with rising latency or connection waits indicates diminishing returns from adding workers. Monitor host CPU, memory, disk and container usage separately; VPS results can vary with other tenants. Keep JSON reports and record the revision, machine specifications and other workloads when comparing hosts or commits.
+Reports go to stdout and progress to stderr. A failed, timed-out, or incomplete
+phase returns a nonzero exit code, retains available statistics, and stops later
+phases.
 
-The baseline excludes real provider limits/network, sandboxes/browsers, uploads/downloads, SeaweedFS/S3, scheduler, SSE subscribers and long multi-turn contexts. The mock uses SSE, but benchmark clients poll task status. Results are not a guarantee of real user or sandbox capacity.
+## 2. Compare results
 
-Deployment `WAVE_*` variables are ignored. PostgreSQL binds only a random `127.0.0.1` port. Each run has a unique container name; exit or Ctrl-C removes the container, anonymous volumes and temporary directory. SIGKILL, power loss or an unresponsive Docker daemon can prevent cleanup; use the container name from startup logs with `docker rm -fv <name>` if needed.
+1. Keep client count, model settings, polling interval, and task count fixed while
+   changing worker count. Too few clients also limit throughput.
+2. Use at least 500 tasks and repeat runs to reduce variation in tail estimates.
+3. Compare throughput, P95/P99, failure rate, and database connection waits
+   together. A throughput plateau with rising latency indicates diminishing
+   returns from more workers.
+4. Save JSON reports with the revision, host specification, and other workloads.
+   Monitor CPU, memory, disk, and containers separately.
+
+The runtime benchmark excludes provider limits and network behavior, sandboxes,
+browsers, file transfers, S3, the scheduler, SSE subscribers, and long multi-turn
+contexts. Use results to compare hosts and revisions; they do not directly
+predict user or sandbox capacity.
+
+## 3. Run the sandbox benchmark
+
+Prepare a backend with the [sandbox setup guide](../../deploy/sandbox-resources.md),
+then run:
+
+```bash
+make bench-sandbox
+make bench-sandbox BENCH_ARGS='-backend gvisor -verify -concurrency 1,2'
+```
+
+Supports gVisor (default), Podman, and sbx, using the selected backend's settings.
+Capacity is independent of deployment limits, so use a dedicated test host.
+This mode does not measure host RSS or peak guest memory.
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `-backend` | `gvisor` | Sandbox backend under test: `gvisor`, `podman` or `sbx` |
+| `-verify` | `false` | Verify results instead of only timing the run |
+| `-concurrency` | `1,2` | Concurrency levels tested in sequence |
+| `-memory-mib` | `512,1024,2048` | Guest memory sizes tested in sequence |
+| `-iterations` | `3` | New sandboxes per client for each memory size |
+| `-timeout` | `3m` | Deadline per sample, excluding forced cleanup |
+
+See `wave bench sandbox --help` for image selection, custom commands, and other options.
+
+## 4. Cleanup and verification
+
+Test resources are cleaned up on normal exit or Ctrl-C. After abnormal
+termination, use the container name from startup logs with `docker rm -fv <name>`
+to remove leftover containers.
+
+After changing benchmark code, run `make bench-test` for race-enabled tests and
+Docker integration checks.
