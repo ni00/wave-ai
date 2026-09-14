@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -342,8 +341,7 @@ func (c apiClient) validate(ctx context.Context, t execution.Task, e expectation
 			return errors.New("artifact sha256 assertion failed")
 		}
 		if len(expected.JSONEquals) > 0 {
-			var actual, want any
-			if json.Unmarshal(b, &actual) != nil || json.Unmarshal(expected.JSONEquals, &want) != nil || !reflect.DeepEqual(actual, want) {
+			if !equalJSON(b, expected.JSONEquals) {
 				return errors.New("artifact json_equals assertion failed")
 			}
 		}

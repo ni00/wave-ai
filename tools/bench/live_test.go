@@ -139,3 +139,22 @@ func TestCaseRequiresAssertionsAndRejectsUnknownFields(t *testing.T) {
 		}
 	}
 }
+
+func TestJSONAssertionsKeepNumbersExact(t *testing.T) {
+	for _, tc := range []struct {
+		a, b  string
+		equal bool
+	}{
+		{`{"n":9007199254740992}`, `{"n":9007199254740993}`, false},
+		{`{"n":1,"s":"text"}`, `{"s":"text","n":1.0}`, true},
+		{`[1e3]`, `[1000]`, true},
+		{`{"n":null}`, `{"other":null}`, false},
+		{`"1"`, `1`, false},
+		{`1e999999999`, `2e999999999`, false},
+		{`1 {}`, `1`, false},
+	} {
+		if got := equalJSON([]byte(tc.a), []byte(tc.b)); got != tc.equal {
+			t.Fatalf("%s vs %s: %t", tc.a, tc.b, got)
+		}
+	}
+}
