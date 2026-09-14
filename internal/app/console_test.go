@@ -144,6 +144,12 @@ func TestConsoleOwnershipPaginationAndImports(t *testing.T) {
 		if kind == "sandboxes" && bytes.Contains(body, []byte("private")) {
 			t.Fatal("sandbox leaked infrastructure")
 		}
+		if kind == "sandboxes" {
+			var record console.Record
+			if json.Unmarshal(body, &record) != nil || record.Meta["memory_mib"] != float64(512) || record.Meta["cpus"] != float64(1) {
+				t.Fatalf("sandbox allocation projection: %s", body)
+			}
+		}
 		if kind == "skills" && !bytes.Contains(body, []byte("Test instructions")) {
 			t.Fatal("missing skill preview")
 		}

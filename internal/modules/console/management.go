@@ -21,8 +21,8 @@ type sandboxView struct {
 	BackendID string
 	Name      string
 	State     string
-	CPUs      uint32
-	MemoryMiB uint64
+	CPUs      uint32 `gorm:"column:cpus"`
+	MemoryMiB uint64 `gorm:"column:memory_mib"`
 	Image     string
 	UpdatedAt time.Time
 }
