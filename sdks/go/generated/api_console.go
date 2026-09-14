@@ -35,6 +35,9 @@ type ApiConsoleBrowseRequest struct {
 	spanId *string
 	timeField *string
 	sessionId *string
+	agentId *string
+	environmentId *string
+	skillId *string
 	taskId *string
 	before *string
 	after *string
@@ -81,6 +84,24 @@ func (r ApiConsoleBrowseRequest) TimeField(timeField string) ApiConsoleBrowseReq
 // Session ID
 func (r ApiConsoleBrowseRequest) SessionId(sessionId string) ApiConsoleBrowseRequest {
 	r.sessionId = &sessionId
+	return r
+}
+
+// Agent ID
+func (r ApiConsoleBrowseRequest) AgentId(agentId string) ApiConsoleBrowseRequest {
+	r.agentId = &agentId
+	return r
+}
+
+// Environment ID
+func (r ApiConsoleBrowseRequest) EnvironmentId(environmentId string) ApiConsoleBrowseRequest {
+	r.environmentId = &environmentId
+	return r
+}
+
+// Referenced skill ID
+func (r ApiConsoleBrowseRequest) SkillId(skillId string) ApiConsoleBrowseRequest {
+	r.skillId = &skillId
 	return r
 }
 
@@ -177,6 +198,15 @@ func (a *ConsoleAPIService) ConsoleBrowseExecute(r ApiConsoleBrowseRequest) (*Co
 	}
 	if r.sessionId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "session_id", r.sessionId, "form", "")
+	}
+	if r.agentId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "agent_id", r.agentId, "form", "")
+	}
+	if r.environmentId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "environment_id", r.environmentId, "form", "")
+	}
+	if r.skillId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "skill_id", r.skillId, "form", "")
 	}
 	if r.taskId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "task_id", r.taskId, "form", "")
@@ -911,6 +941,167 @@ func (a *ConsoleAPIService) ConsoleMetricsExecute(r ApiConsoleMetricsRequest) (*
 			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		if localVarHTTPResponse.StatusCode == 403 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiConsoleResourceRequest struct {
+	ctx context.Context
+	ApiService *ConsoleAPIService
+	kind string
+	id string
+}
+
+func (r ApiConsoleResourceRequest) Execute() (*ConsoleRecord, *http.Response, error) {
+	return r.ApiService.ConsoleResourceExecute(r)
+}
+
+/*
+ConsoleResource Read a console resource
+
+Skill previews are capped at 128 KiB. Sandboxes expose recorded instance state and allocation only.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param kind Resource kind
+ @param id Resource ID; session ID for sandboxes
+ @return ApiConsoleResourceRequest
+*/
+func (a *ConsoleAPIService) ConsoleResource(ctx context.Context, kind string, id string) ApiConsoleResourceRequest {
+	return ApiConsoleResourceRequest{
+		ApiService: a,
+		ctx: ctx,
+		kind: kind,
+		id: id,
+	}
+}
+
+// Execute executes the request
+//  @return ConsoleRecord
+func (a *ConsoleAPIService) ConsoleResourceExecute(r ApiConsoleResourceRequest) (*ConsoleRecord, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *ConsoleRecord
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ConsoleAPIService.ConsoleResource")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1/console/resources/{kind}/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"kind"+"}", url.PathEscape(parameterValueToString(r.kind, "kind")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterValueToString(r.id, "id")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v ApierrEnvelope
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
 			var v ApierrEnvelope
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {

@@ -19,11 +19,15 @@ ssh -N -L 18080:127.0.0.1:8080 "${VPS_USER}@${VPS_HOST}"
 | 分组 | 页面 |
 | --- | --- |
 | 监控 | Overview、Metrics、Traces、Logs |
-| 资源与执行 | Environments、Files、Memory、Sessions、Tasks |
+| 资源与执行 | Agents、Skills、Deployments、Environments、Sandboxes、Files、Memory、Sessions、Tasks |
 | 性能测试 | Benchmarks |
 
 搜索、筛选列表，选择记录查看详情。`/` 聚焦搜索，↑/↓ 选择列表项，Escape 关闭详情。复制 URL 可分享当前资源。列表使用游标分页，详情按需加载；开启实时刷新后，仅在页面可见时每五秒刷新。
 
+- **Agents：**创建、编辑模型、指令、工具和技能绑定，查看版本与关联任务。
+- **Skills：**上传 ZIP、预览 `SKILL.md`、下载技能包，查看引用它的 Agent。
+- **Deployments：**创建定时或手动运行配置，暂停、恢复调度，查看运行记录。
+- **Environments** 是可复用的依赖和沙箱配置；**Sandboxes** 展示会话对应的实例、已记录状态和 CPU/内存配额。
 - **Metrics**：选择 1 小时至 30 天或自定义范围。选择图表时间点，可打开该时段的 Trace、失败任务或日志；方向键可切换时间点。
 - **Traces**：查看调用树、时间线和 Span 详情，跳转到关联任务、子任务或日志。
 - **Logs**：按时间、级别、模块、消息、错误或 ID 筛选。Trace 链接定位到对应 Span。执行事件位于 **Tasks/Sessions → Events**。

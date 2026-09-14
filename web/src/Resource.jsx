@@ -97,6 +97,12 @@ function Task({ id }) {
                 <Badge state={t.state} />
                 <p>{date(t.created_at)}</p>
                 <div className="actions">
+                  <Jump kind="agents" id={t.agent_id}>
+                    Agent
+                  </Jump>
+                  <Jump kind="sandboxes" extra={{ session: t.session_id }}>
+                    Sandbox
+                  </Jump>
                   <Jump kind="traces" id={id}>
                     查看 Trace
                   </Jump>
@@ -248,6 +254,9 @@ function Session({ id }) {
                 <Badge state={s.archived ? "archived" : "active"} />
                 <p>{date(s.created_at)}</p>
                 <div className="actions">
+                  <Jump kind="sandboxes" extra={{ session: id }}>
+                    Sandbox
+                  </Jump>
                   <Jump kind="logs" extra={{ session: id }}>
                     执行日志
                   </Jump>
@@ -286,7 +295,7 @@ function Session({ id }) {
                         {s.environment_id}
                       </Jump>
                     ) : (
-                      <span>默认环境</span>
+                      <span>未关联环境</span>
                     )}
                   </Section>
                   <Section title="Files">
@@ -380,6 +389,17 @@ function Environment({ id }) {
               </div>
               <h2>{e.name}</h2>
               <Badge state={e.archived ? "archived" : "active"} />
+            </div>
+            <div className="actions resource-links">
+              <Jump kind="sandboxes" extra={{ environment: id }}>
+                Sandboxes
+              </Jump>
+              <Jump kind="sessions" extra={{ environment: id }}>
+                Sessions
+              </Jump>
+              <Jump kind="deployments" extra={{ environment: id }}>
+                Deployments
+              </Jump>
             </div>
             <div className="metric-grid">
               <Metric

@@ -24,6 +24,7 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | `wavectl console log` | `--id` | — | Read a structured log |
 | `wavectl console metrics` | — | — | Query monitoring metrics |
 | `wavectl console list` | `--kind` | — | Browse console resources |
+| `wavectl console resource` | `--kind`, `--id` | — | Read a console resource |
 
 ## credentials
 

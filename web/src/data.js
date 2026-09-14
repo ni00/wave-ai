@@ -53,6 +53,9 @@ export function readRoute() {
   return {
     kind: path?.slice(1) || "overview",
     id: params.get("id") || "",
+    agent: params.get("agent") || "",
+    environment: params.get("environment") || "",
+    skill: params.get("skill") || "",
     session: params.get("session") || "",
     task: params.get("task") || "",
     trace: params.get("trace") || "",
@@ -133,6 +136,9 @@ export function comparable(a, b) {
 export function routeFilters(location) {
   return Object.fromEntries(
     [
+      "agent",
+      "environment",
+      "skill",
       "session",
       "task",
       "trace",

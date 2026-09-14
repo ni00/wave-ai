@@ -76,7 +76,9 @@ export function Load({ query, children }) {
       <div className="error">
         <IconAlertCircle size={20} />
         <span>{query.error.message}</span>
-        <button onClick={() => query.refetch()}>重试</button>
+        <button type="button" onClick={() => query.refetch()}>
+          重试
+        </button>
       </div>
     );
   return children(query.data);

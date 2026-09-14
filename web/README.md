@@ -22,7 +22,7 @@ Open [the tunneled console](http://localhost:18080/console/).
 | Section | Pages |
 | --- | --- |
 | Monitoring | Overview, Metrics, Traces, Logs |
-| Resources and execution | Environments, Files, Memory, Sessions, Tasks |
+| Resources and execution | Agents, Skills, Deployments, Environments, Sandboxes, Files, Memory, Sessions, Tasks |
 | Performance testing | Benchmarks |
 
 Search and filter lists, then select a record for details. Press `/` to search,
@@ -30,6 +30,10 @@ Search and filter lists, then select a record for details. Press `/` to search,
 selected resource. Lists use cursor pagination and load details on demand.
 Optional live refresh runs every five seconds while the page is visible.
 
+- **Agents:** create and edit model, instructions, tools, and skill bindings; inspect versions and related tasks.
+- **Skills:** upload a ZIP, preview `SKILL.md`, download the package, and inspect Agent references.
+- **Deployments:** create scheduled or manual runs, pause or resume scheduling, and inspect run records.
+- **Environments** define reusable dependencies and sandbox settings. **Sandboxes** show session instances, recorded state, and allocated CPU/memory.
 - **Metrics:** select a range from one hour to 30 days, or a custom range. Select
   a chart point to open that interval's traces, failed tasks, or logs. Arrow keys
   move between points.

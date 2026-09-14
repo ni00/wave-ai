@@ -1,6 +1,7 @@
 package app
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -11,6 +12,10 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	"wave-ai.local/wave/internal/adapters/sandbox"
+	"wave-ai.local/wave/internal/modules/agents"
+	"wave-ai.local/wave/internal/modules/deployments"
+	"wave-ai.local/wave/internal/modules/skills"
 
 	"wave-ai.local/wave/internal/modules/console"
 	"wave-ai.local/wave/internal/modules/execution"
@@ -81,6 +86,89 @@ func TestConsoleOwnershipPaginationAndImports(t *testing.T) {
 		}
 		return w.Body.Bytes()
 	}
+	// New management lists must preserve ownership and omit large or private fields.
+	skill := skills.Skill{ID: xid.New("skill"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: "console skill", Description: "test package"}
+	var archive bytes.Buffer
+	zw := zip.NewWriter(&archive)
+	entry, _ := zw.Create("SKILL.md")
+	_, _ = entry.Write([]byte("---\nname: console skill\ndescription: test package\n---\nTest instructions"))
+	_ = zw.Close()
+	var upload bytes.Buffer
+	mw := multipart.NewWriter(&upload)
+	part, _ := mw.CreateFormFile("file", "skill.zip")
+	_, _ = part.Write(archive.Bytes())
+	_ = mw.Close()
+	req := httptest.NewRequest("POST", "/v1/skills", &upload)
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	resp := httptest.NewRecorder()
+	h.ServeHTTP(resp, req)
+	if resp.Code != 201 || json.Unmarshal(resp.Body.Bytes(), &skill) != nil {
+		t.Fatalf("skill upload: %d %s", resp.Code, resp.Body.String())
+	}
+	agent := agents.Agent{ID: xid.New("agent"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Version: 1, Config: agents.Config{Name: "100%_console agent", Model: "test", Instructions: "private prompt", SkillIDs: []string{skill.ID}}}
+	if err = a.DB.Create(&agent).Error; err != nil {
+		t.Fatal(err)
+	}
+	second := agent
+	second.ID = xid.New("agent")
+	second.Config = agents.Config{Name: "other", Model: "test"}
+	if err = a.DB.Create(&second).Error; err != nil {
+		t.Fatal(err)
+	}
+	deployment := deployments.Deployment{ID: xid.New("deployment"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: "console deployment", AgentID: agent.ID, Input: "private input"}
+	if err = a.DB.Create(&deployment).Error; err != nil {
+		t.Fatal(err)
+	}
+	box := sandbox.Record{SessionID: s.ID, Backend: "gvisor", EngineHost: "private-engine", Endpoint: "private-endpoint", StagerID: "private-stager", BackendID: "instance-test", Name: "test sandbox", State: "stopped", CPUs: 1, MemoryMiB: 512, Image: "test-image"}
+	if err = a.DB.Create(&box).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []string{"skills", "agents", "deployments", "sandboxes"} {
+		var list console.List
+		body := request(peer, "/v1/console/resources/"+kind, 200)
+		if json.Unmarshal(body, &list) != nil || len(list.Data) != 0 {
+			t.Fatalf("peer saw %s", kind)
+		}
+		body = request(key, "/v1/console/resources/"+kind, 200)
+		if json.Unmarshal(body, &list) != nil || len(list.Data) == 0 || bytes.Contains(body, []byte("private")) {
+			t.Fatalf("invalid %s projection: %s", kind, body)
+		}
+		request(key, "/v1/console/resources/"+kind+"?limit=201", 400)
+		request(key, "/v1/console/resources/"+kind+"?after=bad", 400)
+	}
+	for kind, id := range map[string]string{"skills": skill.ID, "deployments": deployment.ID, "sandboxes": s.ID} {
+		request(peer, "/v1/console/resources/"+kind+"/"+id, 404)
+		request("", "/v1/console/resources/"+kind+"/"+id, 401)
+		body := request(key, "/v1/console/resources/"+kind+"/"+id, 200)
+		if kind == "sandboxes" && bytes.Contains(body, []byte("private")) {
+			t.Fatal("sandbox leaked infrastructure")
+		}
+		if kind == "skills" && !bytes.Contains(body, []byte("Test instructions")) {
+			t.Fatal("missing skill preview")
+		}
+	}
+	var related console.List
+	for path, id := range map[string]string{
+		"agents?skill_id=" + skill.ID:      agent.ID,
+		"agents?q=%25_":                    agent.ID,
+		"deployments?agent_id=" + agent.ID: deployment.ID,
+		"sandboxes?session_id=" + s.ID:     s.ID,
+	} {
+		body := request(key, "/v1/console/resources/"+path, 200)
+		if json.Unmarshal(body, &related) != nil || len(related.Data) != 1 || related.Data[0].ID != id {
+			t.Fatalf("related filter %s: %s", path, body)
+		}
+	}
+	request(key, "/v1/console/resources/deployments?state=bad", 400)
+	request(key, "/v1/console/resources/sandboxes?time_field=finished_at", 400)
+	var page1, page2 console.List
+	_ = json.Unmarshal(request(key, "/v1/console/resources/agents?limit=1", 200), &page1)
+	_ = json.Unmarshal(request(key, "/v1/console/resources/agents?limit=1&cursor="+page1.NextCursor, 200), &page2)
+	if page1.NextCursor == "" || len(page2.Data) != 1 || page1.Data[0].ID == page2.Data[0].ID || page2.NextCursor != "" {
+		t.Fatal("agent cursor pagination")
+	}
+
 	for _, kind := range []string{"traces", "tasks", "sessions", "events"} {
 		var list console.List
 		data := request(peer, "/v1/console/resources/"+kind, 200)
@@ -138,7 +226,7 @@ func TestConsoleOwnershipPaginationAndImports(t *testing.T) {
 	report := []byte(`{"version":2,"run_id":"bench_test","kind":"live","started_at":"2026-09-14T00:00:00Z","phases":[{"workers":1,"attempted":2,"succeeded":2,"failed":0,"elapsed_seconds":1.2}]}`)
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	part, _ := writer.CreateFormFile("file", "console-test.json")
+	part, _ = writer.CreateFormFile("file", "console-test.json")
 	_, _ = part.Write(report)
 	_ = writer.Close()
 	r := httptest.NewRequest(http.MethodPost, "/v1/console/benchmarks", &body)

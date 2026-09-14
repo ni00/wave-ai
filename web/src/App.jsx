@@ -8,6 +8,10 @@ import React, {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  IconRobot,
+  IconPuzzle,
+  IconCalendarClock,
+  IconServer,
   IconWaveSine,
   IconActivity,
   IconLayoutDashboard,
@@ -54,6 +58,10 @@ import {
   Empty,
   DetailBoundary,
 } from "./ui.jsx";
+const Management = lazy(() => import("./Management.jsx"));
+const CreateAction = lazy(() =>
+  import("./Management.jsx").then((m) => ({ default: m.CreateAction })),
+);
 const Trace = lazy(() => import("./Trace.jsx"));
 const Resource = lazy(() => import("./Resource.jsx"));
 const Monitor = lazy(() => import("./Monitor.jsx"));
@@ -63,7 +71,11 @@ const navigation = [
   ["metrics", "Metrics", IconActivity, "Monitoring"],
   ["traces", "Traces", IconListTree, "Monitoring"],
   ["logs", "Logs", IconTerminal2, "Monitoring"],
+  ["agents", "Agents", IconRobot, "资源与执行"],
+  ["skills", "Skills", IconPuzzle, "资源与执行"],
+  ["deployments", "Deployments", IconCalendarClock, "资源与执行"],
   ["environments", "Environments", IconBox, "运行环境"],
+  ["sandboxes", "Sandboxes", IconServer, "资源与执行"],
   ["files", "Files", IconFiles, "文件与产物"],
   ["memory", "Memory", IconBrain, "持久记忆"],
   ["sessions", "Sessions", IconMessages, "会话"],
@@ -199,6 +211,9 @@ function Console({ api, logout }) {
     debounced,
     state,
     period,
+    location.agent,
+    location.environment,
+    location.skill,
     location.session,
     location.task,
     location.after,
@@ -223,6 +238,9 @@ function Console({ api, logout }) {
         : location.after || undefined,
       before: location.before || undefined,
       time_field: location.time_field || undefined,
+      agent_id: location.agent || undefined,
+      environment_id: location.environment || undefined,
+      skill_id: location.skill || undefined,
       session_id: location.session || undefined,
       task_id: location.task || undefined,
     }),
@@ -230,6 +248,9 @@ function Console({ api, logout }) {
       debounced,
       state,
       period,
+      location.agent,
+      location.environment,
+      location.skill,
       location.session,
       location.task,
       location.after,
@@ -276,7 +297,7 @@ function Console({ api, logout }) {
         e.altKey
       )
         return;
-      if (monitoring) return;
+      if (monitoring || document.querySelector("dialog[open]")) return;
       if (e.key === "/") {
         e.preventDefault();
         input.current?.focus();
@@ -297,14 +318,20 @@ function Console({ api, logout }) {
   async function importFile(file) {
     if (!file) return;
     setUploadError("");
-    if (file.size > 16 * 1048576) {
-      setUploadError("报告最大支持 16 MiB");
+    if (file.size > (kind === "skills" ? 23 : 16) * 1048576) {
+      setUploadError(
+        kind === "skills" ? "ZIP 最大支持 23 MiB" : "报告最大支持 16 MiB",
+      );
       return;
     }
     setUploading(true);
     try {
-      const result = await api.upload("consoleImportBench", file.name, file);
-      await qc.invalidateQueries({ queryKey: ["browse", "benchmarks"] });
+      const result = await api.upload(
+        kind === "skills" ? "skillsUpload" : "consoleImportBench",
+        file.name,
+        file,
+      );
+      await qc.invalidateQueries({ queryKey: ["browse", kind] });
       select(result.data.id);
     } catch (e) {
       setUploadError(e.message);
@@ -327,11 +354,11 @@ function Console({ api, logout }) {
         <nav aria-label="主导航">
           {navigation.map(([id, label, Icon]) => (
             <React.Fragment key={id}>
-              {["overview", "environments", "benchmarks"].includes(id) && (
+              {["overview", "agents", "benchmarks"].includes(id) && (
                 <div className="nav-caption">
                   {id === "overview"
                     ? "Monitoring"
-                    : id === "environments"
+                    : id === "agents"
                       ? "资源与执行"
                       : "性能测试"}
                 </div>
@@ -424,9 +451,14 @@ function Console({ api, logout }) {
                 icon={NavIcon}
                 count={`${rows.length}${list.data?.next_cursor ? "+" : ""}`}
               >
-                {kind === "benchmarks" && (
+                {["agents", "deployments"].includes(kind) && (
+                  <Suspense>
+                    <CreateAction key={kind} kind={kind} />
+                  </Suspense>
+                )}
+                {["benchmarks", "skills"].includes(kind) && (
                   <IconButton
-                    title="导入报告"
+                    title={kind === "skills" ? "上传技能包" : "导入报告"}
                     disabled={uploading}
                     onClick={() => upload.current.click()}
                   >
@@ -481,9 +513,15 @@ function Console({ api, logout }) {
                     <option value="168">最近 7 天</option>
                     <option value="720">最近 30 天</option>
                   </select>
-                  {["tasks", "traces", "sessions", "environments"].includes(
-                    kind,
-                  ) && (
+                  {[
+                    "tasks",
+                    "traces",
+                    "sessions",
+                    "environments",
+                    "agents",
+                    "deployments",
+                    "sandboxes",
+                  ].includes(kind) && (
                     <select
                       aria-label="状态筛选"
                       value={state}
@@ -501,7 +539,11 @@ function Console({ api, logout }) {
                             "failed",
                             "canceled",
                           ]
-                        : ["active", "archived"]
+                        : kind === "deployments"
+                          ? ["active", "paused"]
+                          : kind === "sandboxes"
+                            ? ["reserved", "provisioned", "running", "stopped"]
+                            : ["active", "archived"]
                       ).map((s) => (
                         <option key={s}>{s}</option>
                       ))}
@@ -516,9 +558,20 @@ function Console({ api, logout }) {
                     />
                   )}
                 </div>
-                {(location.session || location.task) && (
+                {(location.session ||
+                  location.task ||
+                  location.agent ||
+                  location.environment ||
+                  location.skill) && (
                   <button className="filter-chip" onClick={() => route(kind)}>
-                    关联 {short(location.task || location.session)}
+                    关联{" "}
+                    {short(
+                      location.task ||
+                        location.session ||
+                        location.agent ||
+                        location.environment ||
+                        location.skill,
+                    )}
                     <IconX size={12} />
                   </button>
                 )}
@@ -528,12 +581,16 @@ function Console({ api, logout }) {
                   {uploadError}
                 </div>
               )}
-              {uploading && <div className="list-note">正在导入报告…</div>}
+              {uploading && <div className="list-note">正在上传…</div>}
               <input
                 className="hidden"
                 ref={upload}
                 type="file"
-                accept=".json,application/json"
+                accept={
+                  kind === "skills"
+                    ? ".zip,application/zip"
+                    : ".json,application/json"
+                }
                 onChange={(e) => importFile(e.target.files[0])}
               />
               <div className="list-column-labels">
@@ -667,6 +724,17 @@ function Console({ api, logout }) {
                           id={selected}
                           live={live}
                           initialSpan={location.span}
+                        />
+                      ) : [
+                          "agents",
+                          "skills",
+                          "deployments",
+                          "sandboxes",
+                        ].includes(kind) ? (
+                        <Management
+                          key={kind + selected}
+                          kind={kind}
+                          id={selected}
                         />
                       ) : (
                         <Resource

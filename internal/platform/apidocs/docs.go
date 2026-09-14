@@ -732,6 +732,10 @@ const docTemplate = `{
                             "logs",
                             "events",
                             "environments",
+                            "sandboxes",
+                            "skills",
+                            "agents",
+                            "deployments",
                             "files",
                             "memory",
                             "sessions",
@@ -792,6 +796,24 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Agent ID",
+                        "name": "agent_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "环境 ID || Environment ID",
+                        "name": "environment_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关联技能 ID || Referenced skill ID",
+                        "name": "skill_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "任务 ID || Task ID",
                         "name": "task_id",
                         "in": "query"
@@ -833,6 +855,83 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "参数或报告无效 || Invalid parameters or report",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "身份验证失败 || Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足 || Insufficient scope",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "资源不存在 || Resource not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "内部错误 || Internal error",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/console/resources/{kind}/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "技能预览最多 128 KiB；沙箱仅返回已保存的实例状态与配额。 || Skill previews are capped at 128 KiB. Sandboxes expose recorded instance state and allocation only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "console"
+                ],
+                "summary": "查看后台资源 || Read a console resource",
+                "operationId": "consoleResource",
+                "parameters": [
+                    {
+                        "enum": [
+                            "skills",
+                            "deployments",
+                            "sandboxes"
+                        ],
+                        "type": "string",
+                        "description": "资源类型 || Resource kind",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "资源 ID；沙箱使用会话 ID || Resource ID; session ID for sandboxes",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/console.Record"
+                        }
+                    },
+                    "400": {
+                        "description": "参数无效 || Invalid parameters",
                         "schema": {
                             "$ref": "#/definitions/apierr.Envelope"
                         }

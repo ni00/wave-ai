@@ -522,6 +522,10 @@
             "logs",
             "events",
             "environments",
+            "sandboxes",
+            "skills",
+            "agents",
+            "deployments",
             "files",
             "memory",
             "sessions",
@@ -587,6 +591,30 @@
         "description": "Session ID",
         "in": "query",
         "name": "session_id",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Agent ID",
+        "in": "query",
+        "name": "agent_id",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Environment ID",
+        "in": "query",
+        "name": "environment_id",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Referenced skill ID",
+        "in": "query",
+        "name": "skill_id",
         "schema": {
           "type": "string"
         }
@@ -1035,6 +1063,102 @@
       }
     },
     "summary": "Query monitoring metrics"
+  },
+  "consoleResource": {
+    "authenticated": true,
+    "command": "console resource",
+    "id": "consoleResource",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Resource kind",
+        "in": "path",
+        "name": "kind",
+        "required": true,
+        "schema": {
+          "enum": [
+            "skills",
+            "deployments",
+            "sandboxes"
+          ],
+          "type": "string"
+        }
+      },
+      {
+        "description": "Resource ID; session ID for sandboxes",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/console/resources/{kind}/{id}",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/console.Record"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Invalid parameters"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Authentication required"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Insufficient scope"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Resource not found"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Internal error"
+      }
+    },
+    "summary": "Read a console resource"
   },
   "deploymentsCreate": {
     "authenticated": true,

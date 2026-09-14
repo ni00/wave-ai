@@ -24,6 +24,11 @@ import {
     ConsoleListToJSON,
 } from '../models/ConsoleList.js';
 import {
+    type ConsoleRecord,
+    ConsoleRecordFromJSON,
+    ConsoleRecordToJSON,
+} from '../models/ConsoleRecord.js';
+import {
     type ExecutionEvent,
     ExecutionEventFromJSON,
     ExecutionEventToJSON,
@@ -77,6 +82,18 @@ export interface ConsoleBrowseRequest {
      * Session ID
      */
     sessionId?: string;
+    /**
+     * Agent ID
+     */
+    agentId?: string;
+    /**
+     * Environment ID
+     */
+    environmentId?: string;
+    /**
+     * Referenced skill ID
+     */
+    skillId?: string;
     /**
      * Task ID
      */
@@ -135,6 +152,17 @@ export interface ConsoleMetricsRequest {
     to?: string;
 }
 
+export interface ConsoleResourceRequest {
+    /**
+     * Resource kind
+     */
+    kind: ConsoleResourceKindEnum;
+    /**
+     * Resource ID; session ID for sandboxes
+     */
+    id: string;
+}
+
 /**
  * 
  */
@@ -179,6 +207,18 @@ export class ConsoleApi extends runtime.BaseAPI {
 
         if (requestParameters['sessionId'] != null) {
             queryParameters['session_id'] = requestParameters['sessionId'];
+        }
+
+        if (requestParameters['agentId'] != null) {
+            queryParameters['agent_id'] = requestParameters['agentId'];
+        }
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environment_id'] = requestParameters['environmentId'];
+        }
+
+        if (requestParameters['skillId'] != null) {
+            queryParameters['skill_id'] = requestParameters['skillId'];
         }
 
         if (requestParameters['taskId'] != null) {
@@ -485,6 +525,69 @@ export class ConsoleApi extends runtime.BaseAPI {
         return await response.value();
     }
 
+    /**
+     * Creates request options for consoleResource without sending the request
+     */
+    async consoleResourceRequestOpts(requestParameters: ConsoleResourceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['kind'] == null) {
+            throw new runtime.RequiredError(
+                'kind',
+                'Required parameter "kind" was null or undefined when calling consoleResource().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling consoleResource().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/console/resources/{kind}/{id}`;
+        urlPath = urlPath.replace('{kind}', encodeURIComponent(String(requestParameters['kind'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Skill previews are capped at 128 KiB. Sandboxes expose recorded instance state and allocation only.
+     * Read a console resource
+     */
+    async consoleResourceRaw(requestParameters: ConsoleResourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConsoleRecord>> {
+        const requestOptions = await this.consoleResourceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConsoleRecordFromJSON(jsonValue));
+    }
+
+    /**
+     * Skill previews are capped at 128 KiB. Sandboxes expose recorded instance state and allocation only.
+     * Read a console resource
+     */
+    async consoleResource(requestParameters: ConsoleResourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConsoleRecord> {
+        const response = await this.consoleResourceRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }
 
 /**
@@ -495,6 +598,10 @@ export const ConsoleBrowseKindEnum = {
     Logs: 'logs',
     Events: 'events',
     Environments: 'environments',
+    Sandboxes: 'sandboxes',
+    Skills: 'skills',
+    Agents: 'agents',
+    Deployments: 'deployments',
     Files: 'files',
     Memory: 'memory',
     Sessions: 'sessions',
@@ -510,3 +617,12 @@ export const ConsoleBrowseTimeFieldEnum = {
     FinishedAt: 'finished_at',
 } as const;
 export type ConsoleBrowseTimeFieldEnum = typeof ConsoleBrowseTimeFieldEnum[keyof typeof ConsoleBrowseTimeFieldEnum];
+/**
+ * @export
+ */
+export const ConsoleResourceKindEnum = {
+    Skills: 'skills',
+    Deployments: 'deployments',
+    Sandboxes: 'sandboxes',
+} as const;
+export type ConsoleResourceKindEnum = typeof ConsoleResourceKindEnum[keyof typeof ConsoleResourceKindEnum];

@@ -11,10 +11,13 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"wave-ai.local/wave/internal/modules/agents"
+	"wave-ai.local/wave/internal/modules/deployments"
 	"wave-ai.local/wave/internal/modules/environments"
 	"wave-ai.local/wave/internal/modules/execution"
 	"wave-ai.local/wave/internal/modules/files"
 	"wave-ai.local/wave/internal/modules/memory"
+	"wave-ai.local/wave/internal/modules/skills"
 	"wave-ai.local/wave/internal/platform/apierr"
 	"wave-ai.local/wave/internal/platform/auth"
 )
@@ -38,6 +41,7 @@ type List struct {
 type Query struct {
 	Kind, Search, State, SessionID, TaskID, Before, After, Cursor string
 	TraceID, SpanID, Module, TimeField                            string
+	AgentID, EnvironmentID, SkillID                               string
 	Limit                                                         int
 }
 
@@ -50,6 +54,9 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 	if in.Limit < 1 || in.Limit > 200 || len(in.Search) > 128 || len(in.Cursor) > 1024 {
 		return out, apierr.Invalid("invalid page size, search or cursor")
 	}
+	if in.Kind == "sandboxes" {
+		return browseSandboxes(ctx, db, p, in)
+	}
 	q := db.WithContext(ctx)
 	owned := func(q *gorm.DB) *gorm.DB { return auth.Owned(q, p) }
 	sessions := owned(db.WithContext(ctx).Model(&execution.Session{})).Select("id")
@@ -60,6 +67,22 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 		model = &execution.Task{}
 		q = q.Where(inSubquery{column: "session_id", query: sessions})
 		searchColumns = []string{"id", "agent_id"}
+	case "agents":
+		model = &agents.Agent{}
+		q = owned(q)
+		searchColumns = []string{"id"}
+		if in.SkillID != "" {
+			b, _ := json.Marshal([]string{in.SkillID})
+			q = q.Where(clause.Expr{SQL: "config->'skill_ids' @> ?::jsonb", Vars: []any{string(b)}})
+		}
+	case "skills":
+		model = &skills.Skill{}
+		q = owned(q)
+		searchColumns = []string{"id", "name", "description"}
+	case "deployments":
+		model = &deployments.Deployment{}
+		q = owned(q)
+		searchColumns = []string{"id", "name"}
 	case "sessions":
 		model = &execution.Session{}
 		q = owned(q)
@@ -93,6 +116,9 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 		for _, name := range searchColumns {
 			expr = append(expr, foldLike{column: name, value: "%" + term + "%"})
 		}
+		if in.Kind == "agents" {
+			expr = append(expr, clause.Expr{SQL: "config->>'name' ILIKE ?", Vars: []any{"%" + term + "%"}})
+		}
 		if in.Kind == "tasks" || in.Kind == "traces" {
 			titleSessions := owned(db.WithContext(ctx).Model(&execution.Session{})).Select("id").Where(foldLike{column: "title", value: "%" + term + "%"})
 			expr = append(expr, inSubquery{column: "session_id", query: titleSessions})
@@ -105,15 +131,26 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 	if in.TaskID != "" && (in.Kind == "events" || in.Kind == "files") {
 		q = q.Where(clause.Eq{Column: "task_id", Value: in.TaskID})
 	}
+	if in.AgentID != "" && (in.Kind == "tasks" || in.Kind == "traces" || in.Kind == "deployments") {
+		q = q.Where(clause.Eq{Column: "agent_id", Value: in.AgentID})
+	}
+	if in.EnvironmentID != "" && (in.Kind == "sessions" || in.Kind == "deployments") {
+		q = q.Where(clause.Eq{Column: "environment_id", Value: in.EnvironmentID})
+	}
 	if in.State != "" {
 		switch in.Kind {
 		case "tasks", "traces":
 			q = q.Where(clause.Eq{Column: "state", Value: in.State})
-		case "environments", "sessions":
+		case "environments", "sessions", "agents":
 			if in.State != "active" && in.State != "archived" {
 				return out, apierr.Invalid("state must be active or archived")
 			}
 			q = q.Where(clause.Eq{Column: "archived", Value: in.State == "archived"})
+		case "deployments":
+			if in.State != "active" && in.State != "paused" {
+				return out, apierr.Invalid("state must be active or paused")
+			}
+			q = q.Where(clause.Eq{Column: "paused", Value: in.State == "paused"})
 		case "events":
 			q = q.Where(clause.Eq{Column: "type", Value: in.State})
 		default:
@@ -202,6 +239,42 @@ func Browse(ctx context.Context, db *gorm.DB, p *auth.Principal, in Query) (List
 			}
 			out.Data = append(out.Data, Record{ID: r.ID, Name: taskName(titles[r.SessionID], r.AgentID), State: r.State, CreatedAt: r.CreatedAt, SessionID: r.SessionID, TaskID: r.ID, RootID: r.RootID, Meta: map[string]any{"duration_ms": ms, "tokens": r.UsedTokens, "usage_known": r.UsageKnown, "tool_calls": r.ToolCount, "model_calls": r.Attempts, "agent_version": r.AgentVersion}})
 		}
+	case "agents":
+		var rows []struct {
+			ID        string
+			Name      string
+			Model     string
+			Version   int
+			Archived  bool
+			CreatedAt time.Time
+		}
+		if err := q.Select("id, config->>'name' AS name, config->>'model' AS model, version, archived, created_at").Scan(&rows).Error; err != nil {
+			return out, err
+		}
+		for _, r := range rows {
+			state := "active"
+			if r.Archived {
+				state = "archived"
+			}
+			out.Data = append(out.Data, Record{ID: r.ID, Name: r.Name, State: state, CreatedAt: r.CreatedAt, Meta: map[string]any{"model": r.Model, "version": r.Version}})
+		}
+	case "skills":
+		var rows []skills.Skill
+		if err := q.Omit("blob_key").Find(&rows).Error; err != nil {
+			return out, err
+		}
+		for _, r := range rows {
+			out.Data = append(out.Data, skillRecord(r))
+		}
+	case "deployments":
+		var rows []deployments.Deployment
+		if err := q.Omit("input").Find(&rows).Error; err != nil {
+			return out, err
+		}
+		for _, r := range rows {
+			out.Data = append(out.Data, deploymentRecord(r))
+		}
+
 	case "sessions":
 		var rows []execution.Session
 		if err := q.Select("id", "title", "environment_id", "active_root", "archived", "created_at").Find(&rows).Error; err != nil {

@@ -2024,6 +2024,10 @@ paths:
         - logs
         - events
         - environments
+        - sandboxes
+        - skills
+        - agents
+        - deployments
         - files
         - memory
         - sessions
@@ -2063,6 +2067,18 @@ paths:
       - description: 会话 ID || Session ID
         in: query
         name: session_id
+        type: string
+      - description: Agent ID
+        in: query
+        name: agent_id
+        type: string
+      - description: 环境 ID || Environment ID
+        in: query
+        name: environment_id
+        type: string
+      - description: 关联技能 ID || Referenced skill ID
+        in: query
+        name: skill_id
         type: string
       - description: 任务 ID || Task ID
         in: query
@@ -2117,6 +2133,58 @@ paths:
       security:
       - BearerAuth: []
       summary: 浏览后台资源 || Browse console resources
+      tags:
+      - console
+  /v1/console/resources/{kind}/{id}:
+    get:
+      description: 技能预览最多 128 KiB；沙箱仅返回已保存的实例状态与配额。 || Skill previews are capped at
+        128 KiB. Sandboxes expose recorded instance state and allocation only.
+      operationId: consoleResource
+      parameters:
+      - description: 资源类型 || Resource kind
+        enum:
+        - skills
+        - deployments
+        - sandboxes
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: 资源 ID；沙箱使用会话 ID || Resource ID; session ID for sandboxes
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/console.Record'
+        "400":
+          description: 参数无效 || Invalid parameters
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 身份验证失败 || Authentication required
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 权限不足 || Insufficient scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 资源不存在 || Resource not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误 || Internal error
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 查看后台资源 || Read a console resource
       tags:
       - console
   /v1/credentials:

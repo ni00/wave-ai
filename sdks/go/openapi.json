@@ -937,6 +937,10 @@
                 "logs",
                 "events",
                 "environments",
+                "sandboxes",
+                "skills",
+                "agents",
+                "deployments",
                 "files",
                 "memory",
                 "sessions",
@@ -1006,6 +1010,30 @@
             }
           },
           {
+            "description": "Agent ID",
+            "name": "agent_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Environment ID",
+            "name": "environment_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Referenced skill ID",
+            "name": "skill_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Task ID",
             "name": "task_id",
             "in": "query",
@@ -1062,6 +1090,108 @@
           },
           "400": {
             "description": "Invalid parameters or report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/console/resources/{kind}/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Skill previews are capped at 128 KiB. Sandboxes expose recorded instance state and allocation only.",
+        "tags": [
+          "console"
+        ],
+        "summary": "Read a console resource",
+        "operationId": "consoleResource",
+        "parameters": [
+          {
+            "description": "Resource kind",
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "skills",
+                "deployments",
+                "sandboxes"
+              ]
+            }
+          },
+          {
+            "description": "Resource ID; session ID for sandboxes",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/console.Record"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
             "content": {
               "application/json": {
                 "schema": {

@@ -260,5 +260,8 @@
   },
   "consoleEvent": {
     "command": "console event"
+  },
+  "consoleResource": {
+    "command": "console resource"
   }
 }
