@@ -20,6 +20,7 @@ import (
 	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/adapters/sandbox"
 	"wave-ai.local/wave/internal/modules/agents"
+	"wave-ai.local/wave/internal/modules/console"
 	"wave-ai.local/wave/internal/modules/deployments"
 	"wave-ai.local/wave/internal/modules/environments"
 	"wave-ai.local/wave/internal/modules/execution"
@@ -36,6 +37,7 @@ import (
 	"wave-ai.local/wave/internal/platform/database"
 	"wave-ai.local/wave/internal/platform/httpx"
 	"wave-ai.local/wave/internal/platform/secrets"
+	"wave-ai.local/wave/internal/platform/webui"
 )
 
 type App struct {
@@ -155,6 +157,7 @@ func (a *App) Handler() http.Handler {
 	r.HandleMethodNotAllowed = true
 	_ = r.SetTrustedProxies(nil)
 	r.Use(httpx.Observe())
+	webui.Register(r)
 	swaggerUI := ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/openapi.json"))
 	r.GET("/swagger/*any", func(c *gin.Context) {
 		switch c.Param("any") {
@@ -182,6 +185,7 @@ func (a *App) Handler() http.Handler {
 		}
 		c.Next()
 	})
+	console.Register(v, a.DB, a.Blobs)
 	agents.Register(v, a.DB)
 	environments.Register(v, a.DB)
 	execution.Register(v, a.DB)

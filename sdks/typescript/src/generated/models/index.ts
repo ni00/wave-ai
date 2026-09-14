@@ -9,6 +9,8 @@ export * from './AgentsVersion.js';
 export * from './AgentsVersionsResponse.js';
 export * from './ApierrEnvelope.js';
 export * from './ApierrEnvelopeEr.js';
+export * from './ConsoleList.js';
+export * from './ConsoleRecord.js';
 export * from './DeploymentsCreateRequest.js';
 export * from './DeploymentsDeployment.js';
 export * from './DeploymentsListResponse.js';

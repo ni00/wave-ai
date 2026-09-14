@@ -19,6 +19,7 @@ __version__ = "0.1.0"
 # Define package exports
 __all__ = [
     "AgentsApi",
+    "ConsoleApi",
     "DeploymentsApi",
     "EnvironmentsApi",
     "ExecutionApi",
@@ -45,6 +46,8 @@ __all__ = [
     "AgentsVersionsResponse",
     "ApierrEnvelope",
     "ApierrEnvelopeEr",
+    "ConsoleList",
+    "ConsoleRecord",
     "DeploymentsCreateRequest",
     "DeploymentsDeployment",
     "DeploymentsListResponse",
@@ -104,6 +107,7 @@ __all__ = [
 
 # import apis into sdk package
 from wave_ai_generated.api.agents_api import AgentsApi as AgentsApi
+from wave_ai_generated.api.console_api import ConsoleApi as ConsoleApi
 from wave_ai_generated.api.deployments_api import DeploymentsApi as DeploymentsApi
 from wave_ai_generated.api.environments_api import EnvironmentsApi as EnvironmentsApi
 from wave_ai_generated.api.execution_api import ExecutionApi as ExecutionApi
@@ -134,6 +138,8 @@ from wave_ai_generated.models.agents_version import AgentsVersion as AgentsVersi
 from wave_ai_generated.models.agents_versions_response import AgentsVersionsResponse as AgentsVersionsResponse
 from wave_ai_generated.models.apierr_envelope import ApierrEnvelope as ApierrEnvelope
 from wave_ai_generated.models.apierr_envelope_er import ApierrEnvelopeEr as ApierrEnvelopeEr
+from wave_ai_generated.models.console_list import ConsoleList as ConsoleList
+from wave_ai_generated.models.console_record import ConsoleRecord as ConsoleRecord
 from wave_ai_generated.models.deployments_create_request import DeploymentsCreateRequest as DeploymentsCreateRequest
 from wave_ai_generated.models.deployments_deployment import DeploymentsDeployment as DeploymentsDeployment
 from wave_ai_generated.models.deployments_list_response import DeploymentsListResponse as DeploymentsListResponse

@@ -244,5 +244,15 @@
   "executionTrace": {
     "command": "tasks trace",
     "transport": "json"
+  },
+  "consoleBrowse": {
+    "command": "console list"
+  },
+  "consoleLog": {
+    "command": "console log"
+  },
+  "consoleImportBench": {
+    "command": "console import-bench",
+    "transport": "upload"
   }
 }

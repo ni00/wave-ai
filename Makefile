@@ -36,3 +36,12 @@ down:
 	$(COMPOSE) down
 
 include tools/clients/Makefile
+
+.PHONY: web-build web-test web-dev
+web-build:
+	npm ci --ignore-scripts --prefix web
+	npm run build --prefix web
+web-test:
+	npm test --prefix web
+web-dev:
+	npm run dev --prefix web -- --port 5173

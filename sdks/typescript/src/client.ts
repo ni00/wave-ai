@@ -132,7 +132,7 @@ export class Client {
       throw new TypeError('baseURL must be an HTTP(S) URL without credentials, query or fragment');
     this.baseURL = baseURL.replace(/\/+$/, ''); this.apiKey = apiKey.trim().replace(/^bearer\s+/i, '');
     if (!Number.isInteger(maxRetries) || maxRetries < 0) throw new TypeError('maxRetries must be a non-negative integer');
-    this.fetch = fetch; this.maxRetries = maxRetries;
+    this.fetch = (input, init) => fetch(input, init); this.maxRetries = maxRetries;
   }
   /** Configuration for every typed generated API class. */
   rawConfiguration(): Configuration { return new Configuration({basePath: this.baseURL, accessToken: this.apiKey, fetchApi: this.fetch}); }
@@ -155,7 +155,7 @@ export class Client {
   }
   async call<T = unknown>(operation: OperationID, options: Options = {}): Promise<APIResponse<T>> {
     const [op, url, init] = this.request(operation, options);
-    if (op.transport) throw new TypeError(`${operation} requires the ${op.transport} API`);
+    if (op.transport && op.transport !== 'json') throw new TypeError(`${operation} requires the ${op.transport} API`);
     if (op.requestBody?.required && options.body == null) throw new TypeError('request body is required');
     if (operation === 'executionResolveToolResult') tool(options.body);
     if (options.body !== undefined) { init.body = encodeJSON(options.body); (init.headers as Headers).set('Content-Type', 'application/json'); }

@@ -187,6 +187,44 @@ definitions:
     - message
     - type
     type: object
+  console.List:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/console.Record'
+        type: array
+      next_cursor:
+        type: string
+    required:
+    - data
+    type: object
+  console.Record:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      id:
+        type: string
+      meta:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      root_id:
+        type: string
+      session_id:
+        type: string
+      state:
+        type: string
+      task_id:
+        type: string
+    required:
+    - created_at
+    - id
+    - meta
+    - name
+    - state
+    type: object
   deployments.CreateRequest:
     properties:
       agent_id:
@@ -1694,6 +1732,189 @@ paths:
       summary: Agent 版本历史 || Agent version history
       tags:
       - agents
+  /v1/console/benchmarks:
+    post:
+      consumes:
+      - multipart/form-data
+      operationId: consoleImportBench
+      parameters:
+      - description: Wave bench v2 JSON 报告，最多 16 MiB || Wave bench v2 JSON report,
+          maximum 16 MiB
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/files.File'
+        "400":
+          description: 参数或报告无效 || Invalid parameters or report
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 身份验证失败 || Authentication required
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 权限不足 || Insufficient scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 资源不存在 || Resource not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误 || Internal error
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 导入压测报告 || Import a benchmark report
+      tags:
+      - console
+  /v1/console/logs/{session}/{sequence}:
+    get:
+      consumes:
+      - application/json
+      operationId: consoleLog
+      parameters:
+      - description: 会话 ID || Session ID
+        in: path
+        name: session
+        required: true
+        type: string
+      - description: 事件序号 || Event sequence
+        format: int64
+        in: path
+        name: sequence
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.Event'
+        "400":
+          description: 参数或报告无效 || Invalid parameters or report
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 身份验证失败 || Authentication required
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 权限不足 || Insufficient scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 资源不存在 || Resource not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误 || Internal error
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 读取执行日志 || Read an execution log
+      tags:
+      - console
+  /v1/console/resources/{kind}:
+    get:
+      consumes:
+      - application/json
+      description: 按当前所有者过滤。列表只含元数据，以不透明游标倒序分页；logs 是持久化执行事件（排除 token delta），不含进程
+        stdout。 || Owner-scoped metadata only, with descending opaque cursor pagination.
+        Logs are durable execution events excluding token deltas, not process stdout.
+      operationId: consoleBrowse
+      parameters:
+      - description: 资源类型 || Resource kind
+        enum:
+        - traces
+        - logs
+        - environments
+        - files
+        - memory
+        - sessions
+        - tasks
+        - benchmarks
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: 名称或 ID（最多 128 字节） || Name or ID (maximum 128 bytes)
+        in: query
+        name: q
+        type: string
+      - description: 状态；日志使用事件类型 || State; event type for logs
+        in: query
+        name: state
+        type: string
+      - description: 会话 ID || Session ID
+        in: query
+        name: session_id
+        type: string
+      - description: 任务 ID || Task ID
+        in: query
+        name: task_id
+        type: string
+      - description: 早于 RFC3339 时间 || Before RFC3339 timestamp
+        in: query
+        name: before
+        type: string
+      - description: 不早于 RFC3339 时间 || At or after RFC3339 timestamp
+        in: query
+        name: after
+        type: string
+      - description: 上一页 next_cursor || Previous next_cursor
+        in: query
+        name: cursor
+        type: string
+      - default: 100
+        description: 每页条数 || Items per page
+        in: query
+        maximum: 200
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/console.List'
+        "400":
+          description: 参数或报告无效 || Invalid parameters or report
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "401":
+          description: 身份验证失败 || Authentication required
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: 权限不足 || Insufficient scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 资源不存在 || Resource not found
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误 || Internal error
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 浏览后台资源 || Browse console resources
+      tags:
+      - console
   /v1/credentials:
     get:
       description: 分页返回当前所有者可见的凭据元数据。凭据 token 只写不读，响应中永远不包含明文或密文。 || Return credential

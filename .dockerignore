@@ -7,7 +7,10 @@
 **/.pytest_cache
 **/dist
 cli
-sdks
+sdks/*
+!sdks/typescript
+sdks/typescript/*
+!sdks/typescript/src
 skills
 tools/*
 !tools/bench

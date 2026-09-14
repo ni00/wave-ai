@@ -41,3 +41,9 @@ test('shared HTTP contracts',{skip:!base},async()=>{
   async function* data(){yield new TextEncoder().encode(fixtures.binary);}
   assert.equal((await client('upload').upload('filesUpload','中文.txt',data())).status,201);
 });
+
+test('browser fetch receiver and explicit JSON transport',async()=>{
+ const browserFetch=async function(url){assert.equal(this,undefined);assert.match(url,/\/v1\/tasks\/task-test\/trace$/);return new Response(JSON.stringify({version:1,spans:[]}));};
+ const sdk=new Client({baseURL:'http://localhost:8080',fetch:browserFetch});
+ assert.deepEqual((await sdk.call('executionTrace',{path:{id:'task-test'}})).data,{version:1,spans:[]});
+});

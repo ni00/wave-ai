@@ -506,6 +506,349 @@ export const operations = {
     },
     "summary": "Agent version history"
   },
+  "consoleBrowse": {
+    "authenticated": true,
+    "command": "console list",
+    "id": "consoleBrowse",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Resource kind",
+        "in": "path",
+        "name": "kind",
+        "required": true,
+        "schema": {
+          "enum": [
+            "traces",
+            "logs",
+            "environments",
+            "files",
+            "memory",
+            "sessions",
+            "tasks",
+            "benchmarks"
+          ],
+          "type": "string"
+        }
+      },
+      {
+        "description": "Name or ID (maximum 128 bytes)",
+        "in": "query",
+        "name": "q",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "State; event type for logs",
+        "in": "query",
+        "name": "state",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Session ID",
+        "in": "query",
+        "name": "session_id",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Task ID",
+        "in": "query",
+        "name": "task_id",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Before RFC3339 timestamp",
+        "in": "query",
+        "name": "before",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "At or after RFC3339 timestamp",
+        "in": "query",
+        "name": "after",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Previous next_cursor",
+        "in": "query",
+        "name": "cursor",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Items per page",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 1,
+          "type": "integer"
+        }
+      }
+    ],
+    "path": "/v1/console/resources/{kind}",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/console.List"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Invalid parameters or report"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Authentication required"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Insufficient scope"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Resource not found"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Internal error"
+      }
+    },
+    "summary": "Browse console resources"
+  },
+  "consoleImportBench": {
+    "authenticated": true,
+    "command": "console import-bench",
+    "id": "consoleImportBench",
+    "method": "POST",
+    "parameters": [],
+    "path": "/v1/console/benchmarks",
+    "requestBody": {
+      "content": {
+        "multipart/form-data": {
+          "schema": {
+            "properties": {
+              "file": {
+                "description": "Wave bench v2 JSON report, maximum 16 MiB",
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "required": [
+              "file"
+            ],
+            "type": "object"
+          }
+        }
+      },
+      "required": true
+    },
+    "responses": {
+      "201": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/files.File"
+            }
+          }
+        },
+        "description": "Created"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Invalid parameters or report"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Authentication required"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Insufficient scope"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Resource not found"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Internal error"
+      }
+    },
+    "summary": "Import a benchmark report",
+    "transport": "upload"
+  },
+  "consoleLog": {
+    "authenticated": true,
+    "command": "console log",
+    "id": "consoleLog",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Session ID",
+        "in": "path",
+        "name": "session",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "description": "Event sequence",
+        "in": "path",
+        "name": "sequence",
+        "required": true,
+        "schema": {
+          "format": "int64",
+          "type": "integer"
+        }
+      }
+    ],
+    "path": "/v1/console/logs/{session}/{sequence}",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/execution.Event"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "400": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Invalid parameters or report"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Authentication required"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Insufficient scope"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Resource not found"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Internal error"
+      }
+    },
+    "summary": "Read an execution log"
+  },
   "deploymentsCreate": {
     "authenticated": true,
     "command": "deployments create",

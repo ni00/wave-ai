@@ -51,6 +51,8 @@ type APIClient struct {
 
 	AgentsAPI *AgentsAPIService
 
+	ConsoleAPI *ConsoleAPIService
+
 	DeploymentsAPI *DeploymentsAPIService
 
 	EnvironmentsAPI *EnvironmentsAPIService
@@ -85,6 +87,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 
 	// API Services
 	c.AgentsAPI = (*AgentsAPIService)(&c.common)
+	c.ConsoleAPI = (*ConsoleAPIService)(&c.common)
 	c.DeploymentsAPI = (*DeploymentsAPIService)(&c.common)
 	c.EnvironmentsAPI = (*EnvironmentsAPIService)(&c.common)
 	c.ExecutionAPI = (*ExecutionAPIService)(&c.common)

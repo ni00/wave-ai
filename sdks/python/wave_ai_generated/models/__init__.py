@@ -22,6 +22,8 @@ from wave_ai_generated.models.agents_version import AgentsVersion
 from wave_ai_generated.models.agents_versions_response import AgentsVersionsResponse
 from wave_ai_generated.models.apierr_envelope import ApierrEnvelope
 from wave_ai_generated.models.apierr_envelope_er import ApierrEnvelopeEr
+from wave_ai_generated.models.console_list import ConsoleList
+from wave_ai_generated.models.console_record import ConsoleRecord
 from wave_ai_generated.models.deployments_create_request import DeploymentsCreateRequest
 from wave_ai_generated.models.deployments_deployment import DeploymentsDeployment
 from wave_ai_generated.models.deployments_list_response import DeploymentsListResponse

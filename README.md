@@ -157,3 +157,7 @@ See [client tooling](tools/clients/README.md) for dependencies, integration test
 and packaging.
 
 Native observability: `wave trace -task ID -format json|chrome`, `wave bench live -case case.json`, and `wave bench compare baseline.json candidate.json`. Live cases require deterministic result/artifact assertions and use `WAVE_API_KEY` or `-key-file`. Reports retain content-free task traces. See the [observability guide (Chinese)](tools/bench/OBSERVABILITY.zh-CN.md) for timing semantics, limits and examples.
+
+### Web console
+
+Visit `/console/` on the Wave API server for traces, execution logs, environments, files, memory, sessions, tasks and benchmark reports. Sign in with a Wave API Key. See [Console guide](web/README.md) for development, deployment and performance details.

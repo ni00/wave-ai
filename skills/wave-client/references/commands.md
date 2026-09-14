@@ -15,6 +15,14 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | `wavectl agents archive` | `--id` | — | Archive an Agent |
 | `wavectl agents versions` | `--id` | — | Agent version history |
 
+## console
+
+| Command | Required path flags | Required body fields | Description |
+| --- | --- | --- | --- |
+| `wavectl console import-bench` | — | `--file` | Import a benchmark report |
+| `wavectl console log` | `--session`, `--sequence` | — | Read an execution log |
+| `wavectl console list` | `--kind` | — | Browse console resources |
+
 ## credentials
 
 | Command | Required path flags | Required body fields | Description |

@@ -442,6 +442,277 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/console/benchmarks": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "console"
+                ],
+                "summary": "导入压测报告 || Import a benchmark report",
+                "operationId": "consoleImportBench",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Wave bench v2 JSON 报告，最多 16 MiB || Wave bench v2 JSON report, maximum 16 MiB",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/files.File"
+                        }
+                    },
+                    "400": {
+                        "description": "参数或报告无效 || Invalid parameters or report",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "身份验证失败 || Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足 || Insufficient scope",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "资源不存在 || Resource not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "内部错误 || Internal error",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/console/logs/{session}/{sequence}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "console"
+                ],
+                "summary": "读取执行日志 || Read an execution log",
+                "operationId": "consoleLog",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会话 ID || Session ID",
+                        "name": "session",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "事件序号 || Event sequence",
+                        "name": "sequence",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/execution.Event"
+                        }
+                    },
+                    "400": {
+                        "description": "参数或报告无效 || Invalid parameters or report",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "身份验证失败 || Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足 || Insufficient scope",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "资源不存在 || Resource not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "内部错误 || Internal error",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/console/resources/{kind}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按当前所有者过滤。列表只含元数据，以不透明游标倒序分页；logs 是持久化执行事件（排除 token delta），不含进程 stdout。 || Owner-scoped metadata only, with descending opaque cursor pagination. Logs are durable execution events excluding token deltas, not process stdout.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "console"
+                ],
+                "summary": "浏览后台资源 || Browse console resources",
+                "operationId": "consoleBrowse",
+                "parameters": [
+                    {
+                        "enum": [
+                            "traces",
+                            "logs",
+                            "environments",
+                            "files",
+                            "memory",
+                            "sessions",
+                            "tasks",
+                            "benchmarks"
+                        ],
+                        "type": "string",
+                        "description": "资源类型 || Resource kind",
+                        "name": "kind",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "名称或 ID（最多 128 字节） || Name or ID (maximum 128 bytes)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态；日志使用事件类型 || State; event type for logs",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "会话 ID || Session ID",
+                        "name": "session_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务 ID || Task ID",
+                        "name": "task_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "早于 RFC3339 时间 || Before RFC3339 timestamp",
+                        "name": "before",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "不早于 RFC3339 时间 || At or after RFC3339 timestamp",
+                        "name": "after",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "上一页 next_cursor || Previous next_cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 200,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 100,
+                        "description": "每页条数 || Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/console.List"
+                        }
+                    },
+                    "400": {
+                        "description": "参数或报告无效 || Invalid parameters or report",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "身份验证失败 || Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足 || Insufficient scope",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "资源不存在 || Resource not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "内部错误 || Internal error",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/credentials": {
             "get": {
                 "security": [
@@ -4250,6 +4521,61 @@ const docTemplate = `{
                         "overloaded_error"
                     ],
                     "example": "invalid_request_error"
+                }
+            }
+        },
+        "console.List": {
+            "type": "object",
+            "required": [
+                "data"
+            ],
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/console.Record"
+                    }
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "console.Record": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "id",
+                "meta",
+                "name",
+                "state"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "name": {
+                    "type": "string"
+                },
+                "root_id": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
                 }
             }
         },

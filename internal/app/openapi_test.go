@@ -80,7 +80,7 @@ func TestOpenAPIRoutes(t *testing.T) {
 		}
 	}
 	for _, route := range router.Routes() {
-		if strings.HasPrefix(route.Path, "/swagger/") {
+		if strings.HasPrefix(route.Path, "/swagger/") || strings.HasPrefix(route.Path, "/console/") {
 			continue
 		}
 		parts := strings.Split(route.Path, "/")
