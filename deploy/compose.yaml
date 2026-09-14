@@ -58,6 +58,7 @@ services:
         condition: service_completed_successfully
     environment:
       WAVE_ROLE: all
+      WAVE_LOG_LEVEL: ${WAVE_LOG_LEVEL:-INFO}
       WAVE_HTTP_ADDR: ':8080'
       WAVE_DATABASE_URL: postgres://wave:${WAVE_DB_PASSWORD:-wave}@postgres:5432/wave?sslmode=disable
       WAVE_DATA_DIR: /var/lib/wave
@@ -101,6 +102,11 @@ services:
       WAVE_GUARDRAIL_INPUT_BLOCK: ${WAVE_GUARDRAIL_INPUT_BLOCK:-}
       WAVE_GUARDRAIL_OUTPUT_REDACT: ${WAVE_GUARDRAIL_OUTPUT_REDACT:-}
       WAVE_EGRESS_ALLOW_PRIVATE: ${WAVE_EGRESS_ALLOW_PRIVATE:-false}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Only the trusted Wave service receives this socket, never agent sandboxes.
     volumes:
       - type: bind

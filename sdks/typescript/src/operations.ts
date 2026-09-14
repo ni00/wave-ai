@@ -3113,6 +3113,79 @@ export const operations = {
     "summary": "Subscribe to session events",
     "transport": "sse"
   },
+  "executionTrace": {
+    "authenticated": true,
+    "command": "tasks trace",
+    "id": "executionTrace",
+    "method": "GET",
+    "parameters": [
+      {
+        "description": "Task ID",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "path": "/v1/tasks/{id}/trace",
+    "requestBody": null,
+    "responses": {
+      "200": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/execution.Trace"
+            }
+          }
+        },
+        "description": "OK"
+      },
+      "401": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Missing or invalid Bearer Key"
+      },
+      "403": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Key does not have API scope"
+      },
+      "404": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Task not found or outside the current owner's scope"
+      },
+      "500": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/apierr.Envelope"
+            }
+          }
+        },
+        "description": "Internal error"
+      }
+    },
+    "summary": "Task trace and timing breakdown",
+    "transport": "json"
+  },
   "filesContent": {
     "authenticated": true,
     "command": "files download",

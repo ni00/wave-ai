@@ -27,6 +27,7 @@ func Register(r *gin.RouterGroup, db *gorm.DB) {
 	r.GET("/sessions/:id/messages", h.messages)
 	r.GET("/sessions/:id/required_actions", h.requiredActions)
 	r.GET("/tasks/:id/generations", h.generations)
+	r.GET("/tasks/:id/trace", h.trace)
 	r.POST("/sessions/:id/archive", h.archiveSession)
 	r.POST("/tasks/:id/reconcile", h.reconcile)
 	r.POST("/sessions", h.createSession)
@@ -344,6 +345,7 @@ func (h handler) createTask(c *gin.Context) {
 		httpx.Error(c, e)
 		return
 	}
+	correlateTask(c, t)
 	c.JSON(202, t)
 }
 
@@ -402,6 +404,7 @@ func (h handler) getTask(c *gin.Context) {
 		httpx.Error(c, e)
 		return
 	}
+	correlateTask(c, t)
 	c.JSON(200, t)
 }
 
@@ -523,6 +526,7 @@ func (h handler) delegateTask(c *gin.Context) {
 		httpx.Error(c, e)
 		return
 	}
+	correlateTask(c, t)
 	c.JSON(202, t)
 }
 

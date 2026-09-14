@@ -53,7 +53,7 @@ func (c apiClient) call(ctx context.Context, method, path string, in, out any) e
 		_, err = io.Copy(io.Discard, res.Body)
 		return err
 	}
-	return json.NewDecoder(io.LimitReader(res.Body, 4<<20)).Decode(out)
+	return json.NewDecoder(io.LimitReader(res.Body, 32<<20)).Decode(out)
 }
 
 func runPhase(ctx context.Context, dsn, dir string, workers int, o options) (phaseReport, error) {
@@ -117,17 +117,21 @@ func runPhase(ctx context.Context, dsn, dir string, workers int, o options) (pha
 	p.DBWaitCount = after.WaitCount - before.WaitCount
 	p.DBWaitMS = float64(after.WaitDuration-before.WaitDuration) / float64(time.Millisecond)
 	p.summarize(samples, elapsed)
-	if p.Failed > 0 || p.Attempted != p.Requested {
+	if p.Failed > 0 || p.Attempted != p.Requested || p.TraceFailures > 0 || p.IncompleteTraces > 0 {
 		return p, fmt.Errorf("bench: workers=%d had %d failed and %d unattempted tasks", workers, p.Failed, p.Requested-p.Attempted)
 	}
 	return p, ctx.Err()
 }
 
 type sample struct {
-	task    execution.Task
-	latency time.Duration
-	err     error
-	state   string
+	task            execution.Task
+	latency         time.Duration
+	err             error
+	state           string
+	trace           *execution.Trace
+	traceError      bool
+	cancelRequested bool
+	cancelError     bool
 }
 
 // load is a closed-loop test: a client starts a new session/task only after its
@@ -161,6 +165,7 @@ func (c apiClient) task(ctx context.Context, agent string, o options) (s sample)
 	start := time.Now()
 	defer func() {
 		s.latency = time.Since(start)
+		c.trace(ctx, &s)
 		// Keep only timing/outcome data; do not retain response payloads or
 		// snapshots for every completed task in the load generator's heap.
 		s.task.Result = ""
@@ -191,7 +196,7 @@ func (c apiClient) task(ctx context.Context, agent string, o options) (s sample)
 		if execution.Terminal(s.task.State) || s.task.State == "unknown" || s.task.State == "waiting" {
 			s.state = s.task.State
 			if s.state != "succeeded" {
-				s.err = fmt.Errorf("task %s: state=%s %s", s.task.ID, s.state, s.task.Error)
+				s.err = fmt.Errorf("task %s: state=%s", s.task.ID, s.state)
 			} else if s.task.StartedAt == nil || s.task.FinishedAt == nil || s.task.CreatedAt.IsZero() {
 				s.state = "invalid_result"
 				s.err = errors.New("bench: completed task missing timestamps")

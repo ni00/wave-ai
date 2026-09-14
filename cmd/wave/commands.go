@@ -23,6 +23,9 @@ Usage:
   wave bootstrap -org NAME [-user admin] [-key-label default] [-format human|json|key]
   wave config check
   wave bench [-workers 2,5,10,20] [-tasks 100] [-clients 32] [-format human|json]
+  wave trace -task TASK_ID [-format human|json|chrome]
+  wave bench live -case scenario.json [-tasks 5] [-clients 1]
+  wave bench compare baseline.json candidate.json
   wave bench sandbox [-concurrency 1,2] [-memory-mib 512,1024,2048] [-format human|json]
 
 Use 'wave COMMAND --help' for flags. Configuration is read from WAVE_* environment variables.
@@ -49,6 +52,8 @@ func runCommand(ctx context.Context, args []string, out, diagnostics io.Writer) 
 		err = bootstrapCommand(ctx, args, out, diagnostics)
 	case "config":
 		err = configCommand(args, out, diagnostics)
+	case "trace":
+		err = bench.Inspect(ctx, args, out, diagnostics)
 	case "bench":
 		err = bench.Run(ctx, args, out, diagnostics)
 	default:

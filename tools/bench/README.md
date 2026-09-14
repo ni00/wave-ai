@@ -117,3 +117,5 @@ to remove leftover containers.
 
 After changing benchmark code, run `make bench-test` for race-enabled tests and
 Docker integration checks.
+
+Native observability: `wave trace -task ID -format json|chrome`, `wave bench live -case case.json`, and `wave bench compare baseline.json candidate.json`. Live cases require deterministic result/artifact assertions and use `WAVE_API_KEY` or `-key-file`. Reports retain content-free task traces. See the [observability guide (Chinese)](OBSERVABILITY.zh-CN.md) for timing semantics, limits and examples.

@@ -907,6 +907,94 @@ definitions:
         type: string
         x-nullable: true
     type: object
+  execution.Trace:
+    properties:
+      incomplete:
+        type: boolean
+      session_id:
+        type: string
+      spans:
+        items:
+          $ref: '#/definitions/observe.Span'
+        type: array
+      state:
+        type: string
+      summary:
+        $ref: '#/definitions/execution.TraceSummary'
+      task_id:
+        type: string
+      trace_id:
+        type: string
+      truncated:
+        type: boolean
+      version:
+        type: integer
+    required:
+    - incomplete
+    - session_id
+    - spans
+    - state
+    - summary
+    - task_id
+    - trace_id
+    - truncated
+    - version
+    type: object
+  execution.TraceSummary:
+    properties:
+      cached_input_tokens:
+        format: int64
+        type: integer
+      failed_model_calls:
+        type: integer
+      failed_tool_calls:
+        type: integer
+      initial_queue_ms:
+        type: number
+        x-nullable: true
+      input_tokens:
+        format: int64
+        type: integer
+      model_calls:
+        type: integer
+      model_ms:
+        type: number
+      output_tokens:
+        format: int64
+        type: integer
+      phase_ms:
+        additionalProperties:
+          format: float64
+          type: number
+        type: object
+      tool_calls:
+        type: integer
+      tool_ms:
+        type: number
+      unattributed_ms:
+        type: number
+        x-nullable: true
+      usage_known:
+        type: boolean
+      wall_ms:
+        type: number
+        x-nullable: true
+    required:
+    - cached_input_tokens
+    - failed_model_calls
+    - failed_tool_calls
+    - initial_queue_ms
+    - input_tokens
+    - model_calls
+    - model_ms
+    - output_tokens
+    - phase_ms
+    - tool_calls
+    - tool_ms
+    - unattributed_ms
+    - usage_known
+    - wall_ms
+    type: object
   files.File:
     properties:
       created_at:
@@ -1179,6 +1267,46 @@ definitions:
     - cache_read_input_tokens
     - completion_tokens
     - prompt_tokens
+    type: object
+  observe.Span:
+    properties:
+      attributes:
+        additionalProperties: {}
+        type: object
+      duration_ms:
+        type: number
+        x-nullable: true
+      finished_at:
+        format: date-time
+        type: string
+      first_delta_ms:
+        format: int64
+        type: integer
+        x-nullable: true
+      id:
+        type: string
+      kind:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      started_at:
+        format: date-time
+        type: string
+      state:
+        type: string
+      task_id:
+        type: string
+    required:
+    - duration_ms
+    - first_delta_ms
+    - id
+    - kind
+    - name
+    - started_at
+    - state
+    - task_id
     type: object
   skills.ListResponse:
     properties:
@@ -4113,6 +4241,52 @@ paths:
       security:
       - BearerAuth: []
       summary: 提交工具审批或结果 || Submit tool approval or result
+      tags:
+      - execution
+  /v1/tasks/{id}/trace:
+    get:
+      description: '返回当前任务的模型、工具、准备和收尾 span，以及子任务链接。trace_id 等于 root_id。摘要只统计当前任务，不重复累加子任务；初始排队不包含后续等待，未归因耗时按区间并集计算。仅含元数据，不含提示词、命令、结果和错误文本。最多
+        5000 次模型调用、5000 次工具调用、10000 条阶段事件和 5000 个子任务；超出标记 truncated，缺失结束时间标记 incomplete，未知耗时为
+        null。 || Return model, tool, preparation and finalization spans with child-task
+        links. trace_id equals root_id. Summaries cover only this task; initial queue
+        excludes later waits, and unattributed time uses the union of intervals. Metadata
+        only: no prompts, commands, outputs or error text. Bounded to 5000 generations,
+        5000 tools, 10000 phase events and 5000 children; truncated and incomplete
+        explicitly flag limits or missing ends. Unknown durations are null.'
+      operationId: executionTrace
+      parameters:
+      - description: 任务 ID || Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/execution.Trace'
+        "401":
+          description: 缺少或无效的 Bearer Key || Missing or invalid Bearer Key
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "403":
+          description: Key 不具备 API scope || Key does not have API scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "404":
+          description: 任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's
+            scope
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+        "500":
+          description: 内部错误 || Internal error
+          schema:
+            $ref: '#/definitions/apierr.Envelope'
+      security:
+      - BearerAuth: []
+      summary: 任务执行链路与耗时 || Task trace and timing breakdown
       tags:
       - execution
 securityDefinitions:

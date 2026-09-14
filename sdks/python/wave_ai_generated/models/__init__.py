@@ -53,6 +53,8 @@ from wave_ai_generated.models.execution_text_request import ExecutionTextRequest
 from wave_ai_generated.models.execution_tool_call import ExecutionToolCall
 from wave_ai_generated.models.execution_tool_calls_response import ExecutionToolCallsResponse
 from wave_ai_generated.models.execution_tool_result_request import ExecutionToolResultRequest
+from wave_ai_generated.models.execution_trace import ExecutionTrace
+from wave_ai_generated.models.execution_trace_summary import ExecutionTraceSummary
 from wave_ai_generated.models.files_file import FilesFile
 from wave_ai_generated.models.files_list_response import FilesListResponse
 from wave_ai_generated.models.memory_conflict import MemoryConflict
@@ -69,6 +71,7 @@ from wave_ai_generated.models.memory_write_entry_request import MemoryWriteEntry
 from wave_ai_generated.models.modelclient_func_call_spec import ModelclientFuncCallSpec
 from wave_ai_generated.models.modelclient_tool_call import ModelclientToolCall
 from wave_ai_generated.models.modelclient_usage import ModelclientUsage
+from wave_ai_generated.models.observe_span import ObserveSpan
 from wave_ai_generated.models.skills_list_response import SkillsListResponse
 from wave_ai_generated.models.skills_skill import SkillsSkill
 from wave_ai_generated.models.vault_create_request import VaultCreateRequest

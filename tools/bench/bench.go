@@ -3,6 +3,7 @@ package bench
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -10,9 +11,11 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
+	"wave-ai.local/wave/internal/platform/xid"
 )
 
 type options struct {
@@ -29,6 +32,10 @@ type options struct {
 }
 
 type report struct {
+	RunID      string        `json:"run_id"`
+	Kind       string        `json:"kind"`
+	Revision   string        `json:"revision"`
+	Workload   string        `json:"workload_sha256"`
 	Version    int           `json:"version"`
 	StartedAt  time.Time     `json:"started_at"`
 	GoVersion  string        `json:"go_version"`
@@ -40,9 +47,15 @@ type report struct {
 	Phases     []phaseReport `json:"phases"`
 }
 
-// Run does not load service environment configuration or use provider keys.
-// All state belongs to a disposable PostgreSQL container and temporary directory.
+// Run dispatches isolated synthetic/sandbox benchmarks, live scenarios and comparisons.
+// Only live mode contacts the configured service; provider credentials stay there.
 func Run(ctx context.Context, args []string, out, diagnostics io.Writer) error {
+	if len(args) > 0 && args[0] == "live" {
+		return runLive(ctx, args[1:], out, diagnostics)
+	}
+	if len(args) > 0 && args[0] == "compare" {
+		return compare(args[1:], out, diagnostics)
+	}
 	if len(args) > 0 && args[0] == "sandbox" {
 		return runSandbox(ctx, args[1:], out, diagnostics)
 	}
@@ -96,7 +109,10 @@ func Run(ctx context.Context, args []string, out, diagnostics io.Writer) error {
 		return err
 	}
 	defer cleanup()
-	r := report{Version: 1, StartedAt: time.Now().UTC(), GoVersion: runtime.Version(), OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU(), GOMAXPROCS: runtime.GOMAXPROCS(0), Options: o, Phases: []phaseReport{}}
+	r := report{Version: 2, RunID: xid.New("bench"), Kind: "synthetic", Revision: buildRevision(), Workload: fingerprint(struct {
+		Chunks, Bytes int
+		Delay         time.Duration
+	}{o.Chunks, o.ChunkBytes, o.ModelDelay}), StartedAt: time.Now().UTC(), GoVersion: runtime.Version(), OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU(), GOMAXPROCS: runtime.GOMAXPROCS(0), Options: o, Phases: []phaseReport{}}
 	var runErr error
 	for i, n := range workers {
 		fmt.Fprintf(diagnostics, "bench: workers=%d, clients=%d, warmup=%d, tasks=%d\n", n, min(o.Clients, o.Tasks), o.Warmup, o.Tasks)
@@ -158,4 +174,30 @@ func writeReport(out io.Writer, r report) error {
 	fmt.Fprintln(&b, "Latencies are milliseconds, successful tasks only; e2e includes session creation and polling.\nHeap is sampled for the whole Go process (Wave + load generator + mock), excludes PostgreSQL and is not RSS.\nSynthetic closed-loop baseline only: no sandbox, real model, S3/file load, scheduler or SSE subscribers.\nUse -format json for full distributions, failure states, DB pool waits and timings.")
 	_, err := io.WriteString(out, b.String())
 	return err
+}
+
+func fingerprint(value any) string {
+	raw, _ := json.Marshal(value)
+	return fmt.Sprintf("%x", sha256.Sum256(raw))
+}
+func buildRevision() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		var rev string
+		var dirty bool
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" {
+				rev = s.Value
+			}
+			if s.Key == "vcs.modified" && s.Value == "true" {
+				dirty = true
+			}
+		}
+		if rev != "" {
+			if dirty {
+				rev += "+dirty"
+			}
+			return rev
+		}
+	}
+	return "unknown"
 }

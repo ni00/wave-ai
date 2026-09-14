@@ -5146,6 +5146,84 @@
           }
         }
       }
+    },
+    "/v1/tasks/{id}/trace": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Return model, tool, preparation and finalization spans with child-task links. trace_id equals root_id. Summaries cover only this task; initial queue excludes later waits, and unattributed time uses the union of intervals. Metadata only: no prompts, commands, outputs or error text. Bounded to 5000 generations, 5000 tools, 10000 phase events and 5000 children; truncated and incomplete explicitly flag limits or missing ends. Unknown durations are null.",
+        "tags": [
+          "execution"
+        ],
+        "summary": "Task trace and timing breakdown",
+        "operationId": "executionTrace",
+        "parameters": [
+          {
+            "description": "Task ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/execution.Trace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer Key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key does not have API scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found or outside the current owner's scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/apierr.Envelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6390,6 +6468,125 @@
         },
         "x-wave-validation": "approval-or-result"
       },
+      "execution.Trace": {
+        "type": "object",
+        "required": [
+          "incomplete",
+          "session_id",
+          "spans",
+          "state",
+          "summary",
+          "task_id",
+          "trace_id",
+          "truncated",
+          "version"
+        ],
+        "properties": {
+          "incomplete": {
+            "type": "boolean"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "spans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/observe.Span"
+            }
+          },
+          "state": {
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/execution.TraceSummary"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "trace_id": {
+            "type": "string"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "execution.TraceSummary": {
+        "type": "object",
+        "required": [
+          "cached_input_tokens",
+          "failed_model_calls",
+          "failed_tool_calls",
+          "initial_queue_ms",
+          "input_tokens",
+          "model_calls",
+          "model_ms",
+          "output_tokens",
+          "phase_ms",
+          "tool_calls",
+          "tool_ms",
+          "unattributed_ms",
+          "usage_known",
+          "wall_ms"
+        ],
+        "properties": {
+          "cached_input_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "failed_model_calls": {
+            "type": "integer"
+          },
+          "failed_tool_calls": {
+            "type": "integer"
+          },
+          "initial_queue_ms": {
+            "type": "number",
+            "nullable": true
+          },
+          "input_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "model_calls": {
+            "type": "integer"
+          },
+          "model_ms": {
+            "type": "number"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "phase_ms": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "float64"
+            }
+          },
+          "tool_calls": {
+            "type": "integer"
+          },
+          "tool_ms": {
+            "type": "number"
+          },
+          "unattributed_ms": {
+            "type": "number",
+            "nullable": true
+          },
+          "usage_known": {
+            "type": "boolean"
+          },
+          "wall_ms": {
+            "type": "number",
+            "nullable": true
+          }
+        }
+      },
       "files.File": {
         "type": "object",
         "required": [
@@ -6762,6 +6959,60 @@
             "type": "integer",
             "format": "int64",
             "nullable": true
+          }
+        }
+      },
+      "observe.Span": {
+        "type": "object",
+        "required": [
+          "duration_ms",
+          "first_delta_ms",
+          "id",
+          "kind",
+          "name",
+          "started_at",
+          "state",
+          "task_id"
+        ],
+        "properties": {
+          "attributes": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "duration_ms": {
+            "type": "number",
+            "nullable": true
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "first_delta_ms": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
           }
         }
       },

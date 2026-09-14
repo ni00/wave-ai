@@ -3,10 +3,10 @@ package httpx
 
 import (
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+	"wave-ai.local/wave/internal/platform/observe"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -22,7 +22,7 @@ func Error(c *gin.Context, err error) {
 	} else if errors.Is(err, gorm.ErrDuplicatedKey) {
 		e = apierr.New(409, apierr.InvalidRequest, "resource already exists")
 	} else if !errors.As(err, &e) {
-		slog.Error("request failed", "request_id", c.GetString("request_id"), "error", err)
+		observe.Logger(c.Request.Context()).Error("http.request_failed", "error_kind", observe.ErrorKind(err))
 		e = apierr.New(500, apierr.API, "internal error")
 	}
 	c.AbortWithStatusJSON(e.Status, gin.H{"type": "error", "error": gin.H{"type": e.Type, "message": e.Message}, "request_id": c.GetString("request_id")})
@@ -30,19 +30,22 @@ func Error(c *gin.Context, err error) {
 func Observe() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		c.Set("request_id", apierr.NewRequestID())
+		rid := apierr.NewRequestID()
+		c.Set("request_id", rid)
+		c.Header("X-Request-ID", rid)
+		c.Request = c.Request.WithContext(observe.With(c.Request.Context(), observe.Scope{RequestID: rid}))
 		defer func() {
 			if rec := recover(); rec != nil {
 				if rec == http.ErrAbortHandler {
 					panic(rec)
 				}
-				slog.Error("handler panic", "error", rec)
+				observe.Logger(c.Request.Context()).Error("http.panic")
 				if c.Writer.Written() {
 					panic(http.ErrAbortHandler)
 				}
 				Error(c, apierr.New(500, apierr.API, "internal error"))
 			}
-			slog.Debug("http", "method", c.Request.Method, "path", c.FullPath(), "status", c.Writer.Status(), "duration", time.Since(start))
+			observe.Logger(c.Request.Context()).Info("http.request", "method", c.Request.Method, "route", c.FullPath(), "status", c.Writer.Status(), "duration_ms", float64(time.Since(start))/float64(time.Millisecond))
 		}()
 		c.Next()
 	}

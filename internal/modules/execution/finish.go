@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"wave-ai.local/wave/internal/platform/observe"
 )
 
 func (w *Worker) park(ctx context.Context, t *Task, state string) error {
@@ -87,11 +88,11 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 		return e
 	}
 	if task.ParentID == "" && w.Finish != nil {
-		if e := w.Finish(ctx, s, task); e != nil {
+		if e := observe.Do(ctx, "workspace.finish", func(ctx context.Context) error { return w.Finish(ctx, s, task) }); e != nil {
 			return w.parkUnknown(ctx, claim, e)
 		}
 	}
-	return fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, t *Task) error {
+	e = fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, t *Task) error {
 		now := time.Now()
 		t.State = state
 		t.FinishedAt = &now
@@ -116,6 +117,10 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 		}
 		return emit(tx, s, t.ID, "task.finished", map[string]any{"state": state, "result": t.Result, "error": t.Error})
 	})
+	if e == nil {
+		observe.Logger(ctx).Info("task.finished", "state", state)
+	}
+	return e
 }
 func (w *Worker) parkUnknown(ctx context.Context, t *Task, e error) error {
 	return fenced(ctx, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {

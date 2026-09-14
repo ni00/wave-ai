@@ -16,31 +16,62 @@ type distribution struct {
 }
 
 type phaseReport struct {
-	PhaseError     string         `json:"phase_error,omitempty"`
-	Workers        int            `json:"workers"`
-	Requested      int            `json:"requested"`
-	Attempted      int            `json:"attempted"`
-	Succeeded      int            `json:"succeeded"`
-	Failed         int            `json:"failed"`
-	ErrorRate      float64        `json:"error_rate"`
-	ElapsedSeconds float64        `json:"elapsed_seconds"`
-	TasksPerSecond float64        `json:"successful_tasks_per_second"`
-	EndToEnd       distribution   `json:"end_to_end"`
-	Queue          distribution   `json:"queue"`
-	Execution      distribution   `json:"execution"`
-	PeakHeapMiB    float64        `json:"process_peak_sampled_go_heap_mib"`
-	DBWaitCount    int64          `json:"db_pool_wait_count"`
-	DBWaitMS       float64        `json:"db_pool_wait_ms"`
-	States         map[string]int `json:"states"`
-	Errors         []string       `json:"error_examples,omitempty"`
+	Tasks            []taskSample   `json:"tasks"`
+	Model            distribution   `json:"model"`
+	Tool             distribution   `json:"tool"`
+	TraceFailures    int            `json:"trace_failures"`
+	IncompleteTraces int            `json:"incomplete_traces"`
+	ModelCalls       int            `json:"model_calls"`
+	InputTokens      int64          `json:"input_tokens"`
+	OutputTokens     int64          `json:"output_tokens"`
+	UsageKnown       bool           `json:"usage_known"`
+	PhaseError       string         `json:"phase_error,omitempty"`
+	Workers          int            `json:"workers"`
+	Requested        int            `json:"requested"`
+	Attempted        int            `json:"attempted"`
+	Succeeded        int            `json:"succeeded"`
+	Failed           int            `json:"failed"`
+	ErrorRate        float64        `json:"error_rate"`
+	ElapsedSeconds   float64        `json:"elapsed_seconds"`
+	TasksPerSecond   float64        `json:"successful_tasks_per_second"`
+	EndToEnd         distribution   `json:"end_to_end"`
+	Queue            distribution   `json:"queue"`
+	Execution        distribution   `json:"execution"`
+	PeakHeapMiB      float64        `json:"process_peak_sampled_go_heap_mib"`
+	DBWaitCount      int64          `json:"db_pool_wait_count"`
+	DBWaitMS         float64        `json:"db_pool_wait_ms"`
+	States           map[string]int `json:"states"`
+	Errors           []string       `json:"error_examples,omitempty"`
 }
 
 func (p *phaseReport) summarize(samples []sample, elapsed time.Duration) {
 	p.Attempted = len(samples)
 	p.ElapsedSeconds = elapsed.Seconds()
-	var e2e, queue, execution []float64
+	var e2e, queue, execution, models, tools []float64
+	p.UsageKnown = true
+	p.Tasks = []taskSample{}
 	for _, s := range samples {
 		p.States[s.state]++
+		p.Tasks = append(p.Tasks, traceData(s))
+		if s.traceError {
+			p.TraceFailures++
+		}
+		if s.trace == nil {
+			p.UsageKnown = false
+		} else {
+			tr := s.trace
+			p.ModelCalls += tr.Summary.ModelCalls
+			p.InputTokens += tr.Summary.InputTokens
+			p.OutputTokens += tr.Summary.OutputTokens
+			p.UsageKnown = p.UsageKnown && tr.Summary.UsageKnown
+			if tr.Incomplete || tr.Truncated {
+				p.IncompleteTraces++
+			}
+			if s.err == nil && !tr.Incomplete && !tr.Truncated {
+				models = append(models, tr.Summary.ModelMS)
+				tools = append(tools, tr.Summary.ToolMS)
+			}
+		}
 		if s.err != nil {
 			p.Failed++
 			if len(p.Errors) < 5 {
@@ -59,6 +90,7 @@ func (p *phaseReport) summarize(samples []sample, elapsed time.Duration) {
 	if elapsed > 0 {
 		p.TasksPerSecond = float64(p.Succeeded) / elapsed.Seconds()
 	}
+	p.Model, p.Tool = summarize(models), summarize(tools)
 	p.EndToEnd, p.Queue, p.Execution = summarize(e2e), summarize(queue), summarize(execution)
 }
 

@@ -122,3 +122,5 @@ make clients-check clients-test  # 检查生成一致性与客户端行为。
 ```
 
 依赖安装、集成测试和打包见[客户端工具链](tools/clients/README.zh-CN.md)。
+
+日志、任务 Trace、真实模型压测与回归对比，见[观测与压测说明](tools/bench/OBSERVABILITY.zh-CN.md)。

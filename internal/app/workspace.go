@@ -21,6 +21,7 @@ import (
 	"wave-ai.local/wave/internal/modules/memory"
 	"wave-ai.local/wave/internal/modules/skills"
 	"wave-ai.local/wave/internal/platform/blobstore"
+	"wave-ai.local/wave/internal/platform/observe"
 )
 
 type Workspace = execution.Workspace
@@ -55,7 +56,7 @@ func (a *App) prepare(ctx context.Context, s execution.Session, t execution.Task
 	if e != nil || ready {
 		return e
 	}
-	if e = a.Sandbox.Ensure(ctx, s.ID); e != nil {
+	if e = observe.Do(ctx, "sandbox.ensure", func(ctx context.Context) error { return a.Sandbox.Ensure(ctx, s.ID) }); e != nil {
 		return e
 	}
 	env, e := environments.Get(ctx, a.DB, principal(s), s.EnvironmentID)
@@ -182,15 +183,17 @@ func (a *App) finish(ctx context.Context, s execution.Session, t execution.Task)
 	if ws.RootID != t.RootID || ws.State != "ready" {
 		// Cancelled or failed preparation must not retry provisioning just to
 		// collect outputs or publish incomplete memory projections.
-		return a.Sandbox.Stop(ctx, s.ID)
+		return observe.Do(ctx, "sandbox.stop", func(ctx context.Context) error { return a.Sandbox.Stop(ctx, s.ID) })
 	}
-	e := a.Sandbox.VisitOutputs(ctx, s.ID, 32<<20, func(name string, data []byte) error {
-		rel := strings.TrimPrefix(name, "/mnt/session/outputs/")
-		if rel == name || path.IsAbs(rel) || path.Clean(rel) != rel || strings.HasPrefix(rel, "../") {
-			return errors.New("invalid artifact path")
-		}
-		_, err := files.PutArtifact(ctx, a.DB, a.Blobs, principal(s), s.ID, t.ID, rel, data)
-		return err
+	e := observe.Do(ctx, "artifacts.publish", func(ctx context.Context) error {
+		return a.Sandbox.VisitOutputs(ctx, s.ID, 32<<20, func(name string, data []byte) error {
+			rel := strings.TrimPrefix(name, "/mnt/session/outputs/")
+			if rel == name || path.IsAbs(rel) || path.Clean(rel) != rel || strings.HasPrefix(rel, "../") {
+				return errors.New("invalid artifact path")
+			}
+			_, err := files.PutArtifact(ctx, a.DB, a.Blobs, principal(s), s.ID, t.ID, rel, data)
+			return err
+		})
 	})
 	if e != nil {
 		return e
@@ -206,7 +209,7 @@ func (a *App) finish(ctx context.Context, s execution.Session, t execution.Task)
 		}
 	}
 
-	return a.Sandbox.Stop(ctx, s.ID)
+	return observe.Do(ctx, "sandbox.stop", func(ctx context.Context) error { return a.Sandbox.Stop(ctx, s.ID) })
 }
 
 func (a *App) memoryFiles(ctx context.Context, sid, root string) (map[string][]byte, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"time"
+	"wave-ai.local/wave/internal/platform/observe"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -19,7 +20,7 @@ func Maintain(ctx context.Context, db *gorm.DB) {
 			return
 		case <-tick.C:
 			if e := Expire(ctx, db); e != nil {
-				slog.Error("execution maintenance", "error", e)
+				slog.Error("execution maintenance", "error_kind", observe.ErrorKind(e))
 			}
 		}
 	}

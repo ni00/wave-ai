@@ -92,3 +92,5 @@ make bench-sandbox BENCH_ARGS='-backend gvisor -verify -concurrency 1,2'
 正常退出或 Ctrl-C 后自动清理测试资源。异常终止后，按启动日志中的容器名执行 `docker rm -fv <容器名>` 清理残留容器。
 
 修改压测代码后，运行 `make bench-test`，执行需要 Docker 的竞态检测与集成测试。
+
+日志、任务 Trace、真实模型压测与回归对比，见[观测与压测说明](OBSERVABILITY.zh-CN.md)。

@@ -9,6 +9,7 @@ import (
 
 	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
+	"wave-ai.local/wave/internal/platform/observe"
 )
 
 func (w *Worker) tool(ctx context.Context, claim *Task, s Session, call ToolCall) error {
@@ -41,6 +42,10 @@ func (w *Worker) tool(ctx context.Context, claim *Task, s Session, call ToolCall
 	if blocked {
 		return w.park(ctx, claim, "queued")
 	}
+	scope := observe.From(ctx)
+	scope.SpanID = call.ID
+	ctx = observe.With(ctx, scope)
+	observe.Logger(ctx).Info("tool.started", "tool", call.Tool.Name)
 	var result ToolResult
 	var err error
 	if call.Tool.Kind == "agent" {
@@ -50,6 +55,7 @@ func (w *Worker) tool(ctx context.Context, claim *Task, s Session, call ToolCall
 	} else {
 		result = ToolFailed("executor_unavailable", "tool executor not configured")
 	}
+	observe.Logger(ctx).Info("tool.returned", "tool", call.Tool.Name, "is_error", result.IsError, "outcome_unknown", err != nil, "duration_ms", time.Since(*call.StartedAt).Milliseconds())
 	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	return fenced(cleanup, w.DB, claim, func(tx *gorm.DB, s *Session, t *Task) error {

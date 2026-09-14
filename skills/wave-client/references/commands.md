@@ -110,6 +110,7 @@ Use `--dry-run` to validate and preview a request. For workflow commands, follow
 | `wavectl tasks input` | `--id` | `--text` | Steer a task with additional input |
 | `wavectl tasks reconcile` | `--id` | `--confirm-stopped` | Reconcile a task |
 | `wavectl tasks resume` | `--id` | `--text` | Resume a terminal child task |
+| `wavectl tasks trace` | `--id` | — | Task trace and timing breakdown |
 
 ## tools
 

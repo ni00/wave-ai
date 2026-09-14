@@ -240,5 +240,9 @@
   },
   "executionResolveToolResult": {
     "command": "tools resolve"
+  },
+  "executionTrace": {
+    "command": "tasks trace",
+    "transport": "json"
   }
 }

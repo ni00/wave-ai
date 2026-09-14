@@ -82,7 +82,12 @@ func (w *Worker) compact(ctx context.Context, claim *Task, t Task) (Task, error)
 	if e != nil {
 		return t, e
 	}
-	final, callErr := w.Model.Stream(ctx, modelclient.Request{Model: t.Snapshot.Model, Messages: request, MaxOutputTokens: reserve}, func(modelclient.Delta) {})
+	final, callErr := w.Model.Stream(ctx, modelclient.Request{Model: t.Snapshot.Model, Messages: request, MaxOutputTokens: reserve}, func(modelclient.Delta) {
+		if generation.FirstDeltaMS == nil {
+			ms := time.Since(generation.StartedAt).Milliseconds()
+			generation.FirstDeltaMS = &ms
+		}
+	})
 	generation.complete(final, callErr)
 	summary := ""
 	if final != nil {

@@ -93,6 +93,11 @@ import {
     ExecutionToolResultRequestFromJSON,
     ExecutionToolResultRequestToJSON,
 } from '../models/ExecutionToolResultRequest.js';
+import {
+    type ExecutionTrace,
+    ExecutionTraceFromJSON,
+    ExecutionTraceToJSON,
+} from '../models/ExecutionTrace.js';
 
 export interface ExecutionAddInputRequest {
     /**
@@ -328,6 +333,13 @@ export interface ExecutionStreamEventsRequest {
      * Resume after the last received event sequence; a nonempty after takes precedence
      */
     lastEventID?: string;
+}
+
+export interface ExecutionTraceRequest {
+    /**
+     * Task ID
+     */
+    id: string;
 }
 
 /**
@@ -1564,6 +1576,61 @@ export class ExecutionApi extends runtime.BaseAPI {
      */
     async executionStreamEvents(requestParameters: ExecutionStreamEventsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
         const response = await this.executionStreamEventsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for executionTrace without sending the request
+     */
+    async executionTraceRequestOpts(requestParameters: ExecutionTraceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling executionTrace().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("BearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/tasks/{id}/trace`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return model, tool, preparation and finalization spans with child-task links. trace_id equals root_id. Summaries cover only this task; initial queue excludes later waits, and unattributed time uses the union of intervals. Metadata only: no prompts, commands, outputs or error text. Bounded to 5000 generations, 5000 tools, 10000 phase events and 5000 children; truncated and incomplete explicitly flag limits or missing ends. Unknown durations are null.
+     * Task trace and timing breakdown
+     */
+    async executionTraceRaw(requestParameters: ExecutionTraceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ExecutionTrace>> {
+        const requestOptions = await this.executionTraceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ExecutionTraceFromJSON(jsonValue));
+    }
+
+    /**
+     * Return model, tool, preparation and finalization spans with child-task links. trace_id equals root_id. Summaries cover only this task; initial queue excludes later waits, and unattributed time uses the union of intervals. Metadata only: no prompts, commands, outputs or error text. Bounded to 5000 generations, 5000 tools, 10000 phase events and 5000 children; truncated and incomplete explicitly flag limits or missing ends. Unknown durations are null.
+     * Task trace and timing breakdown
+     */
+    async executionTrace(requestParameters: ExecutionTraceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ExecutionTrace> {
+        const response = await this.executionTraceRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

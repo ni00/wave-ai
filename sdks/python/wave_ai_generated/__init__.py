@@ -76,6 +76,8 @@ __all__ = [
     "ExecutionToolCall",
     "ExecutionToolCallsResponse",
     "ExecutionToolResultRequest",
+    "ExecutionTrace",
+    "ExecutionTraceSummary",
     "FilesFile",
     "FilesListResponse",
     "MemoryConflict",
@@ -92,6 +94,7 @@ __all__ = [
     "ModelclientFuncCallSpec",
     "ModelclientToolCall",
     "ModelclientUsage",
+    "ObserveSpan",
     "SkillsListResponse",
     "SkillsSkill",
     "VaultCreateRequest",
@@ -162,6 +165,8 @@ from wave_ai_generated.models.execution_text_request import ExecutionTextRequest
 from wave_ai_generated.models.execution_tool_call import ExecutionToolCall as ExecutionToolCall
 from wave_ai_generated.models.execution_tool_calls_response import ExecutionToolCallsResponse as ExecutionToolCallsResponse
 from wave_ai_generated.models.execution_tool_result_request import ExecutionToolResultRequest as ExecutionToolResultRequest
+from wave_ai_generated.models.execution_trace import ExecutionTrace as ExecutionTrace
+from wave_ai_generated.models.execution_trace_summary import ExecutionTraceSummary as ExecutionTraceSummary
 from wave_ai_generated.models.files_file import FilesFile as FilesFile
 from wave_ai_generated.models.files_list_response import FilesListResponse as FilesListResponse
 from wave_ai_generated.models.memory_conflict import MemoryConflict as MemoryConflict
@@ -178,6 +183,7 @@ from wave_ai_generated.models.memory_write_entry_request import MemoryWriteEntry
 from wave_ai_generated.models.modelclient_func_call_spec import ModelclientFuncCallSpec as ModelclientFuncCallSpec
 from wave_ai_generated.models.modelclient_tool_call import ModelclientToolCall as ModelclientToolCall
 from wave_ai_generated.models.modelclient_usage import ModelclientUsage as ModelclientUsage
+from wave_ai_generated.models.observe_span import ObserveSpan as ObserveSpan
 from wave_ai_generated.models.skills_list_response import SkillsListResponse as SkillsListResponse
 from wave_ai_generated.models.skills_skill import SkillsSkill as SkillsSkill
 from wave_ai_generated.models.vault_create_request import VaultCreateRequest as VaultCreateRequest

@@ -3935,6 +3935,65 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/tasks/{id}/trace": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回当前任务的模型、工具、准备和收尾 span，以及子任务链接。trace_id 等于 root_id。摘要只统计当前任务，不重复累加子任务；初始排队不包含后续等待，未归因耗时按区间并集计算。仅含元数据，不含提示词、命令、结果和错误文本。最多 5000 次模型调用、5000 次工具调用、10000 条阶段事件和 5000 个子任务；超出标记 truncated，缺失结束时间标记 incomplete，未知耗时为 null。 || Return model, tool, preparation and finalization spans with child-task links. trace_id equals root_id. Summaries cover only this task; initial queue excludes later waits, and unattributed time uses the union of intervals. Metadata only: no prompts, commands, outputs or error text. Bounded to 5000 generations, 5000 tools, 10000 phase events and 5000 children; truncated and incomplete explicitly flag limits or missing ends. Unknown durations are null.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "execution"
+                ],
+                "summary": "任务执行链路与耗时 || Task trace and timing breakdown",
+                "operationId": "executionTrace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务 ID || Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/execution.Trace"
+                        }
+                    },
+                    "401": {
+                        "description": "缺少或无效的 Bearer Key || Missing or invalid Bearer Key",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Key 不具备 API scope || Key does not have API scope",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "任务不存在或不在当前所有者范围内 || Task not found or outside the current owner's scope",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    },
+                    "500": {
+                        "description": "内部错误 || Internal error",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.Envelope"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -5171,6 +5230,125 @@ const docTemplate = `{
                 }
             }
         },
+        "execution.Trace": {
+            "type": "object",
+            "required": [
+                "incomplete",
+                "session_id",
+                "spans",
+                "state",
+                "summary",
+                "task_id",
+                "trace_id",
+                "truncated",
+                "version"
+            ],
+            "properties": {
+                "incomplete": {
+                    "type": "boolean"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "spans": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/observe.Span"
+                    }
+                },
+                "state": {
+                    "type": "string"
+                },
+                "summary": {
+                    "$ref": "#/definitions/execution.TraceSummary"
+                },
+                "task_id": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                },
+                "truncated": {
+                    "type": "boolean"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "execution.TraceSummary": {
+            "type": "object",
+            "required": [
+                "cached_input_tokens",
+                "failed_model_calls",
+                "failed_tool_calls",
+                "initial_queue_ms",
+                "input_tokens",
+                "model_calls",
+                "model_ms",
+                "output_tokens",
+                "phase_ms",
+                "tool_calls",
+                "tool_ms",
+                "unattributed_ms",
+                "usage_known",
+                "wall_ms"
+            ],
+            "properties": {
+                "cached_input_tokens": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "failed_model_calls": {
+                    "type": "integer"
+                },
+                "failed_tool_calls": {
+                    "type": "integer"
+                },
+                "initial_queue_ms": {
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "input_tokens": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "model_calls": {
+                    "type": "integer"
+                },
+                "model_ms": {
+                    "type": "number"
+                },
+                "output_tokens": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "phase_ms": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number",
+                        "format": "float64"
+                    }
+                },
+                "tool_calls": {
+                    "type": "integer"
+                },
+                "tool_ms": {
+                    "type": "number"
+                },
+                "unattributed_ms": {
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "usage_known": {
+                    "type": "boolean"
+                },
+                "wall_ms": {
+                    "type": "number",
+                    "x-nullable": true
+                }
+            }
+        },
         "files.File": {
             "type": "object",
             "required": [
@@ -5543,6 +5721,60 @@ const docTemplate = `{
                     "type": "integer",
                     "format": "int64",
                     "x-nullable": true
+                }
+            }
+        },
+        "observe.Span": {
+            "type": "object",
+            "required": [
+                "duration_ms",
+                "first_delta_ms",
+                "id",
+                "kind",
+                "name",
+                "started_at",
+                "state",
+                "task_id"
+            ],
+            "properties": {
+                "attributes": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "duration_ms": {
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "finished_at": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "first_delta_ms": {
+                    "type": "integer",
+                    "format": "int64",
+                    "x-nullable": true
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "started_at": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
                 }
             }
         },

@@ -8,12 +8,14 @@ import (
 	"gorm.io/gorm/clause"
 
 	"wave-ai.local/wave/internal/adapters/modelclient"
+	"wave-ai.local/wave/internal/platform/observe"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
 // Generation measures one provider call, including retries and compaction.
 // Null usage or finish time means unknown, never zero cost or successful completion.
 type Generation struct {
+	logContext   context.Context
 	ID           string            `gorm:"primaryKey" json:"id" validate:"required"`
 	TaskID       string            `gorm:"index" json:"task_id" validate:"required"`
 	MessageID    string            `json:"message_id,omitempty"`
@@ -37,6 +39,12 @@ func (w *Worker) startGeneration(ctx context.Context, claim *Task, t Task, purpo
 		}
 		return emit(tx, s, t.ID, "generation.started", map[string]any{"generation_id": g.ID, "message_id": messageID, "purpose": purpose, "attempt": g.Attempt})
 	})
+	scope := observe.From(ctx)
+	scope.SpanID = g.ID
+	g.logContext = observe.With(ctx, scope)
+	if e == nil {
+		observe.Logger(g.logContext).Info("model.started", "model", g.Model, "attempt", g.Attempt, "purpose", g.Purpose)
+	}
 	return g, e
 }
 func (g *Generation) complete(final *modelclient.Final, err error) {
@@ -48,6 +56,13 @@ func (g *Generation) complete(final *modelclient.Final, err error) {
 	if final != nil {
 		g.Usage = final.Usage
 	}
+	defer func() {
+		ctx := g.logContext
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		observe.Logger(ctx).Info("model.finished", "model", g.Model, "state", g.State, "duration_ms", elapsed, "first_delta_ms", g.FirstDeltaMS, "usage", g.Usage)
+	}()
 	if err != nil {
 		g.State = "failed"
 		g.Error = err.Error()

@@ -1,0 +1,10 @@
+{
+  "name": "calculator",
+  "session": {},
+  "task": {
+    "agent_id": "REPLACE_WITH_AGENT_ID",
+    "input": "Calculate 17 * 23. Reply with exactly 391 and nothing else.",
+    "budget": {"max_tokens": 2000, "max_tool_calls": 2, "max_seconds": 60}
+  },
+  "expect": {"result_equals": "391"}
+}

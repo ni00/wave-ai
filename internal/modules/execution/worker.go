@@ -13,6 +13,7 @@ import (
 	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/guardrails"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/observe"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
@@ -46,7 +47,7 @@ func (w *Worker) Run(ctx context.Context) {
 		}
 		t, e := claimWithAdmission(ctx, w.DB, owner, w.Lease, w.Admit)
 		if e != nil {
-			slog.Error("claim", "error", e)
+			slog.Error("task.claim_failed", "error_kind", observe.ErrorKind(e))
 			continue
 		}
 		if t == nil {
@@ -56,6 +57,9 @@ func (w *Worker) Run(ctx context.Context) {
 	}
 }
 func (w *Worker) run(ctx context.Context, t *Task) {
+	ctx = w.traceContext(ctx, t)
+	observe.Logger(ctx).Info("task.claimed", "epoch", t.Epoch, "worker_id", t.Owner)
+	defer func() { observe.Logger(ctx).Info("task.released", "epoch", t.Epoch) }()
 	run, cancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
 	wg.Go(func() {
@@ -120,13 +124,13 @@ func (w *Worker) run(ctx context.Context, t *Task) {
 			return emit(tx, s, t.ID, "generation.interrupted", map[string]any{"attempt": current.Attempts})
 		})
 		if rec := recover(); rec != nil {
-			slog.Error("worker panic", "task", t.ID, "error", rec)
+			observe.Logger(ctx).Error("worker.panic")
 		}
 	}()
 	for run.Err() == nil {
 		if e := w.step(run, t); e != nil {
 			if !errors.Is(e, ErrFence) {
-				slog.Warn("execution step", "task", t.ID, "error", e)
+				observe.Logger(ctx).Warn("execution.step_failed", "error_kind", observe.ErrorKind(e))
 			}
 			return
 		}

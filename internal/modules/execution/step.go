@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"wave-ai.local/wave/internal/adapters/modelclient"
+	"wave-ai.local/wave/internal/platform/observe"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
@@ -105,7 +106,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		return w.finish(ctx, claim, t.PendingFinish)
 	}
 	if w.Prepare != nil {
-		if e := w.Prepare(ctx, s, t); e != nil {
+		if e := observe.Do(ctx, "workspace.prepare", func(ctx context.Context) error { return w.Prepare(ctx, s, t) }); e != nil {
 			if errors.Is(e, ErrPending) {
 				return w.park(ctx, claim, "queued")
 			}

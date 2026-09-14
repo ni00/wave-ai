@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"time"
+	"wave-ai.local/wave/internal/platform/observe"
 
 	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
@@ -111,13 +112,13 @@ func RunScheduler(ctx context.Context, db *gorm.DB) {
 		}
 		rows := []Deployment{}
 		if e := db.WithContext(ctx).Where(clause.And(clause.Eq{Column: "paused", Value: false}, clause.Lte{Column: "next_at", Value: time.Now()})).Limit(100).Find(&rows).Error; e != nil {
-			slog.Error("scheduler query", "error", e)
+			slog.Error("scheduler query", "error_kind", observe.ErrorKind(e))
 			continue
 		}
 		for _, d := range rows {
 			_, e := Fire(ctx, db, &auth.Principal{OrgID: d.OrgID, PrincipalID: d.OwnerID}, d.ID, true)
 			if e != nil {
-				slog.Warn("scheduled run", "deployment", d.ID, "error", e)
+				slog.Warn("scheduled run", "deployment", d.ID, "error_kind", observe.ErrorKind(e))
 			}
 		}
 	}
