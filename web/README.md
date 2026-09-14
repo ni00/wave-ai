@@ -6,10 +6,10 @@ Wave 原生后台，入口是 `/console/`。按 Monitoring（Overview、Metrics�
 
 发布的 Wave 二进制和 Docker 镜像内置压缩后的前端资源，启动 `wave serve` 后即可访问 `http://localhost:8080/console/`。使用 `wave bootstrap` 签发的 Wave API Key 登录；密钥只留在页面内存，刷新或断开连接后需重新输入。模型供应商 API Key 不能用于登录后台。
 
-后台 API 与现有 API 使用相同认证和所有者范围，同组织其他用户的资源也不可见。建议通过 HTTPS 反向代理或 SSH 隧道访问。现有 VPS 的服务仍绑定回环地址，可使用：
+后台 API 与现有 API 使用相同认证和所有者范围，同组织其他用户的资源也不可见。建议通过 HTTPS 反向代理或 SSH 隧道访问。服务绑定回环地址时，可通过隧道访问（在本地设置 `VPS_USER` 和 `VPS_HOST`）：
 
 ```sh
-ssh -N -L 18080:127.0.0.1:8080 ubuntu@${VPS_HOST}
+ssh -N -L 18080:127.0.0.1:8080 "${VPS_USER}@${VPS_HOST}"
 # 浏览器打开 http://localhost:18080/console/
 ```
 
