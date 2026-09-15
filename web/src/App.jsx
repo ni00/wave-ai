@@ -77,18 +77,18 @@ const navigation = [
   ["metrics", "Metrics", IconActivity, "Monitoring"],
   ["traces", "Traces", IconListTree, "Monitoring"],
   ["logs", "Logs", IconTerminal2, "Monitoring"],
-  ["agents", "Agents", IconRobot, "资源与执行"],
-  ["skills", "Skills", IconPuzzle, "资源与执行"],
-  ["vaults", "Vaults", IconLock, "资源与执行"],
-  ["webhooks", "Webhooks", IconWebhook, "资源与执行"],
-  ["deployments", "Deployments", IconCalendarClock, "资源与执行"],
-  ["environments", "Environments", IconBox, "运行环境"],
-  ["sandboxes", "Sandboxes", IconServer, "资源与执行"],
-  ["files", "Files", IconFiles, "文件与产物"],
-  ["memory", "Memory", IconBrain, "持久记忆"],
-  ["sessions", "Sessions", IconMessages, "会话"],
-  ["tasks", "Tasks", IconChecklist, "任务"],
-  ["benchmarks", "Benchmarks", IconChartHistogram, "性能压测"],
+  ["agents", "Agents", IconRobot, "Resources & Execution"],
+  ["skills", "Skills", IconPuzzle, "Resources & Execution"],
+  ["vaults", "Vaults", IconLock, "Resources & Execution"],
+  ["webhooks", "Webhooks", IconWebhook, "Resources & Execution"],
+  ["deployments", "Deployments", IconCalendarClock, "Resources & Execution"],
+  ["environments", "Environments", IconBox, "Resources & Execution"],
+  ["sandboxes", "Sandboxes", IconServer, "Resources & Execution"],
+  ["files", "Files", IconFiles, "Resources & Execution"],
+  ["memory", "Memory", IconBrain, "Resources & Execution"],
+  ["sessions", "Sessions", IconMessages, "Resources & Execution"],
+  ["tasks", "Tasks", IconChecklist, "Resources & Execution"],
+  ["benchmarks", "Benchmarks", IconChartHistogram, "Performance"],
 ];
 export default function App() {
   const [apiKey, setAPIKey] = useState("");
@@ -359,17 +359,11 @@ function Console({ api, logout }) {
             Wave<span className="brand-light"> AI</span>
           </span>
         </a>
-        <nav aria-label="主导航">
-          {navigation.map(([id, label, Icon]) => (
+        <nav aria-label="Main navigation">
+          {navigation.map(([id, label, Icon, group], index) => (
             <React.Fragment key={id}>
-              {["overview", "agents", "benchmarks"].includes(id) && (
-                <div className="nav-caption">
-                  {id === "overview"
-                    ? "Monitoring"
-                    : id === "agents"
-                      ? "资源与执行"
-                      : "性能测试"}
-                </div>
+              {group !== navigation[index - 1]?.[3] && (
+                <div className="nav-caption">{group}</div>
               )}
               <a
                 title={label}
@@ -388,12 +382,12 @@ function Console({ api, logout }) {
         <div className="side-bottom">
           <a href="/swagger/index.html" target="_blank" rel="noreferrer">
             <IconBook2 size={18} />
-            <span>API 文档</span>
+            <span>API docs</span>
             <IconExternalLink size={13} />
           </a>
           <button onClick={logout}>
             <IconLogout size={18} />
-            <span>断开连接</span>
+            <span>Disconnect</span>
           </button>
           <div className="account">
             <span className="avatar">W</span>
