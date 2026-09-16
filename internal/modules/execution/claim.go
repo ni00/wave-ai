@@ -27,6 +27,10 @@ func claimWithAdmission(ctx context.Context, db *gorm.DB, owner string, lease ti
 		}
 		for _, hint := range candidates {
 			var claimed *Task
+			// Refresh per candidate: pool waits and the scan itself make the
+			// loop-level now stale, and the lease check below must not steal a
+			// lease that is still live.
+			now = time.Now()
 			err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 				var s Session
 				var t Task
@@ -102,14 +106,18 @@ func claimWithAdmission(ctx context.Context, db *gorm.DB, owner string, lease ti
 				if e := tx.Save(&s).Error; e != nil {
 					return e
 				}
+				// Take the claim clock after the locks: a timestamp captured
+				// before pool waits can precede created_at, breaking trace
+				// intervals and queue.wait accounting.
+				claimNow := time.Now()
 				t.State = "running"
 				t.Owner = owner
 				t.Epoch++
-				until := now.Add(lease)
+				until := claimNow.Add(lease)
 				t.LeaseUntil = &until
 				if t.StartedAt == nil {
-					t.StartedAt = &now
-					if err := telemetry.Enqueue(tx, s.OrgID, s.OwnerID, now, map[string]float64{"queue.wait": float64(now.Sub(t.CreatedAt)) / float64(time.Millisecond)}); err != nil {
+					t.StartedAt = &claimNow
+					if err := telemetry.Enqueue(tx, s.OrgID, s.OwnerID, claimNow, map[string]float64{"queue.wait": float64(claimNow.Sub(t.CreatedAt)) / float64(time.Millisecond)}); err != nil {
 						return err
 					}
 				}
