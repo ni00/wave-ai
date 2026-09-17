@@ -3,7 +3,9 @@ package web
 
 import "embed"
 
-//go:embed dist/compressed
+// Include the tracked .gitkeep so Go tooling works before the frontend is built.
+//
+//go:embed all:dist/compressed
 var assets embed.FS
 
 // ReadAsset reads a gzip-compressed console asset relative to the build root.

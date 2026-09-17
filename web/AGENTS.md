@@ -24,6 +24,6 @@ Keep build artifacts, Git submission rules, asset caching, and optional hosting 
 
 ## Build integration
 
-Keep frontend sources, generated assets, and the Go embedding entry point in this directory. `npm run build` writes browser assets to `dist/client` and gzip assets to `dist/compressed`; `embed.go` embeds only the compressed assets. Do not commit `dist` or copy assets into `internal/`. The `internal/platform/webui` package serves the embedded assets over HTTP.
+Keep frontend sources, generated assets, and the Go embedding entry point in this directory. `npm run build` writes browser assets to `dist/client` and gzip assets to `dist/compressed`; `embed.go` embeds that compressed directory. Track only `dist/compressed/.gitkeep` so Go tooling can load the package before the frontend build. Preserve this placeholder when cleaning generated assets. Do not commit generated assets or copy them into `internal/`. The `internal/platform/webui` package serves the embedded assets over HTTP.
 
 Run `make build`, `make test`, or `make check` from the repository root to build the frontend before compiling Go. These commands require Node.js 22+ and npm as well as Go. Before invoking Go commands directly on packages that import the console, run `make web-build`. Docker builds the frontend in its Node stage and copies the compressed assets into the Go stage.

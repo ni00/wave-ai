@@ -45,4 +45,7 @@ Thumbs.db
 *.swo
 *~
 
-/web/dist/
+/web/dist/*
+!/web/dist/compressed/
+/web/dist/compressed/*
+!/web/dist/compressed/.gitkeep

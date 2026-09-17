@@ -2,8 +2,11 @@ import { readdir, readFile, writeFile, rm, mkdir } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 const source = new URL("../dist/client/", import.meta.url);
 const target = new URL("../dist/compressed/", import.meta.url);
-await rm(target, { recursive: true, force: true });
 await mkdir(target, { recursive: true });
+for (const name of await readdir(target)) {
+  if (name !== ".gitkeep")
+    await rm(new URL(name, target), { recursive: true, force: true });
+}
 async function compress(dir = "") {
   for (const entry of await readdir(new URL(dir, source), {
     withFileTypes: true,
