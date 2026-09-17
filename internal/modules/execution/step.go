@@ -15,6 +15,11 @@ import (
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
+// maxCappedOutputTokens is the largest per-request output cap sent to model
+// providers; larger remaining budgets stay uncapped because providers reject
+// limits above their own output ceilings.
+const maxCappedOutputTokens = 8192
+
 func (w *Worker) step(ctx context.Context, claim *Task) error {
 	var t Task
 	var s Session
@@ -164,6 +169,16 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 	if t.UsedTokens >= t.Budget.MaxTokens || root.UsedTokens >= root.Budget.MaxTokens {
 		return w.fail(ctx, claim, errors.New("task budget exhausted after context compaction"))
 	}
+	// Bound a single generation to the remaining budget so one turn cannot
+	// overshoot without limit; the cross-step checks above remain authoritative.
+	// Large remainders are left unset because providers reject limits above
+	// their own output ceilings.
+	outputCap := min(t.Budget.MaxTokens-t.UsedTokens, root.Budget.MaxTokens-root.UsedTokens)
+	if outputCap < maxCappedOutputTokens {
+		outputCap = max(outputCap, 1)
+	} else {
+		outputCap = 0
+	}
 	messageID := xid.New("message")
 	generation, err := w.startGeneration(ctx, claim, t, "response", messageID)
 	if err != nil {
@@ -184,7 +199,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		})
 		last = time.Now()
 	}
-	final, e := w.Model.Stream(ctx, model.Request{Model: t.Snapshot.Model, Effort: t.Snapshot.Effort, Messages: t.Messages, Tools: defs}, func(d model.Delta) {
+	final, e := w.Model.Stream(ctx, model.Request{Model: t.Snapshot.Model, Effort: t.Snapshot.Effort, Messages: t.Messages, Tools: defs, MaxOutputTokens: int(outputCap)}, func(d model.Delta) {
 		if generation.FirstDeltaMS == nil {
 			ms := time.Since(generation.StartedAt).Milliseconds()
 			generation.FirstDeltaMS = &ms

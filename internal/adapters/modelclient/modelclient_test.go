@@ -126,6 +126,11 @@ func TestOutputBudgetReachesProvider(t *testing.T) {
 		if body["max_completion_tokens"] != float64(512) {
 			t.Error("missing provider output cap", body["max_completion_tokens"])
 		}
+		// DeepSeek-compatible providers only honor the legacy field; both must
+		// carry the cap or the budget is silently ignored.
+		if body["max_tokens"] != float64(512) {
+			t.Error("missing legacy max_tokens cap", body["max_tokens"])
+		}
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"summary\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n")
 	}))

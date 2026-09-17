@@ -41,7 +41,11 @@ func (c *Client) Stream(ctx context.Context, req model.Request, onDelta func(mod
 		"stream_options": map[string]any{"include_usage": true},
 	}
 	if req.MaxOutputTokens > 0 {
+		// Providers disagree on the field name (OpenAI: max_completion_tokens,
+		// DeepSeek: max_tokens). Sending both is accepted by each and the
+		// stricter value wins where both are honored.
 		body["max_completion_tokens"] = req.MaxOutputTokens
+		body["max_tokens"] = req.MaxOutputTokens
 	}
 	if req.Effort != "" {
 		body["reasoning_effort"] = req.Effort

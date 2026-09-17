@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"wave-ai.local/wave/internal/modules/agents"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
@@ -239,4 +240,77 @@ func TestRegressionParkRequeuesProgressedCalls(t *testing.T) {
 			t.Fatalf("call status=%s delivered=%v: task state=%s want=%s", tc.status, tc.delivered, row.State, tc.want)
 		}
 	}
+}
+
+// A tight token budget must cap the per-request output tokens sent to the
+// provider; without the cap a single generation can overshoot any budget
+// (DeepSeek ignores cross-step-only enforcement and max_completion_tokens).
+func TestRegressionTightBudgetCapsOutputTokens(t *testing.T) {
+	db, p, s := setup(t)
+	a := agent(t, db, p, "", nil)
+	tr := task(t, db, p, s, a)
+	tr.Budget.MaxTokens = 50
+	if e := db.Model(&Task{}).Where(eq("id", tr.ID)).Updates(map[string]any{"budget": tr.Budget, "used_tokens": int64(10)}).Error; e != nil {
+		t.Fatal(e)
+	}
+	var got []int
+	capturing := captureModel{fn: func(r model.Request) {
+		got = append(got, r.MaxOutputTokens)
+	}}
+	w := &Worker{DB: db, Model: capturing, Lease: 5 * time.Second}
+	claim, e := Claim(context.Background(), db, "tester", 5*time.Second)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if claim == nil || claim.ID != tr.ID {
+		t.Fatal("claim missed task")
+	}
+	if e := w.step(context.Background(), claim); e != nil {
+		t.Fatal(e)
+	}
+	if len(got) == 0 {
+		t.Fatal("no generation issued")
+	}
+	if got[0] != 40 {
+		t.Fatalf("output cap = %d, want remaining budget 40", got[0])
+	}
+}
+
+// Comfortably large budgets stay uncapped: providers reject limits above their
+// own output ceilings, so the cap only applies when the budget binds.
+func TestRegressionLargeBudgetStaysUncapped(t *testing.T) {
+	db, p, s := setup(t)
+	a := agent(t, db, p, "", nil)
+	tr := task(t, db, p, s, a)
+	var got []int
+	capturing := captureModel{fn: func(r model.Request) {
+		got = append(got, r.MaxOutputTokens)
+	}}
+	w := &Worker{DB: db, Model: capturing, Lease: 5 * time.Second}
+	claim, e := Claim(context.Background(), db, "tester", 5*time.Second)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if claim == nil || claim.ID != tr.ID {
+		t.Fatal("claim missed task")
+	}
+	if e := w.step(context.Background(), claim); e != nil {
+		t.Fatal(e)
+	}
+	if len(got) == 0 {
+		t.Fatal("no generation issued")
+	}
+	if got[0] != 0 {
+		t.Fatalf("default-budget cap = %d, want 0 (unset)", got[0])
+	}
+}
+
+type captureModel struct {
+	fn func(model.Request)
+}
+
+func (c captureModel) Stream(ctx context.Context, r model.Request, delta func(model.Delta)) (*model.Final, error) {
+	c.fn(r)
+	n := int64(3)
+	return &model.Final{Content: []model.ContentBlock{{Type: "text", Text: "answer"}}, Usage: model.Usage{PromptTokens: &n, CompletionTokens: &n}, StopReason: "stop"}, nil
 }
