@@ -229,7 +229,9 @@ func (c *Client) Call(ctx context.Context, id string, o Options) (*Response, err
 	if !ok {
 		return nil, fmt.Errorf("unknown operation %s", id)
 	}
-	if op.Transport != "" {
+	// transport "json" only marks JSON-only output in the contract; plain
+	// Call still serves it. Upload/download/SSE need their dedicated methods.
+	if op.Transport != "" && op.Transport != "json" {
 		return nil, fmt.Errorf("%s requires the %s API", id, op.Transport)
 	}
 	if id == "executionResolveToolResult" {

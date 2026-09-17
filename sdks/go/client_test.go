@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"testing"
@@ -159,5 +161,33 @@ func TestPathAndCursor(t *testing.T) {
 	r, e := c.request(context.Background(), op, Options{Path: map[string]string{"id": "a/b"}, Headers: http.Header{"Last-Event-Id": []string{"42"}}, Query: url.Values{}}, nil, "")
 	if e != nil || r.URL.RawQuery != "" || r.URL.EscapedPath() != "/v1/sessions/a%2Fb/events/stream" {
 		t.Fatal(r, e)
+	}
+}
+
+// Regression: the contract marks JSON-only operations with transport "json"
+// (executionTrace); Call must serve them instead of rejecting them as a
+// non-JSON transport.
+func TestCallServesJSONTransportOperations(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if op, ok := operationRegistry["executionTrace"]; !ok || op.Transport != "json" {
+			t.Errorf("registry entry changed: %+v", op)
+		}
+		if r.URL.Path != "/v1/tasks/task_1/trace" {
+			t.Errorf("path = %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"version":1,"task_id":"task_1","trace_id":"task_1","session_id":"session_1","state":"succeeded","spans":[],"truncated":false,"incomplete":false,"summary":{"wall_ms":1,"initial_queue_ms":0,"model_ms":0,"tool_ms":0,"phase_ms":{},"unattributed_ms":0,"input_tokens":0,"output_tokens":0,"cached_input_tokens":null,"model_calls":0,"tool_calls":0,"failed_model_calls":0,"failed_tool_calls":0,"usage_known":false}}`)
+	}))
+	defer srv.Close()
+	c, e := New(srv.URL, "Bearer k")
+	if e != nil {
+		t.Fatal(e)
+	}
+	trace, e := c.ExecutionTrace(context.Background(), "task_1")
+	if e != nil {
+		t.Fatalf("trace via Call rejected: %v", e)
+	}
+	if trace.TaskId != "task_1" || trace.State != "succeeded" {
+		t.Fatalf("unexpected trace: %+v", trace)
 	}
 }
