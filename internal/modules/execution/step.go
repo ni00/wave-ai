@@ -47,7 +47,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 			for _, in := range inputs {
 				current.Messages = append(current.Messages, modelclient.Message{Role: "user", Content: in.Text})
 				in.Consumed = true
-				if e := tx.Save(&in).Error; e != nil {
+				if e := tx.Model(&in).Update("consumed", true).Error; e != nil {
 					return e
 				}
 				if e := emit(tx, sess, t.ID, "input.consumed", map[string]any{"input_id": in.ID}); e != nil {
@@ -58,7 +58,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 				current.PendingFinish = ""
 			}
 			t = *current
-			return tx.Save(current).Error
+			return tx.Model(current).Select("messages", "context_ready", "pending_finish").Updates(current).Error
 		}
 		return nil
 	}); e != nil {
@@ -113,17 +113,21 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 			return w.parkUnknown(ctx, claim, e)
 		}
 	}
-	var root Task
-	if e := fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, current *Task) error {
-		if e := tx.Where(eq("id", t.RootID)).Take(&root).Error; e != nil {
+
+	// Preparation may wait or consume the duration budget. Check after it
+	// succeeds, and count only steps that proceed to model work.
+	if e := fencedSlim(ctx, w.DB, claim, []string{"attempts", "used_tokens", "budget"}, func(tx *gorm.DB, s *Session, current *Task) error {
+		var root Task
+		if e := tx.Select("id", "used_tokens", "budget", "started_at").Where(eq("id", t.RootID)).Take(&root).Error; e != nil {
 			return e
 		}
-		if t.UsedTokens >= t.Budget.MaxTokens || root.UsedTokens >= root.Budget.MaxTokens || (root.StartedAt != nil && time.Since(*root.StartedAt) > time.Duration(root.Budget.MaxSeconds)*time.Second) {
+		if current.UsedTokens >= current.Budget.MaxTokens || root.UsedTokens >= root.Budget.MaxTokens || (root.StartedAt != nil && time.Since(*root.StartedAt) > time.Duration(root.Budget.MaxSeconds)*time.Second) {
 			return errors.New("task budget exhausted")
 		}
 		current.Attempts++
-		t = *current
-		return tx.Save(current).Error
+		t.Attempts = current.Attempts
+		t.UsedTokens = current.UsedTokens
+		return tx.Model(current).Update("attempts", current.Attempts).Error
 	}); e != nil {
 		if errors.Is(e, ErrFence) {
 			return e
@@ -149,6 +153,10 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		}
 		return w.fail(ctx, claim, compactErr)
 	}
+	// Compaction charges child-task tokens to the root, and sibling children
+	// can spend from the shared budget meanwhile, so re-read the root before
+	// enforcing its ceiling.
+	var root Task
 	if e := w.DB.WithContext(ctx).Where(eq("id", t.RootID)).Take(&root).Error; e != nil {
 		return e
 	}
@@ -170,7 +178,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		}
 		text := delta.String()
 		delta.Reset()
-		deltaErr = fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, t *Task) error {
+		deltaErr = fencedSlim(ctx, w.DB, claim, []string{"attempts"}, func(tx *gorm.DB, s *Session, t *Task) error {
 			return emit(tx, s, t.ID, "message.delta", map[string]any{"text": text, "attempt": t.Attempts, "message_id": messageID, "generation_id": generation.ID})
 		})
 		last = time.Now()
@@ -242,7 +250,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 			return e
 		}
 		var root Task
-		if e := tx.Where(eq("id", current.RootID)).Take(&root).Error; e != nil {
+		if e := tx.Select("id", "used_tokens", "usage_known", "tool_count", "budget").Where(eq("id", current.RootID)).Take(&root).Error; e != nil {
 			return e
 		}
 		tokens := int64(0)
@@ -298,11 +306,11 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 			}
 		}
 		if current.ParentID != "" {
-			if e := tx.Save(&root).Error; e != nil {
+			if e := tx.Model(&root).Select("used_tokens", "usage_known", "tool_count").Updates(&root).Error; e != nil {
 				return e
 			}
 		}
-		if e := tx.Save(current).Error; e != nil {
+		if e := tx.Model(current).Select("failures", "messages", "result", "used_tokens", "usage_known", "tool_count", "pending_finish").Updates(current).Error; e != nil {
 			return e
 		}
 		return emit(tx, s, t.ID, "message.completed", map[string]any{"text": text, "attempt": current.Attempts, "message_id": messageID, "generation_id": generation.ID})

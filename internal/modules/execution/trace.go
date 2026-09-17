@@ -55,12 +55,14 @@ func (w *Worker) traceContext(ctx context.Context, t *Task) context.Context {
 	}
 	s.Record = func(ctx context.Context, span observe.Span) {
 		// Bounded best-effort writes: telemetry failure must not fail/retry a tool.
-		write, cancel := context.WithTimeout(context.WithoutCancel(ctx), 250*time.Millisecond)
+		// The budget exceeds saturated-phase fence latency so span finish events
+		// survive load spikes; a drop leaves an interrupted span in the trace.
+		write, cancel := context.WithTimeout(context.WithoutCancel(ctx), 750*time.Millisecond)
 		defer cancel()
 		raw, _ := json.Marshal(span)
 		data := map[string]any{}
 		_ = json.Unmarshal(raw, &data)
-		err := fenced(write, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {
+		err := fencedSlim(write, w.DB, t, nil, func(tx *gorm.DB, s *Session, current *Task) error {
 			if span.Name == "sandbox.ensure" && span.FinishedAt != nil && span.DurationMS != nil {
 				values := map[string]float64{"sandbox.startup": *span.DurationMS}
 				if span.State == "failed" {

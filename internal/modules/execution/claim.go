@@ -103,7 +103,7 @@ func claimWithAdmission(ctx context.Context, db *gorm.DB, owner string, lease ti
 					}
 				}
 				s.ActiveRoot = t.RootID
-				if e := tx.Save(&s).Error; e != nil {
+				if e := tx.Model(&s).Update("active_root", s.ActiveRoot).Error; e != nil {
 					return e
 				}
 				// Take the claim clock after the locks: a timestamp captured
@@ -121,7 +121,10 @@ func claimWithAdmission(ctx context.Context, db *gorm.DB, owner string, lease ti
 						return err
 					}
 				}
-				if e := tx.Save(&t).Error; e != nil {
+				// Only the claim columns change, plus the fields an admission
+				// callback may set when a reservation is impossible; a
+				// full-row save would rewrite the message and snapshot JSON.
+				if e := tx.Model(&t).Select("state", "owner", "epoch", "lease_until", "started_at", "pending_finish", "error").Updates(&t).Error; e != nil {
 					return e
 				}
 				claimed = &t

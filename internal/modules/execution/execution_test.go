@@ -23,6 +23,13 @@ import (
 type fakeModel struct{}
 
 func (fakeModel) Stream(ctx context.Context, r modelclient.Request, delta func(modelclient.Delta)) (*modelclient.Final, error) {
+	if n := len(r.Messages); n > 0 {
+		if c, _ := r.Messages[n-1].Content.(string); strings.HasPrefix(c, "Summarize for continuation") {
+			delta(modelclient.Delta{Text: "s"})
+			thirty := int64(30)
+			return &modelclient.Final{Content: []modelclient.ContentBlock{{Type: "text", Text: "s"}}, Usage: modelclient.Usage{PromptTokens: &thirty, CompletionTokens: &thirty}, StopReason: "stop"}, nil
+		}
+	}
 	var instruction string
 	if len(r.Messages) > 0 {
 		instruction, _ = r.Messages[0].Content.(string)

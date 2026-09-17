@@ -368,11 +368,23 @@ func (h handler) listTasks(c *gin.Context) {
 // @Router /v1/tasks/{id} [get]
 func (h handler) getTask(c *gin.Context) {
 	var t Task
-	if e := h.db.WithContext(c.Request.Context()).Where(eq("id", c.Param("id"))).Take(&t).Error; e != nil {
-		httpx.Error(c, e)
-		return
-	}
-	if _, e := session(c.Request.Context(), h.db, c.MustGet("principal").(*auth.Principal), t.SessionID); e != nil {
+	db := h.db.WithContext(c.Request.Context())
+	p := c.MustGet("principal").(*auth.Principal)
+	// Check session ownership in the task read so each poll needs only one
+	// query after authentication. The session primary key prevents duplicate rows.
+	from := clause.From{Joins: []clause.Join{{
+		Type: clause.InnerJoin, Table: clause.Table{Name: "sessions"},
+		ON: clause.Where{Exprs: []clause.Expression{clause.Eq{
+			Column: clause.Column{Table: "sessions", Name: "id"},
+			Value:  clause.Column{Table: "tasks", Name: "session_id"},
+		}}},
+	}}}
+	owned := clause.And(
+		clause.Eq{Column: clause.Column{Table: "sessions", Name: "org_id"}, Value: p.OrgID},
+		clause.Eq{Column: clause.Column{Table: "sessions", Name: "owner_id"}, Value: p.PrincipalID},
+		clause.Eq{Column: clause.Column{Table: "tasks", Name: "id"}, Value: c.Param("id")},
+	)
+	if e := db.Clauses(from).Omit("messages").Where(owned).Take(&t).Error; e != nil {
 		httpx.Error(c, e)
 		return
 	}

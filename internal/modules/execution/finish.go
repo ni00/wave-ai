@@ -84,7 +84,7 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 
 		t.Finalizing = true
 		t.PendingFinish = state
-		return tx.Save(t).Error
+		return tx.Model(t).Select("finalizing", "pending_finish").Updates(t).Error
 	})
 	if e != nil || wait {
 		return e
@@ -98,7 +98,7 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 	if task.ParentID == "" && w.Evaluate != nil && (state == "succeeded" || state == "partial") {
 		evaluation = w.Evaluate(ctx, s, task)
 	}
-	e = fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, t *Task) error {
+	e = fencedSlim(ctx, w.DB, claim, []string{"parent_id", "root_id", "result", "error", "created_at"}, func(tx *gorm.DB, s *Session, t *Task) error {
 		now := time.Now()
 		t.Evaluation = evaluation
 		t.State = state
@@ -107,7 +107,7 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 		t.LeaseUntil = nil
 		if t.ParentID == "" {
 			s.ActiveRoot = ""
-			if e := tx.Save(s).Error; e != nil {
+			if e := tx.Model(s).Update("active_root", "").Error; e != nil {
 				return e
 			}
 		} else {
@@ -119,7 +119,7 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 				return e
 			}
 		}
-		if e := tx.Save(t).Error; e != nil {
+		if e := tx.Model(t).Select("evaluation", "state", "finished_at", "owner", "lease_until").Updates(t).Error; e != nil {
 			return e
 		}
 		if err := telemetry.Enqueue(tx, s.OrgID, s.OwnerID, now, map[string]float64{"tasks.completed": 1, "tasks." + state: 1, "task.duration": float64(now.Sub(t.CreatedAt)) / float64(time.Millisecond)}); err != nil {

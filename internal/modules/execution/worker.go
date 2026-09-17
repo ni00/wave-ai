@@ -74,18 +74,7 @@ func (w *Worker) run(ctx context.Context, t *Task) {
 				return
 			case <-tick.C:
 			}
-			e := fenced(run, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {
-				until := time.Now().Add(w.Lease)
-				current.LeaseUntil = &until
-				if e := tx.Model(current).Update("lease_until", until).Error; e != nil {
-					return e
-				}
-				if current.CancelRequested && !t.CancelRequested {
-					cancel()
-				}
-				return nil
-			})
-			if e != nil {
+			if !w.renewLease(run, t, cancel) {
 				return
 			}
 		}
@@ -145,4 +134,20 @@ func (w *Worker) run(ctx context.Context, t *Task) {
 }
 func principal(s Session) *auth.Principal {
 	return &auth.Principal{OrgID: s.OrgID, PrincipalID: s.OwnerID, Scope: auth.ScopeAPI}
+}
+
+// renewLease checks lease validity after acquiring the locks. Sampling the
+// clock before a pool or row-lock wait could resurrect an expired lease.
+func (w *Worker) renewLease(run context.Context, t *Task, stop context.CancelFunc) bool {
+	err := fencedSlim(run, w.DB, t, []string{"cancel_requested"}, func(tx *gorm.DB, s *Session, current *Task) error {
+		until := time.Now().Add(w.Lease)
+		if err := tx.Model(current).Update("lease_until", until).Error; err != nil {
+			return err
+		}
+		if current.CancelRequested && !t.CancelRequested {
+			stop()
+		}
+		return nil
+	})
+	return err == nil
 }

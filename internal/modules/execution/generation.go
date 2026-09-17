@@ -35,7 +35,7 @@ type Generation struct {
 
 func (w *Worker) startGeneration(ctx context.Context, claim *Task, t Task, purpose, messageID string) (Generation, error) {
 	g := Generation{ID: xid.New("generation"), TaskID: t.ID, MessageID: messageID, Purpose: purpose, Model: t.Snapshot.Model, Attempt: t.Attempts, State: "running", StartedAt: time.Now()}
-	e := fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, current *Task) error {
+	e := fencedSlim(ctx, w.DB, claim, nil, func(tx *gorm.DB, s *Session, current *Task) error {
 		if e := tx.Create(&g).Error; e != nil {
 			return e
 		}

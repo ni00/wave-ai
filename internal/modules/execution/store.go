@@ -46,10 +46,17 @@ func withTask(ctx context.Context, db *gorm.DB, id string, fn func(*gorm.DB, *Se
 	if err := db.WithContext(ctx).Select("session_id").Where(eq("id", id)).Take(&hint).Error; err != nil {
 		return err
 	}
+	return lockTask(ctx, db, hint.SessionID, id, fn)
+}
+
+// lockTask runs fn with the session and task rows locked in the canonical
+// order. sessionID must come from a durable source: the task row itself or the
+// claim the worker holds.
+func lockTask(ctx context.Context, db *gorm.DB, sessionID, id string, fn func(*gorm.DB, *Session, *Task) error) error {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var s Session
 		var t Task
-		if err := tx.Clauses(lock).Where(eq("id", hint.SessionID)).Take(&s).Error; err != nil {
+		if err := tx.Clauses(lock).Where(eq("id", sessionID)).Take(&s).Error; err != nil {
 			return err
 		}
 		if err := tx.Clauses(lock).Where(eq("id", id)).Take(&t).Error; err != nil {
@@ -66,11 +73,48 @@ func authorize(s *Session, p *auth.Principal) error {
 }
 
 func fenced(ctx context.Context, db *gorm.DB, claim *Task, fn func(*gorm.DB, *Session, *Task) error) error {
-	return withTask(ctx, db, claim.ID, func(tx *gorm.DB, s *Session, t *Task) error {
+	// The claim pins the session, so the task hint lookup is unnecessary here.
+	return lockTask(ctx, db, claim.SessionID, claim.ID, func(tx *gorm.DB, s *Session, t *Task) error {
 		if t.Owner != claim.Owner || t.Epoch != claim.Epoch || t.State != "running" || t.LeaseUntil == nil || !t.LeaseUntil.After(time.Now()) {
 			return ErrFence
 		}
 		return fn(tx, s, t)
+	})
+}
+
+// fencedSlim is fenced with a column-pruned task read, for closures that
+// touch only the listed columns: full-row reads deserialize the message and
+// snapshot JSONB on every call. The ownership-check columns are always
+// included. Closures that Save the task must use fenced, not fencedSlim.
+func fencedSlim(ctx context.Context, db *gorm.DB, claim *Task, cols []string, fn func(*gorm.DB, *Session, *Task) error) error {
+	all := make([]string, 0, len(cols)+5)
+	all = append(all, cols...)
+	for _, c := range []string{"id", "owner", "epoch", "state", "lease_until"} {
+		found := false
+		for _, have := range all {
+			if have == c {
+				found = true
+				break
+			}
+		}
+		if !found {
+			all = append(all, c)
+		}
+	}
+	// The claim pins the session, so the task hint lookup is unnecessary here.
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var s Session
+		var t Task
+		if err := tx.Clauses(lock).Where(eq("id", claim.SessionID)).Take(&s).Error; err != nil {
+			return err
+		}
+		if err := tx.Clauses(lock).Select(all).Where(eq("id", claim.ID)).Take(&t).Error; err != nil {
+			return err
+		}
+		if t.Owner != claim.Owner || t.Epoch != claim.Epoch || t.State != "running" || t.LeaseUntil == nil || !t.LeaseUntil.After(time.Now()) {
+			return ErrFence
+		}
+		return fn(tx, &s, &t)
 	})
 }
 
