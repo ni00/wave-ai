@@ -70,6 +70,9 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	if e != nil {
 		return nil, e
 	}
+	if e := VerifySchema(db); e != nil {
+		return nil, e
+	}
 	pool, _ := db.DB()
 	ok := false
 	defer func() {
@@ -229,7 +232,7 @@ func (a *App) serve(ctx context.Context) error {
 		// stays unset on purpose; SSE responses manage their own deadlines.
 		ReadTimeout: 5 * time.Minute,
 		IdleTimeout: 120 * time.Second,
-		BaseContext:       func(net.Listener) context.Context { return ctx },
+		BaseContext: func(net.Listener) context.Context { return ctx },
 	}
 	result := make(chan error, 1)
 	go func() { result <- server.ListenAndServe() }()
