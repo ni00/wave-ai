@@ -95,6 +95,12 @@ verification of its execution. Inspect required actions through the CLI or an SD
 then follow the [tool workflow](skills/wave-client/references/tools.md) or
 [recovery workflow](skills/wave-client/references/recovery.md).
 
+## Agent memory
+
+Agents can save preferences, project conventions, and other information for use
+across tasks and sessions. Bind a memory store to the session and enable the
+agent's memory tools. See [Configure agent memory](deploy/agent-memory.md).
+
 ## Deployment
 
 ### Model and worker configuration
@@ -114,10 +120,9 @@ access and keep the database and storage on a private network.
 
 ### Sandboxes and backups
 
-Docker with gVisor is the default; rootless Podman and sbx are also supported.
+Docker with gVisor is the production sandbox backend.
 Follow the [sandbox setup guide](deploy/sandbox-resources.md) before running
-sandboxed tasks. The `local` backend uses the service user's host permissions and
-is intended for trusted development.
+sandboxed tasks.
 
 Each sandbox defaults to 1 vCPU and 1 GiB of memory. Replicas share default limits
 of 2 active or reserved sandboxes and 4 GiB of guest memory. Sandbox quotas and

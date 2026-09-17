@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "description": "Managed Agents service. All /v1 endpoints require a Bearer Wave API Key;\nissue it with `wave bootstrap`. Enter the raw Wave API Key in the SDK and Swagger UI bearer configuration.\nOffset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence.\nJSON errors return {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses.\nJSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use nullable; omission is not equivalent to null.\nInteractive documentation: /swagger/index.html. OpenAPI 3 spec: /swagger/openapi.json; legacy Swagger 2: /swagger/doc.json.\n\n[English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)",
+    "description": "Managed Agents service. All /v1 endpoints require a Bearer Wave API Key;\nissue it with `wave bootstrap`. Enter the raw Wave API Key in the SDK and Swagger UI bearer configuration.\nOffset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence.\nJSON errors return {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses.\nJSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use nullable; omission is not equivalent to null.\nInteractive documentation: /swagger/index.html. OpenAPI 3 spec: /swagger/openapi.json.\n\n[English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)",
     "title": "Wave AI API",
     "contact": {},
     "version": "1.0"
@@ -22,6 +22,9 @@
           "503": {
             "description": "Database unavailable"
           }
+        },
+        "x-wave-client": {
+          "command": "health"
         }
       }
     },
@@ -112,6 +115,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "agents list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -188,6 +198,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "agents create"
         }
       }
     },
@@ -266,6 +279,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "agents get"
         }
       },
       "put": {
@@ -373,6 +389,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "agents update"
         }
       }
     },
@@ -444,6 +463,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "agents archive"
         }
       }
     },
@@ -553,6 +575,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "agents versions",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       }
     },
@@ -649,6 +678,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "console import-bench",
+          "transport": "upload"
         }
       }
     },
@@ -746,6 +779,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "console event"
         }
       }
     },
@@ -823,6 +859,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "console log"
         }
       }
     },
@@ -908,6 +947,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "console metrics"
         }
       }
     },
@@ -1140,6 +1182,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "console list"
         }
       }
     },
@@ -1242,6 +1287,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "console resource"
         }
       }
     },
@@ -1340,6 +1388,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "credentials list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -1416,6 +1471,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "credentials create"
         }
       }
     },
@@ -1524,6 +1582,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "credentials rotate"
         }
       },
       "delete": {
@@ -1593,6 +1654,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "credentials revoke"
         }
       }
     },
@@ -1701,6 +1765,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "credentials validate"
         }
       }
     },
@@ -1791,6 +1858,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -1877,6 +1951,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments create"
         }
       }
     },
@@ -1974,6 +2051,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments get"
         }
       },
       "put": {
@@ -2080,6 +2160,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments update"
         }
       },
       "patch": {
@@ -2177,6 +2260,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments pause"
         }
       }
     },
@@ -2273,6 +2359,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments run",
+          "idempotent": true
         }
       }
     },
@@ -2382,6 +2472,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments runs",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       }
     },
@@ -2479,6 +2576,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments schedule"
         }
       }
     },
@@ -2597,6 +2697,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "deployments versions",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       }
     },
@@ -2687,6 +2794,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "environments list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -2763,6 +2877,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "environments create"
         }
       }
     },
@@ -2841,6 +2958,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "environments get"
         }
       }
     },
@@ -2912,6 +3032,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "environments archive"
         }
       }
     },
@@ -3018,6 +3141,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "files list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -3103,6 +3233,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "files upload",
+          "transport": "upload"
         }
       }
     },
@@ -3181,6 +3315,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "files get"
         }
       },
       "delete": {
@@ -3250,6 +3387,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "files delete"
         }
       }
     },
@@ -3448,6 +3588,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "files download",
+          "transport": "download"
         }
       }
     },
@@ -3538,6 +3682,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "memory list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -3614,6 +3765,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "memory create"
         }
       }
     },
@@ -3722,6 +3876,13 @@
                 }
               }
             }
+          }
+        },
+        "x-wave-client": {
+          "command": "memory conflicts",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
           }
         }
       }
@@ -3832,6 +3993,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "memory entries",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "put": {
@@ -3939,6 +4107,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "memory write"
         }
       },
       "delete": {
@@ -4046,6 +4217,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "memory delete"
         }
       }
     },
@@ -4155,6 +4329,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "memory revisions",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       }
     },
@@ -4245,6 +4426,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "sessions list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -4331,6 +4519,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "sessions create"
         }
       }
     },
@@ -4409,6 +4600,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "sessions get"
         }
       }
     },
@@ -4490,6 +4684,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "sessions archive"
         }
       }
     },
@@ -4595,6 +4792,13 @@
                 }
               }
             }
+          }
+        },
+        "x-wave-client": {
+          "command": "events list",
+          "pagination": {
+            "request": "after",
+            "itemCursor": "sequence"
           }
         }
       }
@@ -4702,6 +4906,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "events watch",
+          "transport": "sse"
         }
       }
     },
@@ -4816,6 +5024,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "sessions messages",
+          "pagination": {
+            "request": "after",
+            "next": "next_after"
+          }
         }
       }
     },
@@ -4894,6 +5109,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "sessions actions"
         }
       }
     },
@@ -5002,6 +5220,13 @@
                 }
               }
             }
+          }
+        },
+        "x-wave-client": {
+          "command": "tasks list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
           }
         }
       },
@@ -5119,6 +5344,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks create",
+          "idempotent": true
         }
       }
     },
@@ -5209,6 +5438,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "skills list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -5294,6 +5530,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "skills upload",
+          "transport": "upload"
         }
       }
     },
@@ -5492,6 +5732,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "skills download",
+          "transport": "download"
         }
       }
     },
@@ -5570,6 +5814,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks get"
         }
       }
     },
@@ -5688,6 +5935,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks delegate",
+          "idempotent": true
         }
       }
     },
@@ -5759,6 +6010,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks cancel"
         }
       }
     },
@@ -5866,6 +6120,13 @@
                 }
               }
             }
+          }
+        },
+        "x-wave-client": {
+          "command": "tasks collaboration",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
           }
         }
       }
@@ -5976,6 +6237,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks generations",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       }
     },
@@ -6084,6 +6352,13 @@
                 }
               }
             }
+          }
+        },
+        "x-wave-client": {
+          "command": "tasks inputs",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
           }
         }
       },
@@ -6194,6 +6469,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks input",
+          "idempotent": true
         }
       }
     },
@@ -6296,6 +6575,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks reconcile"
         }
       }
     },
@@ -6388,6 +6670,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks resume"
         }
       }
     },
@@ -6466,6 +6751,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tools list"
         }
       }
     },
@@ -6476,7 +6764,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "Approval example: `{\"approve\":true}`; rejection example: `{\"approve\":false}`.\nSuccess example: `{\"result\":\"tool response\",\"is_error\":false}`; failure example: `{\"result\":\"confirmed failure\",\"is_error\":true,\"error_code\":\"remote_failure\"}`.\nChoose one example above. Swagger 2.0 cannot express mutually exclusive fields; do not send all fields from its automatically generated example together.\nSubmit exactly one of three forms: approval {\"approve\": true|false}; confirmed result {\"result\": \"...\", \"is_error\": false}; confirmed failure {\"result\": \"...\", \"is_error\": true, \"error_code\": \"...\"}. Do not combine approval and result; error_code requires is_error=true, and an empty string is a valid result. Identical approvals or complete results may be resubmitted, including after task completion; changing an existing decision returns 409. Waiting tasks are requeued.",
+        "description": "Approval example: `{\"approve\":true}`; rejection example: `{\"approve\":false}`.\nSuccess example: `{\"result\":\"tool response\",\"is_error\":false}`; failure example: `{\"result\":\"confirmed failure\",\"is_error\":true,\"error_code\":\"remote_failure\"}`.\nChoose one example above. do not send all fields from its automatically generated example together.\nSubmit exactly one of three forms: approval {\"approve\": true|false}; confirmed result {\"result\": \"...\", \"is_error\": false}; confirmed failure {\"result\": \"...\", \"is_error\": true, \"error_code\": \"...\"}. Do not combine approval and result; error_code requires is_error=true, and an empty string is a valid result. Identical approvals or complete results may be resubmitted, including after task completion; changing an existing decision returns 409. Waiting tasks are requeued.",
         "tags": [
           "execution"
         ],
@@ -6577,6 +6865,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tools resolve"
         }
       }
     },
@@ -6655,6 +6946,10 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "tasks trace",
+          "transport": "json"
         }
       }
     },
@@ -6764,6 +7059,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "vaults list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -6859,6 +7161,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "vaults create"
         }
       }
     },
@@ -6956,6 +7261,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "vaults get"
         }
       },
       "delete": {
@@ -7051,6 +7359,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "vaults archive"
         }
       }
     },
@@ -7160,6 +7471,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "webhooks list",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       },
       "post": {
@@ -7255,6 +7573,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "webhooks create"
         }
       }
     },
@@ -7352,6 +7673,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "webhooks get"
         }
       },
       "patch": {
@@ -7458,6 +7782,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "webhooks update"
         }
       }
     },
@@ -7576,6 +7903,13 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "webhooks deliveries",
+          "pagination": {
+            "request": "offset",
+            "next": "next_offset"
+          }
         }
       }
     },
@@ -7682,6 +8016,9 @@
               }
             }
           }
+        },
+        "x-wave-client": {
+          "command": "webhooks retry"
         }
       }
     }
@@ -8383,9 +8720,7 @@
             "description": "Omit for service defaults.",
             "type": "string",
             "enum": [
-              "sbx",
-              "gvisor",
-              "podman"
+              "gvisor"
             ]
           },
           "sandbox_profile": {
@@ -8436,9 +8771,7 @@
             "description": "Omit for service defaults; existing sessions retain their original backend.",
             "type": "string",
             "enum": [
-              "sbx",
-              "gvisor",
-              "podman"
+              "gvisor"
             ]
           },
           "sandbox_profile": {

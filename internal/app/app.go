@@ -11,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 
@@ -30,7 +29,6 @@ import (
 	"wave-ai.local/wave/internal/modules/skills"
 	"wave-ai.local/wave/internal/modules/vault"
 	"wave-ai.local/wave/internal/modules/webhooks"
-	_ "wave-ai.local/wave/internal/platform/apidocs" // 生成的 OpenAPI spec，/swagger 路由依赖
 	"wave-ai.local/wave/internal/platform/apierr"
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/blobstore"
@@ -61,6 +59,10 @@ func Models() []any {
 	return append(out, execution.Models()...)
 }
 func New(ctx context.Context, cfg *config.Config) (*App, error) {
+	if cfg.SandboxBackend != "" && cfg.SandboxBackend != "gvisor" {
+		return nil, fmt.Errorf("sandbox backend must be gvisor")
+	}
+
 	if cfg.StorageBackend == "s3" && len(cfg.MasterKey) != 32 {
 		return nil, fmt.Errorf("S3 storage requires WAVE_MASTER_KEY (32-byte hex); keep the same key across restarts and replicas")
 	}
@@ -91,39 +93,12 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	if e != nil {
 		return nil, e
 	}
-	var provider sandbox.Provider
-	if cfg.SandboxBackend == "local" {
-		provider, e = sandbox.NewLocal(cfg.SandboxLocalRoot)
-	} else {
-		sbx := sandbox.NewSbx(sandbox.SbxOptions{
-			BaseURL:         cfg.SbxURL,
-			Token:           cfg.SbxToken,
-			Image:           cfg.SbxImage,
-			Parent:          "wave",
-			CPUs:            uint32(cfg.SbxCPUs),
-			MemoryMiB:       uint64(cfg.SbxMemoryMiB),
-			MaxRunning:      cfg.SbxMaxRunning,
-			MemoryBudgetMiB: uint64(cfg.SbxMemoryBudgetMiB),
-			Store:           db,
-		})
-		backends := map[string]sandbox.Managed{"sbx": sbx}
-		for _, backend := range []string{"gvisor", "podman"} {
-			host := cfg.DockerHost
-			if backend == "podman" {
-				host = cfg.PodmanHost
-			}
-			container, err := sandbox.NewContainer(sandbox.ContainerOptions{Backend: backend, Host: host, Image: cfg.ContainerImage, Runtime: cfg.GVisorRuntime, Network: cfg.ContainerNetwork, CPUs: uint32(cfg.SbxCPUs), MemoryMiB: uint64(cfg.SbxMemoryMiB), MaxRunning: cfg.SbxMaxRunning, MemoryBudgetMiB: uint64(cfg.SbxMemoryBudgetMiB), Store: db})
-			if err != nil {
-				return nil, err
-			}
-			backends[backend] = container
-		}
-		selected := cfg.SandboxBackend
-		if selected == "" {
-			selected = "gvisor"
-		}
-		provider = &sandbox.Router{Store: db, Default: selected, Backends: backends}
-	}
+	provider, e := sandbox.NewContainer(sandbox.ContainerOptions{
+		Backend: "gvisor", Host: cfg.DockerHost, Image: cfg.ContainerImage,
+		Runtime: cfg.GVisorRuntime, Network: cfg.ContainerNetwork,
+		CPUs: uint32(cfg.SandboxCPUs), MemoryMiB: uint64(cfg.SandboxMemoryMiB),
+		MaxRunning: cfg.SandboxMaxRunning, MemoryBudgetMiB: uint64(cfg.SandboxMemoryBudgetMiB), Store: db,
+	})
 	if e != nil {
 		return nil, e
 	}
@@ -146,26 +121,14 @@ func (a *App) Close() {
 	_ = pool.Close()
 }
 
-// Handler godoc
-// @Title Wave AI API
-// @Version 1.0
-// @Description Managed Agents 服务。所有 /v1 接口使用 Bearer Wave API Key 认证； || Managed Agents service. All /v1 endpoints require a Bearer Wave API Key;
-// @Description 由 `wave bootstrap` 签发。Authorization 填写完整的 `Bearer <Wave API Key>`。 || issue it with `wave bootstrap`. Set Authorization to the full `Bearer <Wave API Key>` value.
-// @Description offset 分页返回 data 和可选 next_offset（省略表示末页）；消息历史使用 next_after，事件列表使用最后一条 sequence 续读。 || Offset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence.
-// @Description JSON 错误返回 {"type":"error","error":{"type":"api_error","message":"..."},"request_id":"req_..."}。文件传输的 Range 错误返回 text/plain；条件下载和健康检查可返回空响应。 || JSON errors return {"type":"error","error":{"type":"api_error","message":"..."},"request_id":"req_..."}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses.
-// @Description JSON 请求拒绝未知字段，非 multipart 请求体上限为 2 MiB。可空字段通过 x-nullable 标记；省略与 null 不等价。 || JSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use x-nullable; omission is not equivalent to null.
-// @Description 交互式文档见 /swagger/index.html，OpenAPI spec 见 /swagger/doc.json。 || Interactive documentation: /swagger/index.html. OpenAPI spec: /swagger/doc.json.
-// @SecurityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description 填写完整的 Bearer <Wave API Key>，包含 Bearer 前缀和空格。 || Enter the full Bearer <Wave API Key> value, including the Bearer prefix and a space.
+// Handler exposes the routes documented by api/openapi.json.
 func (a *App) Handler() http.Handler {
 	r := gin.New()
 	r.HandleMethodNotAllowed = true
 	_ = r.SetTrustedProxies(nil)
 	r.Use(httpx.Observe())
 	webui.Register(r)
-	swaggerUI := ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/openapi.json"))
+	swaggerUI := http.StripPrefix("/swagger", swaggerFiles.Handler)
 	r.GET("/swagger/*any", func(c *gin.Context) {
 		switch c.Param("any") {
 		case "/openapi.json", "/openapi.en.json":
@@ -178,7 +141,7 @@ func (a *App) Handler() http.Handler {
 			c.Data(http.StatusOK, "application/javascript; charset=utf-8", apicontract.SwaggerInitializer)
 			return
 		}
-		swaggerUI(c)
+		swaggerUI.ServeHTTP(c.Writer, c.Request)
 	})
 	r.NoRoute(func(c *gin.Context) { httpx.Error(c, apierr.NotFoundErr("route not found")) })
 	r.NoMethod(func(c *gin.Context) {
@@ -211,14 +174,7 @@ func (a *App) Handler() http.Handler {
 	return r
 }
 
-// health godoc
-// @ID health
-// @Summary 健康检查 || Health check
-// @Description 无需认证；检查数据库连通性，超时时间 1 秒。所有响应均无响应体。 || No authentication required. Check database connectivity with a one-second timeout. All responses have empty bodies.
-// @Tags system
-// @Success 204 "数据库可用 || Database available"
-// @Failure 503 "数据库不可用 || Database unavailable"
-// @Router /health [get]
+// health handles the documented HTTP operation.
 func (a *App) health(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second)
 	defer cancel()

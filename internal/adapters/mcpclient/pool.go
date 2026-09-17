@@ -24,14 +24,20 @@ type Pool struct {
 
 func (p *Pool) Get(scope, server, url, bearer string) *Client {
 	p.mu.Lock()
-	defer p.mu.Unlock()
+	var closed []*Client
+	defer func() {
+		p.mu.Unlock()
+		for _, c := range closed {
+			c.Close()
+		}
+	}()
 	if p.entries == nil {
 		p.entries = map[poolKey]poolEntry{}
 	}
 	now := time.Now()
 	for key, entry := range p.entries {
 		if now.Sub(entry.used) > 15*time.Minute {
-			entry.client.Close()
+			closed = append(closed, entry.client)
 			delete(p.entries, key)
 		}
 	}
@@ -49,7 +55,7 @@ func (p *Pool) Get(scope, server, url, bearer string) *Client {
 				oldest, stamp = k, e.used
 			}
 		}
-		p.entries[oldest].client.Close()
+		closed = append(closed, p.entries[oldest].client)
 		delete(p.entries, oldest)
 	}
 	client := New(server, url, bearer)
@@ -58,9 +64,15 @@ func (p *Pool) Get(scope, server, url, bearer string) *Client {
 }
 func (p *Pool) Close() {
 	p.mu.Lock()
-	defer p.mu.Unlock()
+	var closed []*Client
+	defer func() {
+		p.mu.Unlock()
+		for _, c := range closed {
+			c.Close()
+		}
+	}()
 	for k, e := range p.entries {
-		e.client.Close()
+		closed = append(closed, e.client)
 		delete(p.entries, k)
 	}
 }

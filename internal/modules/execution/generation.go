@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/observe"
 	"wave-ai.local/wave/internal/platform/telemetry"
 	"wave-ai.local/wave/internal/platform/xid"
@@ -18,19 +18,19 @@ import (
 // Null usage or finish time means unknown, never zero cost or successful completion.
 type Generation struct {
 	logContext   context.Context
-	ID           string            `gorm:"primaryKey" json:"id" validate:"required"`
-	TaskID       string            `gorm:"index" json:"task_id" validate:"required"`
-	MessageID    string            `json:"message_id,omitempty"`
-	Purpose      string            `json:"purpose" validate:"required"`
-	Model        string            `json:"model" validate:"required"`
-	Attempt      int               `json:"attempt" validate:"required"`
-	State        string            `json:"state" validate:"required" enums:"running,completed,failed,interrupted"`
-	StartedAt    time.Time         `json:"started_at" validate:"required" format:"date-time"`
-	FinishedAt   *time.Time        `json:"finished_at,omitempty" format:"date-time"`
-	DurationMS   *int64            `json:"duration_ms" validate:"required" format:"int64" extensions:"x-nullable"`    // 耗时，单位毫秒；未知时为 null。 || Duration in milliseconds; null when unknown.
-	FirstDeltaMS *int64            `json:"first_delta_ms" validate:"required" format:"int64" extensions:"x-nullable"` // 首个增量的延迟，单位毫秒；尚未收到或未知时为 null。 || First-delta latency in milliseconds; null if no delta has arrived or the value is unknown.
-	Usage        modelclient.Usage `gorm:"serializer:json;type:jsonb" json:"usage" validate:"required"`
-	Error        string            `json:"error,omitempty"`
+	ID           string      `gorm:"primaryKey" json:"id" validate:"required"`
+	TaskID       string      `gorm:"index" json:"task_id" validate:"required"`
+	MessageID    string      `json:"message_id,omitempty"`
+	Purpose      string      `json:"purpose" validate:"required"`
+	Model        string      `json:"model" validate:"required"`
+	Attempt      int         `json:"attempt" validate:"required"`
+	State        string      `json:"state" validate:"required" enums:"running,completed,failed,interrupted"`
+	StartedAt    time.Time   `json:"started_at" validate:"required" format:"date-time"`
+	FinishedAt   *time.Time  `json:"finished_at,omitempty" format:"date-time"`
+	DurationMS   *int64      `json:"duration_ms" validate:"required" format:"int64" extensions:"x-nullable"`    // 耗时，单位毫秒；未知时为 null。 || Duration in milliseconds; null when unknown.
+	FirstDeltaMS *int64      `json:"first_delta_ms" validate:"required" format:"int64" extensions:"x-nullable"` // 首个增量的延迟，单位毫秒；尚未收到或未知时为 null。 || First-delta latency in milliseconds; null if no delta has arrived or the value is unknown.
+	Usage        model.Usage `gorm:"serializer:json;type:jsonb" json:"usage" validate:"required"`
+	Error        string      `json:"error,omitempty"`
 }
 
 func (w *Worker) startGeneration(ctx context.Context, claim *Task, t Task, purpose, messageID string) (Generation, error) {
@@ -49,7 +49,7 @@ func (w *Worker) startGeneration(ctx context.Context, claim *Task, t Task, purpo
 	}
 	return g, e
 }
-func (g *Generation) complete(final *modelclient.Final, err error) {
+func (g *Generation) complete(final *model.Final, err error) {
 	now := time.Now()
 	elapsed := now.Sub(g.StartedAt).Milliseconds()
 	g.FinishedAt = &now

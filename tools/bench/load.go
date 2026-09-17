@@ -67,7 +67,7 @@ func runPhase(ctx context.Context, dsn, dir string, workers int, o options) (pha
 	defer model.Close()
 	cfg := &config.Config{
 		Role: "worker", DatabaseURL: dsn, DataDir: dir,
-		StorageBackend: "local", SandboxBackend: "sbx",
+		StorageBackend: "local", SandboxBackend: "gvisor",
 		WorkerConcurrency: workers, LeaseSeconds: 30, ContextTokens: 32000,
 		ModelBaseURL: model.URL, ModelTimeoutSec: max(1, int(o.Timeout.Seconds())+1),
 	}

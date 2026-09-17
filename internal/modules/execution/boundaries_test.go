@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm"
 	"testing"
 	"time"
-	"wave-ai.local/wave/internal/adapters/modelclient"
+	"wave-ai.local/wave/internal/platform/model"
 )
 
 func TestRegressionConsumedInputSurvivesBudgetFailure(t *testing.T) {
@@ -54,7 +54,7 @@ func TestRegressionDurationBudgetAfterPrepare(t *testing.T) {
 		t.Fatalf("claim %v %v", claim, e)
 	}
 	calls := 0
-	w := Worker{DB: db, Prepare: func(context.Context, Session, Task) error { time.Sleep(1200 * time.Millisecond); return nil }, Model: modelFunc(func(c context.Context, r modelclient.Request, d func(modelclient.Delta)) (*modelclient.Final, error) {
+	w := Worker{DB: db, Prepare: func(context.Context, Session, Task) error { time.Sleep(1200 * time.Millisecond); return nil }, Model: modelFunc(func(c context.Context, r model.Request, d func(model.Delta)) (*model.Final, error) {
 		calls++
 		return fakeModel{}.Stream(c, r, d)
 	})}

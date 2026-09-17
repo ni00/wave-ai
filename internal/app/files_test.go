@@ -31,7 +31,7 @@ import (
 func storageTestConfig(t *testing.T, dsn, backend string) *config.Config {
 	t.Helper()
 	dir := t.TempDir()
-	cfg := &config.Config{DatabaseURL: dsn, DataDir: dir, SandboxBackend: "local", SandboxLocalRoot: dir + "/work", StorageBackend: backend}
+	cfg := &config.Config{DatabaseURL: dsn, DataDir: dir, SandboxBackend: "gvisor", DockerHost: "unix:///nonexistent-wave-test.sock", StorageBackend: backend}
 	if backend != "s3" {
 		return cfg
 	}

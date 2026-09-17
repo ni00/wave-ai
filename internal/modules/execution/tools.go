@@ -8,8 +8,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/observe"
 )
 
@@ -17,7 +17,7 @@ func (w *Worker) tool(ctx context.Context, claim *Task, s Session, call ToolCall
 	if call.Tool.Kind == "agent" && call.Tool.Name == "agent_wait" {
 		return w.waitChildren(ctx, claim, call)
 	}
-	writing := call.Tool.Kind == "builtin" && call.Tool.Name != "read" && call.Tool.Name != "ls" && call.Tool.Name != "grep" && call.Tool.Name != "find"
+	writing := call.Tool.Kind == "builtin" && (call.Tool.Name == "bash" || call.Tool.Name == "write" || call.Tool.Name == "edit")
 	blocked := false
 	if e := fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, t *Task) error {
 		if t.CancelRequested {
@@ -110,7 +110,7 @@ func findTool(t *Task, name string) (agents.Tool, bool) {
 	}
 	return agents.Tool{Name: name}, false
 }
-func definitions(t Task) []modelclient.ToolDef {
+func definitions(t Task) []model.ToolDef {
 	out := management(&t)
 	for _, tool := range t.Snapshot.Tools {
 		p := tool.Parameters
@@ -120,7 +120,7 @@ func definitions(t Task) []modelclient.ToolDef {
 		if p == nil {
 			p = map[string]any{"type": "object", "additionalProperties": true}
 		}
-		out = append(out, modelclient.ToolDef{Type: "function", Function: modelclient.FuncSpec{Name: tool.Name, Description: tool.Description, Parameters: p}})
+		out = append(out, model.ToolDef{Type: "function", Function: model.FuncSpec{Name: tool.Name, Description: tool.Description, Parameters: p}})
 	}
 	return out
 }

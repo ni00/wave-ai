@@ -2,7 +2,6 @@
 CLIENTS_TOOL := go run ./tools/clients
 .PHONY: cli-build clients-setup clients-generate clients-check clients-test clients-build clients-integration clients-package clients-smoke
 clients-setup:
-	npm ci --ignore-scripts --prefix tools/clients
 	npm ci --ignore-scripts --prefix sdks/typescript
 	uv sync --frozen --project sdks/python
 clients-generate:

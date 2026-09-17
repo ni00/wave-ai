@@ -26,22 +26,7 @@ func Register(r *gin.RouterGroup, db *gorm.DB, box *secrets.Box) {
 	r.POST("/webhooks/:id/deliveries/:delivery/retry", h.retry)
 }
 
-// create godoc
-// @ID webhooksCreate
-// @Summary 创建 Webhook || Create a webhook
-// @Tags webhooks
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param body body CreateRequest true "请求 || Request"
-// @Success 200 {object} Subscription
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/webhooks [post]
+// create handles the documented HTTP operation.
 func (h handler) create(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	var in CreateRequest
@@ -57,23 +42,7 @@ func (h handler) create(c *gin.Context) {
 	c.JSON(200, s)
 }
 
-// list godoc
-// @ID webhooksList
-// @Summary 列出 Webhooks || List webhooks
-// @Tags webhooks
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param limit query int false "每页条数 || Items per page" minimum(1) maximum(200) default(100)
-// @Param offset query int false "偏移量 || Offset" minimum(0) default(0)
-// @Success 200 {object} ListResponse
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/webhooks [get]
+// list handles the documented HTTP operation.
 func (h handler) list(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	rows := []Subscription{}
@@ -84,22 +53,7 @@ func (h handler) list(c *gin.Context) {
 	httpx.List(c, rows)
 }
 
-// get godoc
-// @ID webhooksGet
-// @Summary 查看 Webhook || Get a webhook
-// @Tags webhooks
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Success 200 {object} Subscription
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/webhooks/{id} [get]
+// get handles the documented HTTP operation.
 func (h handler) get(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	s, e := Get(c.Request.Context(), h.db, p, c.Param("id"))
@@ -110,23 +64,7 @@ func (h handler) get(c *gin.Context) {
 	c.JSON(200, s)
 }
 
-// update godoc
-// @ID webhooksUpdate
-// @Summary 暂停或恢复 Webhook || Pause or resume a webhook
-// @Tags webhooks
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Param body body UpdateRequest true "请求 || Request"
-// @Success 200 {object} Subscription
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/webhooks/{id} [patch]
+// update handles the documented HTTP operation.
 func (h handler) update(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	var in UpdateRequest
@@ -156,24 +94,7 @@ func (h handler) update(c *gin.Context) {
 	c.JSON(200, s)
 }
 
-// deliveries godoc
-// @ID webhooksDeliveries
-// @Summary Webhook 投递记录 || Webhook deliveries
-// @Tags webhooks
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Param limit query int false "每页条数 || Items per page" minimum(1) maximum(200) default(100)
-// @Param offset query int false "偏移量 || Offset" minimum(0) default(0)
-// @Success 200 {object} DeliveriesResponse
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/webhooks/{id}/deliveries [get]
+// deliveries handles the documented HTTP operation.
 func (h handler) deliveries(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	s, e := Get(c.Request.Context(), h.db, p, c.Param("id"))
@@ -189,23 +110,7 @@ func (h handler) deliveries(c *gin.Context) {
 	httpx.List(c, rows)
 }
 
-// retry godoc
-// @ID webhooksRetry
-// @Summary 重试投递 || Retry delivery
-// @Tags webhooks
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Param delivery path string true "资源 ID || Resource ID"
-// @Success 200 {object} Delivery
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/webhooks/{id}/deliveries/{delivery}/retry [post]
+// retry handles the documented HTTP operation.
 func (h handler) retry(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	s, e := Get(c.Request.Context(), h.db, p, c.Param("id"))

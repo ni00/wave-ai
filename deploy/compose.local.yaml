@@ -1,5 +1,5 @@
 # Opt in with COMPOSE_FILE=deploy/compose.yaml:deploy/compose.local.yaml in deploy/.env.
-# Required when using local file storage or local sandbox workspaces in Docker.
+# Required when using local file storage in Docker.
 services:
   wave:
     volumes:

@@ -58,12 +58,13 @@ func TestHTTPCluster(t *testing.T) {
 	}))
 	defer model.Close()
 	dir := t.TempDir()
-	cfg := &config.Config{Role: "worker", DatabaseURL: dsn, DataDir: dir, SandboxBackend: "local", SandboxLocalRoot: dir + "/sandboxes", WorkerConcurrency: 4, LeaseSeconds: 5, ModelBaseURL: model.URL, ModelTimeoutSec: 10}
+	cfg := &config.Config{Role: "worker", DatabaseURL: dsn, DataDir: dir, SandboxBackend: "gvisor", DockerHost: "unix:///nonexistent-wave-test.sock", WorkerConcurrency: 4, LeaseSeconds: 5, ModelBaseURL: model.URL, ModelTimeoutSec: 10}
 	a, e := New(ctx, cfg)
 	if e != nil {
 		t.Fatal(e)
 	}
 	defer a.Close()
+	useWorkspaceFixture(t, a)
 	b, e := New(ctx, cfg)
 	if e != nil {
 		t.Fatal(e)
@@ -190,7 +191,7 @@ func TestHTTPCluster(t *testing.T) {
 	call(api2.URL, "GET", "/v1/sessions/"+sid+"/required_actions", nil, 404)
 	call(api2.URL, "GET", "/v1/tasks/"+tid+"/generations", nil, 404)
 	key = save
-	env := call(api1.URL, "POST", "/v1/environments", map[string]any{"name": "local workspace"}, 201)
+	env := call(api1.URL, "POST", "/v1/environments", map[string]any{"name": "test workspace"}, 201)
 	writer := call(api1.URL, "POST", "/v1/agents", map[string]any{"name": "writer", "model": "writer", "tools": []any{map[string]any{"name": "write", "kind": "builtin"}}}, 201)
 	s2 := call(api1.URL, "POST", "/v1/sessions", map[string]any{"title": "with workspace", "environment_id": env["id"]}, 201)
 	t2 := call(api1.URL, "POST", "/v1/sessions/"+s2["id"].(string)+"/tasks", map[string]any{"agent_id": writer["id"], "input": "write output"}, 202)

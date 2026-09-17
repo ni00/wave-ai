@@ -9,22 +9,7 @@ import (
 	"wave-ai.local/wave/internal/platform/httpx"
 )
 
-// get godoc
-// @ID deploymentsGet
-// @Summary 查看部署 || Get a deployment
-// @Tags deployments
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Success 200 {object} Deployment
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/deployments/{id} [get]
+// get handles the documented HTTP operation.
 func (h handler) get(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	d, e := Get(c.Request.Context(), h.db, p, c.Param("id"))
@@ -35,23 +20,7 @@ func (h handler) get(c *gin.Context) {
 	c.JSON(200, d)
 }
 
-// update godoc
-// @ID deploymentsUpdate
-// @Summary 更新部署配置 || Update deployment configuration
-// @Tags deployments
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Param body body UpdateRequest true "请求 || Request"
-// @Success 200 {object} Deployment
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/deployments/{id} [put]
+// update handles the documented HTTP operation.
 func (h handler) update(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	var in UpdateRequest
@@ -67,24 +36,7 @@ func (h handler) update(c *gin.Context) {
 	c.JSON(200, d)
 }
 
-// versions godoc
-// @ID deploymentsVersions
-// @Summary 部署版本 || Deployment versions
-// @Tags deployments
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Param limit query int false "每页条数 || Items per page" minimum(1) maximum(200) default(100)
-// @Param offset query int false "偏移量 || Offset" minimum(0) default(0)
-// @Success 200 {object} VersionsResponse
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/deployments/{id}/versions [get]
+// versions handles the documented HTTP operation.
 func (h handler) versions(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	d, e := Get(c.Request.Context(), h.db, p, c.Param("id"))
@@ -100,22 +52,7 @@ func (h handler) versions(c *gin.Context) {
 	httpx.List(c, rows)
 }
 
-// schedule godoc
-// @ID deploymentsSchedule
-// @Summary 未来触发时间 || Upcoming occurrences
-// @Tags deployments
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Success 200 {object} ScheduleResponse
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/deployments/{id}/schedule [get]
+// schedule handles the documented HTTP operation.
 func (h handler) schedule(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	d, e := Get(c.Request.Context(), h.db, p, c.Param("id"))

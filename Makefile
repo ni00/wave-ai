@@ -1,7 +1,7 @@
 CACHE_DIR := $(if $(XDG_CACHE_HOME),$(XDG_CACHE_HOME),$(HOME)/.cache)/wave-ai
 BINDIR ?= $(CACHE_DIR)/bin
 COMPOSE := docker compose --project-directory deploy
-DOCS_DIR ?= internal/platform/apidocs
+DOCS_DIR ?= api
 
 .PHONY: build run test integration check docs docs-check setup up down bench bench-test bench-sandbox
 build:
@@ -24,7 +24,7 @@ check:
 	go mod verify
 	$(MAKE) build
 docs:
-	go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g app/app.go -d internal -o "$(DOCS_DIR)" --packageName apidocs --parseInternal
+	node tools/clients/localize.cjs api/openapi.json api/translations.zh-CN.json "$(DOCS_DIR)/openapi.zh-CN.json"
 docs-check:
 	bash internal/tests/docs.sh
 	go test ./internal/app -run 'TestOpenAPI|TestRoutingErrors' -count=1

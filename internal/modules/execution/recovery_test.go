@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
@@ -208,7 +208,7 @@ func TestCompactionPreservesHistoryAndPriority(t *testing.T) {
 				role = "assistant"
 			}
 			text := strings.Repeat("context ", 44)
-			current.Messages = append(current.Messages, modelclient.Message{Role: role, Content: text})
+			current.Messages = append(current.Messages, model.Message{Role: role, Content: text})
 			if e := appendMessage(tx, s, current, Message{Role: role, Text: text, Source: "user"}); e != nil {
 				return e
 			}
@@ -223,12 +223,12 @@ func TestCompactionPreservesHistoryAndPriority(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	w := Worker{DB: db, ContextTokens: 8000, Model: modelFunc(func(ctx context.Context, r modelclient.Request, d func(modelclient.Delta)) (*modelclient.Final, error) {
+	w := Worker{DB: db, ContextTokens: 8000, Model: modelFunc(func(ctx context.Context, r model.Request, d func(model.Delta)) (*model.Final, error) {
 		if r.MaxOutputTokens != 2000 || len(r.Tools) != 0 {
 			t.Fatal("unbounded summary request", r.MaxOutputTokens)
 		}
 		n := int64(10)
-		return &modelclient.Final{Content: []modelclient.ContentBlock{{Type: "text", Text: "Objective and explicit constraints retained; next complete tests."}}, Usage: modelclient.Usage{PromptTokens: &n, CompletionTokens: &n}}, nil
+		return &model.Final{Content: []model.ContentBlock{{Type: "text", Text: "Objective and explicit constraints retained; next complete tests."}}, Usage: model.Usage{PromptTokens: &n, CompletionTokens: &n}}, nil
 	})}
 	out, e := w.compact(ctx, claim, root)
 	if e != nil {

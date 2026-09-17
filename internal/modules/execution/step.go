@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/observe"
 	"wave-ai.local/wave/internal/platform/xid"
 )
@@ -45,7 +45,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 				return e
 			}
 			for _, in := range inputs {
-				current.Messages = append(current.Messages, modelclient.Message{Role: "user", Content: in.Text})
+				current.Messages = append(current.Messages, model.Message{Role: "user", Content: in.Text})
 				in.Consumed = true
 				if e := tx.Model(&in).Update("consumed", true).Error; e != nil {
 					return e
@@ -77,7 +77,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 				if call.IsError {
 					toolContent = "Tool failed (" + call.ErrorCode + "): " + call.Result
 				}
-				t.Messages = append(t.Messages, modelclient.Message{Role: "tool", ToolCallID: call.ModelID, Content: toolContent})
+				t.Messages = append(t.Messages, model.Message{Role: "tool", ToolCallID: call.ModelID, Content: toolContent})
 				if e := appendMessage(tx, s, t, Message{Role: "tool", Source: "tool", Text: call.Result, CallID: call.ID, IsError: call.IsError, ErrorCode: call.ErrorCode}); e != nil {
 					return e
 				}
@@ -183,7 +183,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		})
 		last = time.Now()
 	}
-	final, e := w.Model.Stream(ctx, modelclient.Request{Model: t.Snapshot.Model, Effort: t.Snapshot.Effort, Messages: t.Messages, Tools: defs}, func(d modelclient.Delta) {
+	final, e := w.Model.Stream(ctx, model.Request{Model: t.Snapshot.Model, Effort: t.Snapshot.Effort, Messages: t.Messages, Tools: defs}, func(d model.Delta) {
 		if generation.FirstDeltaMS == nil {
 			ms := time.Since(generation.StartedAt).Milliseconds()
 			generation.FirstDeltaMS = &ms
@@ -244,7 +244,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		if w.Guard != nil {
 			text = w.Guard.RedactOutput(text)
 		}
-		current.Messages = append(current.Messages, modelclient.Message{Role: "assistant", Content: text, ToolCalls: final.ToolCalls})
+		current.Messages = append(current.Messages, model.Message{Role: "assistant", Content: text, ToolCalls: final.ToolCalls})
 		current.Result = text
 		if e := appendMessage(tx, s, current, Message{ID: messageID, Role: "assistant", Source: "model", Text: text, ToolCalls: final.ToolCalls}); e != nil {
 			return e

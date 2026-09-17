@@ -18,7 +18,6 @@ import (
 	"wave-ai.local/wave/internal/modules/environments"
 	"wave-ai.local/wave/internal/modules/execution"
 	"wave-ai.local/wave/internal/modules/files"
-	"wave-ai.local/wave/internal/modules/memory"
 	"wave-ai.local/wave/internal/modules/skills"
 	"wave-ai.local/wave/internal/platform/blobstore"
 	"wave-ai.local/wave/internal/platform/observe"
@@ -143,29 +142,7 @@ func (a *App) prepare(ctx context.Context, s execution.Session, t execution.Task
 			return e
 		}
 	}
-	for _, id := range s.MemoryIDs {
-		mount := "/mnt/memory/" + id
-		res, e := a.Sandbox.Exec(ctx, s.ID, sandbox.ExecRequest{Command: "rm -rf -- " + quote(mount) + " && mkdir -p -- " + quote(mount), RequestID: t.RootID + "-memory-" + id, TimeoutSec: 30})
-		if e != nil {
-			return e
-		}
-		if res.ExitCode != 0 {
-			return errors.New("memory mount preparation failed")
-		}
-		rows, e := memory.Project(ctx, a.DB, principal(s), s.ID, id)
-		if e != nil {
-			return e
-		}
-		for _, row := range rows {
-			if row.Deleted {
-				continue
-			}
-			if e = a.Sandbox.StageMemory(ctx, s.ID, "/mnt/memory/"+id, row.Path, []byte(row.Content), true); e != nil {
-				return e
-			}
 
-		}
-	}
 	ws.State = "ready"
 	return a.DB.WithContext(ctx).Save(&ws).Error
 }
@@ -199,59 +176,5 @@ func (a *App) finish(ctx context.Context, s execution.Session, t execution.Task)
 		return e
 	}
 
-	for _, id := range s.MemoryIDs {
-		local, e := a.memoryFiles(ctx, s.ID, "/mnt/memory/"+id)
-		if e != nil {
-			return e
-		}
-		if e = memory.WriteBack(ctx, a.DB, principal(s), s.ID, id, local); e != nil {
-			return e
-		}
-	}
-
 	return observe.Do(ctx, "sandbox.stop", func(ctx context.Context) error { return a.Sandbox.Stop(ctx, s.ID) })
-}
-
-func (a *App) memoryFiles(ctx context.Context, sid, root string) (map[string][]byte, error) {
-	out := map[string][]byte{}
-	total := 0
-	var walk func(string, int) error
-	walk = func(dir string, depth int) error {
-		if depth > 20 {
-			return errors.New("memory directory depth exceeded")
-		}
-		names, e := a.Sandbox.ListDir(ctx, sid, dir)
-		if e != nil {
-			return e
-		}
-		for _, name := range names {
-			isDir := strings.HasSuffix(name, "/")
-			name = strings.TrimSuffix(name, "/")
-			if name == "" || path.Base(name) != name || name == "." || name == ".." {
-				return errors.New("invalid memory directory entry")
-			}
-			p := path.Join(dir, name)
-			if isDir {
-				if e = walk(p, depth+1); e != nil {
-					return e
-				}
-				continue
-			}
-			b, e := a.Sandbox.ReadFile(ctx, sid, p, (2<<20)+1)
-			if e != nil {
-				return e
-			}
-			total += len(b)
-			if len(b) > 2<<20 || total > 20<<20 || len(out) >= 1000 {
-				return errors.New("memory mount size exceeded")
-			}
-			if b == nil {
-				b = []byte{}
-			}
-			out[strings.TrimPrefix(p, root+"/")] = b
-		}
-		return nil
-	}
-	e := walk(root, 0)
-	return out, e
 }

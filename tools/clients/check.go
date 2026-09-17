@@ -207,8 +207,12 @@ func (t *tool) compat(ctx context.Context, specPath, operationsPath string) erro
 	if err := readJSON(operationsPath, &old); err != nil {
 		return err
 	}
-	if err := readJSON(t.path("tools/clients/operations.json"), &current); err != nil {
+	if err := readJSON(t.path("api/openapi.json"), &current); err != nil {
 		return err
+	}
+	current = operationSemantics(current)
+	if _, isSpec := old["openapi"]; isSpec {
+		old = operationSemantics(old)
 	}
 	for _, id := range sortedKeys(old) {
 		op, exists := current[id]

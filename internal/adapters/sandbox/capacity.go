@@ -17,10 +17,6 @@ type Resources struct {
 	MemoryMiB uint64 `json:"memory_mib"`
 }
 
-func (s *Sbx) Resources(profile string) (Resources, error) {
-	return profileResources(profile, Resources{s.opts.CPUs, s.opts.MemoryMiB})
-}
-
 func profileResources(profile string, defaults Resources) (Resources, error) {
 	switch profile {
 	case "", "default":
@@ -32,14 +28,6 @@ func profileResources(profile string, defaults Resources) (Resources, error) {
 	default:
 		return Resources{}, fmt.Errorf("unknown sandbox profile %q", profile)
 	}
-}
-
-// Reserve must run inside a transaction. A DB-wide lock makes admission shared
-// across workers/replicas. Reservations survive restarts and unknown outcomes;
-// only a confirmed stop releases them. All replicas must use the same limits.
-// Retained disks keep their original specification, including after a restart.
-func (s *Sbx) Reserve(tx *gorm.DB, sessionID string, resources Resources) error {
-	return reserve(tx, sessionID, resources, allocation{Backend: "sbx", Host: s.opts.BaseURL, Image: s.opts.Image, MaxRunning: s.opts.MaxRunning, MemoryBudgetMiB: s.opts.MemoryBudgetMiB})
 }
 
 type allocation struct {
@@ -55,6 +43,10 @@ type Managed interface {
 	Reserve(*gorm.DB, string, Resources) error
 }
 
+// Reserve must run inside a transaction. A DB-wide lock makes admission shared
+// across workers/replicas. Reservations survive restarts and unknown outcomes;
+// only a confirmed stop releases them. All replicas must use the same limits.
+// Retained disks keep their original specification, including after a restart.
 func reserve(tx *gorm.DB, sessionID string, resources Resources, policy allocation) error {
 	if err := tx.Exec("SELECT pg_advisory_xact_lock(?, ?)", 1463899717, 1).Error; err != nil {
 		return err

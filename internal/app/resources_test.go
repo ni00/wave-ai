@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -47,6 +48,7 @@ func testResourceTransactions(t *testing.T, backend string) {
 		t.Fatal(e)
 	}
 	t.Cleanup(a.Close)
+	useWorkspaceFixture(t, a)
 	key, e := auth.Bootstrap(ctx, a.DB, xid.New("org"), "owner", "test", auth.ScopeAPI)
 	if e != nil {
 		t.Fatal(e)
@@ -110,82 +112,106 @@ func testResourceTransactions(t *testing.T, backend string) {
 	}
 	// This resource test invokes preparation/finalization directly, not workers.
 	defer a.DB.Model(&execution.Task{}).Where(clause.Eq{Column: "id", Value: task.ID}).Update("state", "canceled")
-	write := func(path, body string, version int) {
+	// Creating a memory-only session is supported by the public API.
+	sessionBody, _ := json.Marshal(map[string]any{"title": "memory only", "memory_store_ids": []string{store.ID}})
+	request := httptest.NewRequest(http.MethodPost, "/v1/sessions", strings.NewReader(string(sessionBody)))
+	request.Header.Set("Authorization", "Bearer "+key)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	a.Handler().ServeHTTP(response, request)
+	if response.Code != 201 {
+		t.Fatalf("memory-only session: %d %s", response.Code, response.Body.String())
+	}
+	// Memory tools work without an environment and commit before finalization.
+	memorySession := s
+	memorySession.EnvironmentID = ""
+	invoke := func(name string, args map[string]any) execution.ToolResult {
 		t.Helper()
-		if _, e := memory.Write(ctx, a.DB, p, store.ID, path, body, s.ID, version); e != nil {
-			t.Fatal(e)
+		raw, _ := json.Marshal(args)
+		result, err := a.execute(ctx, memorySession, execution.ToolCall{Tool: agents.Tool{Name: name, Kind: "builtin"}, Arguments: string(raw)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return result
+	}
+	read := invoke("memory_read", map[string]any{"store_id": store.ID, "path": "notes.md"})
+	var entry memory.Entry
+	if json.Unmarshal([]byte(read.Output), &entry) != nil || entry.Version != 0 || !entry.Deleted {
+		t.Fatal(read)
+	}
+	writeArgs := map[string]any{"store_id": store.ID, "path": "notes.md", "content": "durable", "version": 0}
+	if result := invoke("memory_write", writeArgs); result.IsError {
+		t.Fatal(result)
+	}
+	if err := a.DB.Where("store_id = ? AND path = ?", store.ID, "notes.md").Take(&entry).Error; err != nil || entry.Content != "durable" || entry.Version != 1 {
+		t.Fatal(entry, err)
+	}
+	if result := invoke("memory_write", writeArgs); result.ErrorCode != "memory_conflict" {
+		t.Fatal("stale write accepted", result)
+	}
+	list := invoke("memory_read", map[string]any{"store_id": store.ID})
+	if list.IsError || strings.Contains(list.Output, "durable") || !strings.Contains(list.Output, "notes.md") {
+		t.Fatal(list)
+	}
+	if result := invoke("memory_delete", map[string]any{"store_id": store.ID, "path": "notes.md", "version": 1}); result.IsError {
+		t.Fatal(result)
+	}
+	read = invoke("memory_read", map[string]any{"store_id": store.ID, "path": "notes.md"})
+	if json.Unmarshal([]byte(read.Output), &entry) != nil || entry.Version != 2 || !entry.Deleted {
+		t.Fatal(read)
+	}
+	for _, path := range []string{"../bad", "/absolute", "a/../bad"} {
+		if result := invoke("memory_write", map[string]any{"store_id": store.ID, "path": path, "content": "bad", "version": 0}); !result.IsError {
+			t.Fatal("invalid path accepted", result)
 		}
 	}
-	write("unchanged.txt", "baseline", 0)
-	write("changed.txt", "baseline", 0)
-	write("deleted.txt", "baseline", 0)
-	write("resurrect.txt", "old", 0)
-	if _, e = memory.Delete(ctx, a.DB, p, store.ID, "resurrect.txt", s.ID, 1); e != nil {
-		t.Fatal(e)
+	// Two writers reading the same version cannot silently overwrite each other.
+	var successes, conflicts atomic.Int32
+	var writers sync.WaitGroup
+	for i := range 2 {
+		writers.Go(func() {
+			raw, _ := json.Marshal(map[string]any{"store_id": store.ID, "path": "race.md", "content": fmt.Sprint(i), "version": 0})
+			result, err := a.execute(ctx, memorySession, execution.ToolCall{Tool: agents.Tool{Name: "memory_write", Kind: "builtin"}, Arguments: string(raw)})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			if result.ErrorCode == "memory_conflict" {
+				conflicts.Add(1)
+			} else if !result.IsError {
+				successes.Add(1)
+			} else {
+				t.Error(result)
+			}
+		})
+	}
+	writers.Wait()
+	if successes.Load() != 1 || conflicts.Load() != 1 {
+		t.Fatal("concurrent update lost", successes.Load(), conflicts.Load())
+	}
+	for _, args := range []map[string]any{
+		{"store_id": store.ID, "path": "bad.md", "content": "missing version"},
+		{"store_id": store.ID, "path": "bad.md", "version": 0, "content": strings.Repeat("x", (1<<20)+1)},
+		{"store_id": store.ID, "path": "bad.md", "version": 0, "content": "unknown field", "extra": true},
+	} {
+		if result := invoke("memory_write", args); result.ErrorCode != "invalid_arguments" {
+			t.Fatal("invalid write accepted", result.ErrorCode)
+		}
+	}
+	memorySession.MemoryIDs = nil
+	if result := invoke("memory_read", map[string]any{"store_id": store.ID}); result.ErrorCode != "memory_unavailable" {
+		t.Fatal("unbound store read", result)
+	}
+	memorySession.MemoryIDs = []string{store.ID}
+	memorySession.OwnerID = "00000000-0000-4000-8000-000000000001"
+	if result := invoke("memory_read", map[string]any{"store_id": store.ID}); result.ErrorCode != "memory_unavailable" {
+		t.Fatal("cross-owner read", result)
 	}
 	if e = a.prepare(ctx, s, task); e != nil {
 		t.Fatal(e)
 	}
-	if _, e = a.Sandbox.Exec(ctx, s.ID, sandbox.ExecRequest{Command: "rm -- " + quote("/mnt/memory/"+store.ID+"/deleted.txt"), RequestID: "delete-test"}); e != nil {
-		t.Fatal(e)
-	}
-	if e = a.Sandbox.WriteFile(ctx, s.ID, "/mnt/memory/"+store.ID+"/resurrect.txt", []byte("restored")); e != nil {
-		t.Fatal(e)
-	}
-	write("unchanged.txt", "concurrent remote", 1)
-	if e = a.Sandbox.WriteFile(ctx, s.ID, "/mnt/memory/"+store.ID+"/changed.txt", []byte("local edit")); e != nil {
-		t.Fatal(e)
-	}
-	if e = a.Sandbox.WriteFile(ctx, s.ID, "/mnt/memory/"+store.ID+"/new.txt", []byte{}); e != nil {
-		t.Fatal(e)
-	}
 	if e = a.finish(ctx, s, task); e != nil {
 		t.Fatal(e)
-	}
-	check := func(path, body string, version int) {
-		t.Helper()
-		var row memory.Entry
-		if e := a.DB.Where(clause.And(clause.Eq{Column: "store_id", Value: store.ID}, clause.Eq{Column: "path", Value: path})).Take(&row).Error; e != nil {
-			t.Fatal(e)
-		}
-		if row.Content != body || row.Version != version {
-			t.Fatalf("%s = %+v", path, row)
-		}
-	}
-	check("unchanged.txt", "concurrent remote", 2)
-	check("changed.txt", "local edit", 2)
-	check("new.txt", "", 1)
-	check("resurrect.txt", "restored", 3)
-	var deleted memory.Entry
-	if e = a.DB.Where(clause.And(clause.Eq{Column: "store_id", Value: store.ID}, clause.Eq{Column: "path", Value: "deleted.txt"})).Take(&deleted).Error; e != nil {
-		t.Fatal(e)
-	}
-	if !deleted.Deleted || deleted.Version != 2 {
-		t.Fatal("memory deletion not written back", deleted)
-	}
-	if e = a.finish(ctx, s, task); e != nil {
-		t.Fatal(e)
-	}
-	check("changed.txt", "local edit", 2)
-	// Re-stage a new root, then edit the same file locally and remotely.
-	task.RootID = xid.New("task")
-	if e = a.prepare(ctx, s, task); e != nil {
-		t.Fatal(e)
-	}
-	write("changed.txt", "remote winner", 2)
-	if e = a.Sandbox.WriteFile(ctx, s.ID, "/mnt/memory/"+store.ID+"/changed.txt", []byte("conflicting local")); e != nil {
-		t.Fatal(e)
-	}
-	if e = a.finish(ctx, s, task); e == nil {
-		t.Fatal("expected retained conflict")
-	}
-	check("changed.txt", "remote winner", 3)
-	var conflicts []memory.Conflict
-	if e = a.DB.Where(clause.Eq{Column: "store_id", Value: store.ID}).Find(&conflicts).Error; e != nil {
-		t.Fatal(e)
-	}
-	if len(conflicts) != 1 || conflicts[0].Content != "conflicting local" {
-		t.Fatal(conflicts)
 	}
 	first, e := files.PutArtifact(ctx, a.DB, a.Blobs, p, s.ID, task.ID, "a/result.txt", []byte("one"))
 	if e != nil {
@@ -324,18 +350,23 @@ func testCachedMCPCredentials(t *testing.T, a *App, p *auth.Principal) {
 	ctx := context.Background()
 	var calls, initializes atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			w.WriteHeader(204)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
 		var body map[string]any
 		json.NewDecoder(r.Body).Decode(&body)
 		switch body["method"] {
 		case "initialize":
 			initializes.Add(1)
 			w.Header().Set("Mcp-Session-Id", "fixture-session")
-			json.NewEncoder(w).Encode(map[string]any{"id": body["id"], "result": map[string]any{"protocolVersion": "2025-11-25"}})
+			json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": body["id"], "result": map[string]any{"protocolVersion": "2025-11-25"}})
 		case "notifications/initialized":
 			w.WriteHeader(202)
 		case "tools/call":
 			calls.Add(1)
-			json.NewEncoder(w).Encode(map[string]any{"id": body["id"], "result": map[string]any{"content": []any{map[string]any{"type": "text", "text": "confirmed tool failure"}}, "isError": true}})
+			json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": body["id"], "result": map[string]any{"content": []any{map[string]any{"type": "text", "text": "confirmed tool failure"}}, "isError": true}})
 		}
 	}))
 	defer server.Close()

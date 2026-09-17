@@ -7,18 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"connectrpc.com/connect"
-	common "github.com/docker/sandboxes-api/gen/go/docker/sbx/common/v1"
-	v1 "github.com/docker/sandboxes-api/gen/go/docker/sbx/v1"
-	sdk "github.com/docker/sandboxes-api/gen/go/sbx"
-	"google.golang.org/protobuf/types/known/durationpb"
 	"gorm.io/gorm"
 	"wave-ai.local/wave/internal/adapters/sandbox"
 	"wave-ai.local/wave/internal/platform/database"
@@ -52,13 +46,13 @@ type sandboxSample struct {
 	CleanupError string   `json:"cleanup_error,omitempty"`
 }
 
-// runSandbox exercises real microVMs using the same adapter as Wave. It does
+// runSandbox exercises gVisor sandboxes using the same adapter as Wave. It does
 // not use a model, service DB, user sessions, or the normal worker benchmark.
 func runSandbox(ctx context.Context, args []string, out, diagnostics io.Writer) error {
 	var o sandboxOptions
 	fs := flag.NewFlagSet("bench sandbox", flag.ContinueOnError)
 	fs.SetOutput(diagnostics)
-	fs.StringVar(&o.Backend, "backend", "gvisor", "gvisor, podman or sbx")
+	fs.StringVar(&o.Backend, "backend", "gvisor", "gvisor")
 	fs.BoolVar(&o.Verify, "verify", false, "verify container file isolation, idempotency, bounded output and timeout cleanup")
 	fs.StringVar(&o.Concurrency, "concurrency", "1,2", "concurrent sandbox clients; independent of service capacity limits")
 	fs.StringVar(&o.Memory, "memory-mib", "512,1024,2048", "guest memory sizes to compare")
@@ -69,7 +63,7 @@ func runSandbox(ctx context.Context, args []string, out, diagnostics io.Writer) 
 	fs.DurationVar(&o.Timeout, "timeout", 3*time.Minute, "deadline per sample, excluding forced cleanup")
 	fs.StringVar(&o.Format, "format", "human", "human or json")
 	fs.Usage = func() {
-		fmt.Fprintln(diagnostics, "Usage: wave bench sandbox [flags]\nRequires Docker for disposable PostgreSQL and the selected sandbox engine.\nReads WAVE_SBX_*, WAVE_DOCKER_HOST, WAVE_PODMAN_HOST, WAVE_CONTAINER_IMAGE/NETWORK and WAVE_GVISOR_RUNTIME. Deletes only its own sandbox disks.\nUse a dedicated test host: benchmark capacity is independent of running Wave deployments.\nMeasures create, command, stop and restart times; does not measure host RSS or peak guest memory.")
+		fmt.Fprintln(diagnostics, "Usage: wave bench sandbox [flags]\nRequires Docker for disposable PostgreSQL and the selected sandbox engine.\nReads WAVE_DOCKER_HOST, WAVE_CONTAINER_IMAGE/NETWORK and WAVE_GVISOR_RUNTIME. Deletes only its own sandbox disks.\nUse a dedicated test host: benchmark capacity is independent of running Wave deployments.\nMeasures create, command, stop and restart times; does not measure host RSS or peak guest memory.")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
@@ -92,35 +86,13 @@ func runSandbox(ctx context.Context, args []string, out, diagnostics io.Writer) 
 	if o.Format != "human" && o.Format != "json" {
 		return errors.New("format must be human or json")
 	}
-	if o.Backend != "sbx" && o.Backend != "gvisor" && o.Backend != "podman" {
-		return errors.New("backend must be sbx, gvisor or podman")
-	}
-	if o.Verify && o.Backend == "sbx" {
-		return errors.New("container isolation verification requires gvisor or podman")
+	if o.Backend != "gvisor" {
+		return errors.New("backend must be gvisor")
 	}
 	if o.Image == "" {
-		if o.Backend == "sbx" {
-			o.Image = os.Getenv("WAVE_SBX_IMAGE")
-			if o.Image == "" {
-				o.Image = "docker.io/docker/sandbox-ubuntu-24.04:latest"
-			}
-		} else {
-			o.Image = os.Getenv("WAVE_CONTAINER_IMAGE")
-			if o.Image == "" {
-				o.Image = sandbox.DefaultContainerImage
-			}
-		}
-	}
-	baseURL := os.Getenv("WAVE_SBX_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost:6060"
-	}
-	token := os.Getenv("WAVE_SBX_TOKEN")
-	var client *sdk.Client
-	if o.Backend == "sbx" {
-		client = sdk.New(&http.Client{Timeout: 45 * time.Second, Transport: sandboxTransport{token}}, baseURL)
-		if _, err := client.Capabilities().GetCapabilities(ctx, connect.NewRequest(&v1.GetCapabilitiesRequest{})); err != nil {
-			return fmt.Errorf("bench sandbox: sbx API unavailable: %w", err)
+		o.Image = os.Getenv("WAVE_CONTAINER_IMAGE")
+		if o.Image == "" {
+			o.Image = sandbox.DefaultContainerImage
 		}
 	}
 	pg, cleanup, err := startPostgres(ctx, diagnostics)
@@ -142,7 +114,6 @@ func runSandbox(ctx context.Context, args []string, out, diagnostics io.Writer) 
 		return err
 	}
 	runID := xid.New("bench")
-	parent := "wave"
 	samples := []sandboxSample{}
 	var runErr error
 	for _, memory := range memories {
@@ -152,19 +123,11 @@ func runSandbox(ctx context.Context, args []string, out, diagnostics io.Writer) 
 				break
 			}
 			fmt.Fprintf(diagnostics, "bench sandbox: %d MiB, concurrency=%d, iterations=%d\n", memory, concurrency, o.Iterations)
-			var box sandbox.Provider
-			if o.Backend == "sbx" {
-				box = sandbox.NewSbx(sandbox.SbxOptions{BaseURL: baseURL, Token: token, Parent: parent, Image: o.Image, CPUs: uint32(o.CPUs), MemoryMiB: uint64(memory), MaxRunning: concurrency, MemoryBudgetMiB: uint64(memory * concurrency), Store: db})
-			} else {
-				host := os.Getenv("WAVE_DOCKER_HOST")
-				if o.Backend == "podman" {
-					host = os.Getenv("WAVE_PODMAN_HOST")
-				}
-				box, err = sandbox.NewContainer(sandbox.ContainerOptions{Backend: o.Backend, Host: host, Image: o.Image, Runtime: os.Getenv("WAVE_GVISOR_RUNTIME"), Network: os.Getenv("WAVE_CONTAINER_NETWORK"), CPUs: uint32(o.CPUs), MemoryMiB: uint64(memory), MaxRunning: concurrency, MemoryBudgetMiB: uint64(memory * concurrency), Store: db})
-				if err != nil {
-					return err
-				}
+			box, err := sandbox.NewContainer(sandbox.ContainerOptions{Backend: "gvisor", Host: os.Getenv("WAVE_DOCKER_HOST"), Image: o.Image, Runtime: os.Getenv("WAVE_GVISOR_RUNTIME"), Network: os.Getenv("WAVE_CONTAINER_NETWORK"), CPUs: uint32(o.CPUs), MemoryMiB: uint64(memory), MaxRunning: concurrency, MemoryBudgetMiB: uint64(memory * concurrency), Store: db})
+			if err != nil {
+				return err
 			}
+
 			results := make([]sandboxSample, concurrency*o.Iterations)
 			var wg sync.WaitGroup
 			for n := range concurrency {
@@ -172,7 +135,7 @@ func runSandbox(ctx context.Context, args []string, out, diagnostics io.Writer) 
 					for iteration := range o.Iterations {
 						index := n*o.Iterations + iteration
 						sid := fmt.Sprintf("%s-%d-%d-%d", runID, memory, concurrency, index)
-						results[index] = sandboxTrial(ctx, box, client, db, parent, sid, memory, concurrency, o)
+						results[index] = sandboxTrial(ctx, box, db, sid, memory, concurrency, o)
 						if results[index].CleanupError != "" || ctx.Err() != nil {
 							return
 						}
@@ -180,9 +143,7 @@ func runSandbox(ctx context.Context, args []string, out, diagnostics io.Writer) 
 				})
 			}
 			wg.Wait()
-			if closer, ok := box.(interface{ Close() error }); ok {
-				_ = closer.Close()
-			}
+			_ = box.Close()
 			cleanupFailed := false
 			for _, sample := range results {
 				if sample.Name == "" {
@@ -205,19 +166,14 @@ func runSandbox(ctx context.Context, args []string, out, diagnostics io.Writer) 
 	return errors.Join(runErr, writeSandboxReport(out, o, samples))
 }
 
-func sandboxTrial(ctx context.Context, box sandbox.Provider, client *sdk.Client, db *gorm.DB, parent, sid string, memory, concurrency int, o sandboxOptions) (r sandboxSample) {
+func sandboxTrial(ctx context.Context, box *sandbox.Container, db *gorm.DB, sid string, memory, concurrency int, o sandboxOptions) (r sandboxSample) {
 	r.Name, r.MemoryMiB, r.Concurrency = "wave-"+sid, memory, concurrency
 	run, cancel := context.WithTimeout(ctx, o.Timeout)
 	defer cancel()
 	defer func() {
 		cleanup, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
-		var err error
-		if container, ok := box.(*sandbox.Container); ok {
-			err = container.Destroy(cleanup, sid)
-		} else {
-			err = deleteBenchmarkSandbox(cleanup, client, parent, r.Name)
-		}
+		err := box.Destroy(cleanup, sid)
 		if err != nil {
 			r.CleanupError = err.Error()
 		} else if err := db.WithContext(cleanup).Where("session_id = ?", sid).Delete(&sandbox.Record{}).Error; err != nil {
@@ -273,41 +229,6 @@ func sandboxTrial(ctx context.Context, box sandbox.Provider, client *sdk.Client,
 		return nil
 	})
 	return
-}
-
-func deleteBenchmarkSandbox(ctx context.Context, client *sdk.Client, parent, name string) error {
-	op, err := client.Sandboxes().DeleteSandbox(ctx, connect.NewRequest(&v1.DeleteSandboxRequest{Sandbox: &common.SandboxRef{Parent: parent, Identifier: &common.SandboxRef_Name{Name: name}}, Force: true, RequestId: "delete-" + name}))
-	if connect.CodeOf(err) == connect.CodeNotFound {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	for {
-		result, err := client.Operations().WaitOperation(ctx, connect.NewRequest(&v1.WaitOperationRequest{Id: op.Msg.Id, Timeout: durationpb.New(10 * time.Second)}))
-		if err != nil {
-			return err
-		}
-		if result.Msg.Done {
-			if result.Msg.GetError() != nil {
-				return fmt.Errorf("delete failed: %s", result.Msg.GetError())
-			}
-			return nil
-		}
-		if err := pause(ctx, 100*time.Millisecond); err != nil {
-			return err
-		}
-	}
-}
-
-type sandboxTransport struct{ token string }
-
-func (t sandboxTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	r = r.Clone(r.Context())
-	if t.token != "" {
-		r.Header.Set("Authorization", "Bearer "+t.token)
-	}
-	return http.DefaultTransport.RoundTrip(r)
 }
 
 func sandboxIntegers(raw string, low, high int) ([]int, error) {

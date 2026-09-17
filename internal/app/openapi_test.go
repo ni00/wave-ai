@@ -11,30 +11,63 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-openapi/spec"
+	"strconv"
+	apicontract "wave-ai.local/wave/api"
 
 	"wave-ai.local/wave/internal/modules/execution"
 	"wave-ai.local/wave/internal/platform/apierr"
 	"wave-ai.local/wave/internal/platform/httpx"
 )
 
-func openAPIDoc(t *testing.T) (*gin.Engine, spec.Swagger) {
+// Minimal native OpenAPI 3 test view. Reference checks use the full source bytes.
+type openDocument struct {
+	OpenAPI    string              `json:"openapi"`
+	Paths      map[string]openPath `json:"paths"`
+	Components struct {
+		Schemas map[string]openSchema `json:"schemas"`
+	} `json:"components"`
+}
+type openPath struct{ Get, Post, Put, Patch, Delete, Head, Options *openOperation }
+type openOperation struct {
+	ID         string                  `json:"operationId"`
+	Security   []map[string][]string   `json:"security"`
+	Parameters []openParameter         `json:"parameters"`
+	Responses  map[string]openResponse `json:"responses"`
+}
+type openParameter struct {
+	Name, In string
+	Schema   openSchema
+}
+type openResponse struct {
+	Content map[string]struct{ Schema *openSchema } `json:"content"`
+}
+type openSchema struct {
+	Type, Format     string
+	Nullable         bool
+	Required         []string
+	Properties       map[string]openSchema
+	Enum             []any
+	Minimum, Maximum *float64
+	Default          any
+}
+
+func openAPIDoc(t *testing.T) (*gin.Engine, openDocument) {
 	t.Helper()
 	router := (&App{}).Handler().(*gin.Engine)
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/swagger/doc.json", nil))
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/swagger/openapi.json", nil))
 	if w.Code != http.StatusOK {
 		t.Fatalf("Swagger endpoint: %d %s", w.Code, w.Body.String())
 	}
-	var doc spec.Swagger
+	var doc openDocument
 	if err := json.Unmarshal(w.Body.Bytes(), &doc); err != nil {
 		t.Fatal(err)
 	}
 	return router, doc
 }
 
-func operations(item spec.PathItem) map[string]*spec.Operation {
-	return map[string]*spec.Operation{
+func operations(item openPath) map[string]*openOperation {
+	return map[string]*openOperation{
 		"GET": item.Get, "POST": item.Post, "PUT": item.Put, "PATCH": item.Patch,
 		"DELETE": item.Delete, "HEAD": item.Head, "OPTIONS": item.Options,
 	}
@@ -42,12 +75,12 @@ func operations(item spec.PathItem) map[string]*spec.Operation {
 
 func TestOpenAPIRoutes(t *testing.T) {
 	router, doc := openAPIDoc(t)
-	if doc.Swagger != "2.0" {
-		t.Fatalf("unexpected specification version %q", doc.Swagger)
+	if doc.OpenAPI != "3.0.0" {
+		t.Fatalf("unexpected specification version %q", doc.OpenAPI)
 	}
 	documented := map[string]bool{}
 	ids := map[string]string{}
-	for path, item := range doc.Paths.Paths {
+	for path, item := range doc.Paths {
 		for method, op := range operations(item) {
 			if op == nil {
 				continue
@@ -65,14 +98,14 @@ func TestOpenAPIRoutes(t *testing.T) {
 					t.Errorf("%s: missing BearerAuth", key)
 				}
 				for _, status := range []int{401, 403, 500} {
-					if op.Responses == nil || op.Responses.StatusCodeResponses[status].Schema == nil {
+					if op.Responses == nil || op.Responses[strconv.Itoa(status)].Content["application/json"].Schema == nil {
 						t.Errorf("%s: missing %d error schema", key, status)
 					}
 				}
 			}
 			for _, p := range op.Parameters {
 				if p.In == "query" && p.Name == "limit" {
-					if p.Minimum == nil || *p.Minimum != 1 || p.Maximum == nil || *p.Maximum != 200 || p.Default != float64(100) {
+					if p.Schema.Minimum == nil || *p.Schema.Minimum != 1 || p.Schema.Maximum == nil || *p.Schema.Maximum != 200 || p.Schema.Default != float64(100) {
 						t.Errorf("%s: incomplete page limit contract", key)
 					}
 				}
@@ -98,7 +131,7 @@ func TestOpenAPIRoutes(t *testing.T) {
 	for key := range documented {
 		t.Errorf("OpenAPI documents an unregistered route: %s", key)
 	}
-	if op := doc.Paths.Paths["/health"].Get; op == nil || len(op.Security) != 0 {
+	if op := doc.Paths["/health"].Get; op == nil || len(op.Security) != 0 {
 		t.Error("health must be documented without authentication")
 	}
 }
@@ -116,7 +149,7 @@ func TestOpenAPI3Publication(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &doc); err != nil || w.Code != 200 || doc.OpenAPI != "3.0.0" {
 		t.Fatalf("published OpenAPI 3: %d %v", w.Code, err)
 	}
-	for path, item := range legacy.Paths.Paths {
+	for path, item := range legacy.Paths {
 		for method, op := range operations(item) {
 			if op != nil && doc.Paths[path][strings.ToLower(method)].OperationID != op.ID {
 				t.Errorf("OpenAPI versions disagree for %s %s", method, path)
@@ -205,24 +238,21 @@ func TestOpenAPILanguages(t *testing.T) {
 	}
 }
 
-func definition(t *testing.T, doc spec.Swagger, suffix string) spec.Schema {
+func definition(t *testing.T, doc openDocument, suffix string) openSchema {
 	t.Helper()
-	for name, schema := range doc.Definitions {
+	for name, schema := range doc.Components.Schemas {
 		if strings.HasSuffix(name, suffix) {
 			return schema
 		}
 	}
 	t.Fatalf("missing definition %s", suffix)
-	return spec.Schema{}
+	return openSchema{}
 }
 
 func TestOpenAPIContracts(t *testing.T) {
 	_, doc := openAPIDoc(t)
 	// Check every reference, including deeply nested fields used by SDK generators.
-	docJSON, err := json.Marshal(doc)
-	if err != nil {
-		t.Fatal(err)
-	}
+	docJSON := apicontract.OpenAPI
 	var document any
 	if err := json.Unmarshal(docJSON, &document); err != nil {
 		t.Fatal(err)
@@ -232,8 +262,8 @@ func TestOpenAPIContracts(t *testing.T) {
 		switch value := value.(type) {
 		case map[string]any:
 			if ref, ok := value["$ref"].(string); ok {
-				name, local := strings.CutPrefix(ref, "#/definitions/")
-				if _, exists := doc.Definitions[name]; !local || !exists {
+				name, local := strings.CutPrefix(ref, "#/components/schemas/")
+				if _, exists := doc.Components.Schemas[name]; !local || !exists {
 					t.Errorf("unresolved schema reference %q", ref)
 				}
 			}
@@ -272,13 +302,13 @@ func TestOpenAPIContracts(t *testing.T) {
 	generation := definition(t, doc, "execution.Generation")
 	for _, field := range []string{"duration_ms", "first_delta_ms"} {
 		p := generation.Properties[field]
-		if v, present := wire[field]; !present || v != nil || p.Extensions["x-nullable"] != true || p.Format != "int64" || !slices.Contains(generation.Required, field) {
+		if v, present := wire[field]; !present || v != nil || !p.Nullable || p.Format != "int64" || !slices.Contains(generation.Required, field) {
 			t.Errorf("%s: unknown must be a required, nullable int64", field)
 		}
 	}
 	usage := definition(t, doc, "modelclient.Usage")
 	for field, value := range wire["usage"].(map[string]any) {
-		if value != nil || usage.Properties[field].Extensions["x-nullable"] != true || !slices.Contains(usage.Required, field) {
+		if value != nil || !usage.Properties[field].Nullable || !slices.Contains(usage.Required, field) {
 			t.Errorf("usage.%s: unknown must remain null", field)
 		}
 	}
@@ -290,8 +320,8 @@ func TestOpenAPIContracts(t *testing.T) {
 		t.Error("tool status is missing waiting_children")
 	}
 	for _, path := range []string{"/v1/sessions/{id}/messages", "/v1/sessions/{id}/events", "/v1/sessions/{id}/events/stream"} {
-		op := doc.Paths.Paths[path].Get
-		if op == nil || !slices.ContainsFunc(op.Parameters, func(p spec.Parameter) bool { return p.In == "header" && p.Name == "Last-Event-ID" }) {
+		op := doc.Paths[path].Get
+		if op == nil || !slices.ContainsFunc(op.Parameters, func(p openParameter) bool { return p.In == "header" && p.Name == "Last-Event-ID" }) {
 			t.Errorf("%s: missing resume header", path)
 		}
 	}
@@ -301,7 +331,7 @@ func TestOpenAPIDownload(t *testing.T) {
 	_, doc := openAPIDoc(t)
 	modified := time.Date(2026, 9, 13, 0, 0, 0, 0, time.UTC)
 	for _, path := range []string{"/v1/files/{id}/content", "/v1/skills/{id}/content"} {
-		op := doc.Paths.Paths[path].Get
+		op := doc.Paths[path].Get
 		for _, tc := range []struct {
 			header, value string
 			status        int
@@ -316,21 +346,21 @@ func TestOpenAPIDownload(t *testing.T) {
 			}
 			w := httptest.NewRecorder()
 			httpx.Download(w, req, "test.bin", modified, strings.NewReader("abcdef"))
-			response, exists := op.Responses.StatusCodeResponses[w.Code]
+			response, exists := op.Responses[strconv.Itoa(w.Code)]
 			if w.Code != tc.status || !exists {
 				t.Fatalf("%s: download status %d is unexpected or undocumented", path, w.Code)
 			}
 			switch tc.status {
 			case 200, 206:
-				if response.Schema == nil || !response.Schema.Type.Contains("file") {
+				if response.Content["application/octet-stream"].Schema == nil || response.Content["application/octet-stream"].Schema.Type != "string" || response.Content["application/octet-stream"].Schema.Format != "binary" {
 					t.Errorf("%s: binary response must have file schema", path)
 				}
 			case 304, 412:
-				if w.Body.Len() != 0 || response.Schema != nil {
+				if w.Body.Len() != 0 || len(response.Content) != 0 {
 					t.Error("conditional response must be empty")
 				}
 			case 416:
-				if !strings.HasPrefix(w.Header().Get("Content-Type"), "text/plain") || response.Schema == nil || !response.Schema.Type.Contains("string") {
+				if !strings.HasPrefix(w.Header().Get("Content-Type"), "text/plain") || response.Content["text/plain"].Schema == nil || response.Content["text/plain"].Schema.Type != "string" {
 					t.Error("Range errors must document their plain-text body")
 				}
 			}

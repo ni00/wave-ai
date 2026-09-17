@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"wave-ai.local/wave/internal/platform/model"
 )
 
 // sse serves one streamed chat-completions response from the given frames.
@@ -38,7 +39,7 @@ func TestStreamSparseToolCallIndices(t *testing.T) {
 	defer srv.Close()
 
 	c := New(srv.URL, "k", 0)
-	final, err := c.Stream(t.Context(), Request{Model: "m", Stream: true}, nil)
+	final, err := c.Stream(t.Context(), model.Request{Model: "m", Stream: true}, nil)
 	if err != nil {
 		t.Fatalf("stream: %v", err)
 	}
@@ -70,7 +71,7 @@ func TestStreamContentAndUsage(t *testing.T) {
 
 	var got strings.Builder
 	c := New(srv.URL, "k", 0)
-	final, err := c.Stream(t.Context(), Request{Model: "m", Stream: true}, func(d Delta) {
+	final, err := c.Stream(t.Context(), model.Request{Model: "m", Stream: true}, func(d model.Delta) {
 		got.WriteString(d.Text)
 	})
 	if err != nil {
@@ -90,7 +91,7 @@ func TestTruncatedStreamIsNotSuccess(t *testing.T) {
 		w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n"))
 	}))
 	defer server.Close()
-	if _, e := New(server.URL, "", 0).Stream(t.Context(), Request{Model: "test"}, nil); e == nil {
+	if _, e := New(server.URL, "", 0).Stream(t.Context(), model.Request{Model: "test"}, nil); e == nil {
 		t.Fatal("truncated preview became success")
 	}
 }
@@ -109,7 +110,7 @@ func TestOutputBudgetReachesProvider(t *testing.T) {
 		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"summary\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n")
 	}))
 	defer server.Close()
-	if _, e := New(server.URL, "", 0).Stream(t.Context(), Request{Model: "any", MaxOutputTokens: 512}, nil); e != nil {
+	if _, e := New(server.URL, "", 0).Stream(t.Context(), model.Request{Model: "any", MaxOutputTokens: 512}, nil); e != nil {
 		t.Fatal(e)
 	}
 }

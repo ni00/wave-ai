@@ -4,10 +4,10 @@ package execution
 import (
 	"time"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
 	"wave-ai.local/wave/internal/modules/webhooks"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/telemetry"
 )
 
@@ -68,7 +68,7 @@ type Task struct {
 	Experts         map[string]agents.Agent `gorm:"serializer:json;type:jsonb" json:"experts,omitempty"`
 	AgentID         string                  `json:"agent_id" validate:"required"`
 	AgentVersion    int                     `json:"agent_version" validate:"required"`
-	Messages        []modelclient.Message   `gorm:"serializer:json;type:jsonb" json:"-"`
+	Messages        []model.Message         `gorm:"serializer:json;type:jsonb" json:"-"`
 	Budget          Budget                  `gorm:"serializer:json;type:jsonb" json:"budget" validate:"required"`
 	UsedTokens      int64                   `json:"used_tokens" validate:"required" format:"int64"`
 	UsageKnown      bool                    `json:"usage_known" validate:"required"`

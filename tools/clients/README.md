@@ -2,8 +2,8 @@
 
 English | [简体中文](README.zh-CN.md)
 
-Generate OpenAPI contracts, Go / Python / TypeScript SDKs, CLI metadata, and
-command references from server types and annotations.
+Generate Go / Python / TypeScript SDKs, CLI metadata, and command references
+from the native OpenAPI 3 contract in `api/openapi.json`.
 
 ## Generate and check
 
@@ -22,10 +22,11 @@ changes, run `go run ./tools/clients check`.
 
 ## Edit generation sources
 
-Edit server types and Swagger annotations, then regenerate. Do not edit generated
-output directly. Add metadata to `operations.json` for every new `operationId`,
-including pagination, transport, idempotency, and command naming. `config.json`
-controls generator versions, package names, and the release version.
+Edit `api/openapi.json` and the corresponding server DTOs and handlers together.
+Keep pagination, transport, idempotency, and CLI command metadata in each
+operation's `x-wave-client` extension. Route, schema, and workflow tests check
+that the handwritten contract agrees with the service. `config.json` controls
+generator versions, package names, and the release version. Do not edit generated SDKs.
 
 Generation preserves handwritten code. Check generated files:
 
@@ -39,26 +40,19 @@ Compare with an earlier contract:
 go run ./tools/clients compat BASELINE_SPEC BASELINE_OPERATIONS
 ```
 
-Replace the placeholders with baseline OpenAPI and operation metadata paths.
+Replace the placeholders with baseline OpenAPI and operation metadata paths. For a baseline with `x-wave-client`,
+pass the baseline OpenAPI path twice.
 Run behavior tests as well as compatibility checks.
 
 ## Bilingual documentation
 
-Use `中文 || English` for translatable summaries, descriptions, parameters,
-response headers, and field comments:
+Edit Chinese summaries and descriptions in `api/translations.zh-CN.json`, keyed
+by JSON Pointer into the English contract. Run `make docs` to update
+`api/openapi.zh-CN.json`. Missing or obsolete translations fail generation.
+Only documentation text may differ; identifiers, types, examples, and defaults
+stay identical. Never translate literal example payloads.
 
-```go
-// @Summary 创建任务 || Create a task
-// @Param id path string true "会话 ID || Session ID"
-// @Failure 404 {object} apierr.Envelope "任务不存在 || Task not found"
-```
-
-Shared terms such as `Agent ID` need no pair. Missing required English
-translations fail generation.
-
-`api/openapi.json` is the SDK/CLI generation input; `api/openapi.zh-CN.json` is the
-Chinese version. Only documentation text may differ; identifiers, types, examples,
-and defaults stay identical. User guides use English `NAME.md` and Chinese
+User guides use English `NAME.md` and Chinese
 `NAME.zh-CN.md`, with reciprocal language links and matching examples. Keep skill
 instructions and generated command references in English.
 

@@ -1,7 +1,7 @@
 /*
 Wave AI API
 
-Managed Agents service. All /v1 endpoints require a Bearer Wave API Key; issue it with `wave bootstrap`. Enter the raw Wave API Key in the SDK and Swagger UI bearer configuration. Offset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence. JSON errors return {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses. JSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use nullable; omission is not equivalent to null. Interactive documentation: /swagger/index.html. OpenAPI 3 spec: /swagger/openapi.json; legacy Swagger 2: /swagger/doc.json.  [English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)
+Managed Agents service. All /v1 endpoints require a Bearer Wave API Key; issue it with `wave bootstrap`. Enter the raw Wave API Key in the SDK and Swagger UI bearer configuration. Offset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence. JSON errors return {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses. JSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use nullable; omission is not equivalent to null. Interactive documentation: /swagger/index.html. OpenAPI 3 spec: /swagger/openapi.json.  [English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)
 
 API version: 1.0
 */
@@ -3076,7 +3076,7 @@ ExecutionResolveToolResult Submit tool approval or result
 
 Approval example: `{"approve":true}`; rejection example: `{"approve":false}`.
 Success example: `{"result":"tool response","is_error":false}`; failure example: `{"result":"confirmed failure","is_error":true,"error_code":"remote_failure"}`.
-Choose one example above. Swagger 2.0 cannot express mutually exclusive fields; do not send all fields from its automatically generated example together.
+Choose one example above. do not send all fields from its automatically generated example together.
 Submit exactly one of three forms: approval {"approve": true|false}; confirmed result {"result": "...", "is_error": false}; confirmed failure {"result": "...", "is_error": true, "error_code": "..."}. Do not combine approval and result; error_code requires is_error=true, and an empty string is a valid result. Identical approvals or complete results may be resubmitted, including after task completion; changing an existing decision returns 409. Waiting tasks are requeued.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().

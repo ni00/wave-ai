@@ -13,11 +13,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/moby/moby/client"
-	"gorm.io/gorm"
 )
 
 func TestEngineProbeNeverFallsBack(t *testing.T) {
-	for _, backend := range []string{"gvisor", "podman"} {
+	for _, backend := range []string{"gvisor"} {
 		t.Run(backend, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/v1.40/info" {
@@ -91,48 +90,33 @@ func TestContainerArchiveBoundaries(t *testing.T) {
 	}
 }
 
-func TestRouterPinsBackendAndSharesCapacity(t *testing.T) {
-	db, prefix := capacityDB(t)
-	g, err := NewContainer(ContainerOptions{Backend: "gvisor", Store: db, MaxRunning: 1, MemoryBudgetMiB: 1024})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer g.Close()
-	p, err := NewContainer(ContainerOptions{Backend: "podman", Store: db, MaxRunning: 1, MemoryBudgetMiB: 1024})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer p.Close()
-	r := &Router{Store: db, Default: "gvisor", Backends: map[string]Managed{"gvisor": g, "podman": p}}
-	if err = db.Transaction(func(tx *gorm.DB) error { return r.ReserveSession(tx, prefix+"a", "", "default") }); err != nil {
-		t.Fatal(err)
-	}
-	r.Default = "podman"
-	got, err := r.provider(context.Background(), prefix+"a")
-	if err != nil || got != g {
-		t.Fatalf("retained backend changed: %v", err)
-	}
-	err = db.Transaction(func(tx *gorm.DB) error { return r.ReserveSession(tx, prefix+"b", "podman", "default") })
-	if !errors.Is(err, ErrCapacity) {
-		t.Fatalf("backends overcommitted: %v", err)
-	}
-	if err = g.Stop(context.Background(), prefix+"a"); err != nil {
-		t.Fatal(err)
-	}
-	if err = db.Transaction(func(tx *gorm.DB) error { return r.ReserveSession(tx, prefix+"b", "podman", "default") }); err != nil {
-		t.Fatal(err)
-	}
-	delete(r.Backends, "gvisor")
-	if _, err = r.provider(context.Background(), prefix+"a"); err == nil {
-		t.Fatal("missing backend silently fell back")
-	}
-}
-
 func TestContainerRejectsUnsafeConfiguration(t *testing.T) {
-	for _, o := range []ContainerOptions{{Backend: "runc"}, {Backend: "gvisor", Host: "tcp://127.0.0.1:2375"}, {Backend: "podman", Network: "host"}, {Backend: "gvisor", Network: "container:other"}} {
+	for _, o := range []ContainerOptions{{Backend: "runc"}, {Backend: "gvisor", Host: "tcp://127.0.0.1:2375"}, {Backend: "gvisor", Network: "host"}, {Backend: "gvisor", Network: "container:other"}} {
 		if c, err := NewContainer(o); err == nil {
 			c.Close()
 			t.Fatalf("accepted %+v", o)
 		}
+	}
+}
+
+func TestPublicationStopsAtFirstRejectedFile(t *testing.T) {
+	var archive bytes.Buffer
+	w := tar.NewWriter(&archive)
+	for _, name := range []string{"outputs/a", "outputs/b"} {
+		if err := w.WriteHeader(&tar.Header{Name: name, Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	rejected := errors.New("upload failed")
+	err := walkArchive(&archive, "outputs", 100, func(string, *tar.Header, io.Reader) error {
+		calls++
+		return rejected
+	})
+	if !errors.Is(err, rejected) || calls != 1 {
+		t.Fatal("publication continued after failure", err, calls)
 	}
 }

@@ -22,7 +22,7 @@ func TestHelpWithoutConfiguration(t *testing.T) {
 }
 func TestConfigCheckRedactsSecrets(t *testing.T) {
 	t.Setenv("WAVE_STORAGE_BACKEND", "local")
-	t.Setenv("WAVE_SANDBOX_BACKEND", "sbx")
+	t.Setenv("WAVE_SANDBOX_BACKEND", "gvisor")
 	t.Setenv("WAVE_MODEL_API_KEY", "private-model-key")
 	t.Setenv("WAVE_DATABASE_URL", "postgres://user:private-password@localhost/db")
 	var out, diagnostics bytes.Buffer

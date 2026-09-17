@@ -12,21 +12,6 @@ import (
 	"wave-ai.local/wave/internal/platform/httpx"
 )
 
-// @ID consoleResource
-// @Summary 查看后台资源 || Read a console resource
-// @Tags console
-// @Produce json
-// @Security BearerAuth
-// @Description 技能预览最多 128 KiB；沙箱仅返回已保存的实例状态与配额。 || Skill previews are capped at 128 KiB. Sandboxes expose recorded instance state and allocation only.
-// @Param kind path string true "资源类型 || Resource kind" Enums(skills,deployments,sandboxes)
-// @Param id path string true "资源 ID；沙箱使用会话 ID || Resource ID; session ID for sandboxes"
-// @Success 200 {object} Record
-// @Failure 400 {object} apierr.Envelope "参数无效 || Invalid parameters"
-// @Failure 401 {object} apierr.Envelope "身份验证失败 || Authentication required"
-// @Failure 403 {object} apierr.Envelope "权限不足 || Insufficient scope"
-// @Failure 404 {object} apierr.Envelope "资源不存在 || Resource not found"
-// @Failure 500 {object} apierr.Envelope "内部错误 || Internal error"
-// @Router /v1/console/resources/{kind}/{id} [get]
 func (h handler) resource(c *gin.Context) {
 	ctx, cancel := contextTimeout(c)
 	defer cancel()

@@ -107,7 +107,7 @@ func (t *tool) integration(ctx context.Context) error {
 	env := map[string]string{
 		"WAVE_TEST_DATABASE_URL": "postgres://wave:wave-test@127.0.0.1:" + pgport + "/wave_test?sslmode=disable",
 		"WAVE_DATA_DIR":          filepath.Join(work, "data"), "WAVE_STORAGE_BACKEND": "s3", "WAVE_S3_ENDPOINT": endpoint, "WAVE_S3_REGION": "us-east-1", "WAVE_S3_BUCKET": "wave", "WAVE_S3_PATH_STYLE": "true", "WAVE_S3_ALLOW_HTTP": "true", "WAVE_MASTER_KEY": randomHex(32),
-		"AWS_ACCESS_KEY_ID": "wave-test", "AWS_SECRET_ACCESS_KEY": "wave-test-password", "WAVE_SANDBOX_BACKEND": "local", "WAVE_SANDBOX_ALLOW_LOCAL": "true", "WAVE_SANDBOX_LOCAL_ROOT": filepath.Join(work, "sandboxes"), "WAVE_PROFILE": "",
+		"AWS_ACCESS_KEY_ID": "wave-test", "AWS_SECRET_ACCESS_KEY": "wave-test-password", "WAVE_SANDBOX_BACKEND": "gvisor", "WAVE_PROFILE": "",
 	}
 	binary, cli := filepath.Join(work, "service"), filepath.Join(work, "wavectl")
 	if err = t.run(ctx, t.root, nil, "go", "build", "-o", binary, "./tests/clients/service"); err != nil {

@@ -21,11 +21,11 @@ func ValidateSessionResources(ctx context.Context, db *gorm.DB, p *auth.Principa
 			return apierr.Invalid("environment archived")
 		}
 	}
-	if (len(fileIDs) > 0 || len(memoryIDs) > 0) && envID == "" {
-		return apierr.Invalid("mounted resources require an environment")
+	if len(fileIDs) > 0 && envID == "" {
+		return apierr.Invalid("files require an environment")
 	}
 	if len(fileIDs) > 100 || len(memoryIDs) > 20 || len(vaultIDs) > 20 {
-		return apierr.Invalid("too many mounted resources")
+		return apierr.Invalid("too many session resources")
 	}
 	for _, id := range fileIDs {
 		if _, e := files.Get(ctx, db, p, id); e != nil {

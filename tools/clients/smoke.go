@@ -36,10 +36,10 @@ func (t *tool) smoke(ctx context.Context) error {
 		}
 	}
 	var operations object
-	if err := readJSON(t.path("tools/clients/operations.json"), &operations); err != nil {
+	if err := readJSON(t.path("api/openapi.json"), &operations); err != nil {
 		return err
 	}
-	count := len(operations)
+	count := len(operationSemantics(operations))
 	work, err := os.MkdirTemp("", "wave-install-smoke-*")
 	if err != nil {
 		return err

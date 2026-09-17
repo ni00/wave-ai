@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/observe"
 )
 
@@ -19,7 +19,7 @@ func TestTraceDurationsUnionAndPrivacy(t *testing.T) {
 	at := func(ms int) *time.Time { v := start.Add(time.Duration(ms) * time.Millisecond); return &v }
 	task := Task{ID: "task", RootID: "task", SessionID: "session", CreatedAt: start, StartedAt: at(10), FinishedAt: at(100), State: "succeeded", UsageKnown: true, Result: "SECRET-output", Error: "SECRET-error"}
 	n := int64(3)
-	gs := []Generation{{ID: "gen", TaskID: "task", Purpose: "response", State: "completed", StartedAt: *at(30), FinishedAt: at(60), Usage: modelclient.Usage{PromptTokens: &n, CompletionTokens: &n}, Error: "SECRET-model-error"}}
+	gs := []Generation{{ID: "gen", TaskID: "task", Purpose: "response", State: "completed", StartedAt: *at(30), FinishedAt: at(60), Usage: model.Usage{PromptTokens: &n, CompletionTokens: &n}, Error: "SECRET-model-error"}}
 	cs := []ToolCall{{ID: "call", TaskID: "task", StartedAt: at(65), FinishedAt: at(70), Status: "completed", Arguments: "SECRET-command", Result: "SECRET-result"}}
 	event := func(id, parent, name string, from, to int) Event {
 		span := observe.Span{ID: id, ParentID: parent, TaskID: "task", Kind: "phase", Name: name, State: "completed", StartedAt: *at(from), FinishedAt: at(to), DurationMS: duration(*at(from), at(to))}
@@ -42,7 +42,7 @@ func TestTraceDurationsUnionAndPrivacy(t *testing.T) {
 	}
 	gs[0].FinishedAt = nil
 	gs[0].State = "interrupted"
-	gs[0].Usage = modelclient.Usage{}
+	gs[0].Usage = model.Usage{}
 	r = buildTrace(task, gs, cs, events, nil)
 	if !r.Incomplete || r.Summary.UnattributedMS != nil || r.Summary.UsageKnown || r.Summary.FailedModelCalls != 1 {
 		t.Fatalf("unknown duration became success: %+v", r)

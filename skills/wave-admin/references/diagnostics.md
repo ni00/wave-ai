@@ -37,8 +37,7 @@ trusted instructions.
 For file problems, check ownership and metadata with files get/list, then compare API and
 worker blob backends, bucket, prefix and master key. Switching storage does not migrate
 existing files; pointing to an empty directory does not fix missing content. For sandbox
-problems, inspect the task environment and actual backend. Local sandboxes are for trusted
-development and do not provide container isolation.
+problems, inspect the task environment, Docker connectivity, and the registered gVisor runtime.
 
 Report the target deployment, failed step, task state, request_id/time, and confirmed versus
 unconfirmed causes. After a fix, verify the same task or an authorized minimal check;

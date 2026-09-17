@@ -7,10 +7,10 @@ import (
 
 	"gorm.io/gorm"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
+	"wave-ai.local/wave/internal/platform/model"
 )
 
-func management(t *Task) []modelclient.ToolDef {
+func management(t *Task) []model.ToolDef {
 	if t.ParentID == "" && len(t.Experts) == 0 {
 		return nil
 	}
@@ -30,7 +30,7 @@ func management(t *Task) []modelclient.ToolDef {
 			fields     []string
 		}{"agent_cancel", "Request cancellation of a child", []string{"task_id"}})
 	}
-	out := []modelclient.ToolDef{}
+	out := []model.ToolDef{}
 	for _, spec := range specs {
 		props := map[string]any{}
 		for _, f := range spec.fields {
@@ -44,7 +44,7 @@ func management(t *Task) []modelclient.ToolDef {
 		if spec.name == "agent_spawn" {
 			props["budget"] = map[string]any{"type": "object", "properties": map[string]any{"max_tokens": map[string]any{"type": "integer"}, "max_tool_calls": map[string]any{"type": "integer"}, "max_seconds": map[string]any{"type": "integer"}}}
 		}
-		out = append(out, modelclient.ToolDef{Type: "function", Function: modelclient.FuncSpec{Name: spec.name, Description: spec.desc, Parameters: map[string]any{"type": "object", "properties": props, "required": spec.fields}}})
+		out = append(out, model.ToolDef{Type: "function", Function: model.FuncSpec{Name: spec.name, Description: spec.desc, Parameters: map[string]any{"type": "object", "properties": props, "required": spec.fields}}})
 	}
 	return out
 }

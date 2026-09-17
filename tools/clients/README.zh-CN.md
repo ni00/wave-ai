@@ -2,7 +2,7 @@
 
 [English](README.md) | 简体中文
 
-从服务端类型和注释生成 OpenAPI 契约、Go / Python / TypeScript SDK、CLI 元数据及命令参考。
+从 `api/openapi.json` 原生 OpenAPI 3 契约生成 Go / Python / TypeScript SDK、CLI 元数据及命令参考。
 
 ## 生成与检查
 
@@ -18,7 +18,7 @@ API 或工作流行为变化后，运行 `make clients-integration`，验证任�
 
 ## 修改生成来源
 
-修改服务端类型和 Swagger 注释后重新生成，不直接编辑生成结果。新增 `operationId` 时，须在 `operations.json` 补充分页、传输、幂等性和命令命名等元数据。生成器版本、包名及发布版本由 `config.json` 管理。
+同步修改 `api/openapi.json` 与服务端 DTO、处理器。每个操作的 `x-wave-client` 扩展保存分页、传输、幂等性和 CLI 命令元数据。路由、字段和工作流测试检查手写契约与服务的行为是否一致。生成器版本、包名及发布版本由 `config.json` 管理。不要直接修改生成的 SDK。
 
 生成保留手写代码。检查生成文件：
 
@@ -32,21 +32,13 @@ go run ./tools/clients generate --check
 go run ./tools/clients compat BASELINE_SPEC BASELINE_OPERATIONS
 ```
 
-将占位符替换为基线 OpenAPI 和操作元数据路径。除兼容性检查外，还需运行行为测试。
+将占位符替换为基线 OpenAPI 和操作元数据路径。基线包含 `x-wave-client` 时，两个参数均传入基线 OpenAPI 路径。除兼容性检查外，还需运行行为测试。
 
 ## 双语文档
 
-可翻译的 API 注释使用 `中文 || English`，适用于摘要、描述、参数、响应头和字段说明：
+在 `api/translations.zh-CN.json` 中修改中文摘要和说明，以英文契约中的 JSON Pointer 为键。运行 `make docs` 更新 `api/openapi.zh-CN.json`。缺失或过时的翻译会使生成失败。两版只允许说明文字不同，标识符、类型、示例和默认值保持一致。不要翻译示例中的字面数据。
 
-```go
-// @Summary 创建任务 || Create a task
-// @Param id path string true "会话 ID || Session ID"
-// @Failure 404 {object} apierr.Envelope "任务不存在 || Task not found"
-```
-
-`Agent ID` 等通用文本无需重复；缺少必需的英文翻译会使生成失败。
-
-`api/openapi.json` 是 SDK 和 CLI 的生成输入，`api/openapi.zh-CN.json` 是中文版本。两版只允许说明文字不同，标识符、类型、示例和默认值保持一致。用户指南分别使用英文 `NAME.md` 和中文 `NAME.zh-CN.md`，提供语言切换链接，示例保持对应。技能指令和生成的命令参考保留英文。
+用户指南分别使用英文 `NAME.md` 和中文 `NAME.zh-CN.md`，提供语言切换链接，示例保持对应。技能指令和生成的命令参考保留英文。
 
 ## 构建发布包
 

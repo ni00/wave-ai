@@ -157,26 +157,6 @@ func (c *Container) stage(ctx context.Context, sid, p string, data []byte) error
 	destination := "/" + strings.Split(strings.TrimPrefix(p, "/"), "/")[0]
 	return c.copyFileAt(ctx, r.StagerID, destination, p, data, 0444)
 }
-func (c *Container) StageMemory(ctx context.Context, sid, mount, rel string, data []byte, writable bool) error {
-	if err := absolutePath(mount); err != nil {
-		return err
-	}
-	if !strings.HasPrefix(mount, "/mnt/memory/") {
-		return errors.New("invalid memory mount")
-	}
-	if err := relativePath(rel); err != nil {
-		return err
-	}
-	// Current memory projections are writable. Mode bits cannot enforce RO for
-	// a root agent; reject that request instead of pretending it is isolated.
-	if !writable {
-		return errors.New("read-only memory projections require a dedicated volume")
-	}
-	return c.WriteFile(ctx, sid, mount+"/"+rel, data)
-}
-
-// Archives are streamed and never extracted on the host. Reject traversal and
-// links; bound total bytes, metadata, depth and per-file memory independently.
 func walkArchive(reader io.Reader, root string, maxFileBytes int64, visit func(string, *tar.Header, io.Reader) error) error {
 	limited := &io.LimitedReader{R: reader, N: (128 << 20) + (16 << 20)}
 	tr := tar.NewReader(limited)

@@ -10,8 +10,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
@@ -147,7 +147,7 @@ func TestModelRetryAndCancellation(t *testing.T) {
 	if e = db.Model(&Task{}).Where(eq("id", x.ID)).Update("attempts", 10).Error; e != nil {
 		t.Fatal(e)
 	}
-	w := Worker{DB: db, Model: modelFunc(func(context.Context, modelclient.Request, func(modelclient.Delta)) (*modelclient.Final, error) {
+	w := Worker{DB: db, Model: modelFunc(func(context.Context, model.Request, func(model.Delta)) (*model.Final, error) {
 		return nil, errors.New("temporary outage")
 	})}
 	if e = w.step(ctx, claim); e != nil {
@@ -188,9 +188,9 @@ func TestModelRetryAndCancellation(t *testing.T) {
 	}
 }
 
-type modelFunc func(context.Context, modelclient.Request, func(modelclient.Delta)) (*modelclient.Final, error)
+type modelFunc func(context.Context, model.Request, func(model.Delta)) (*model.Final, error)
 
-func (f modelFunc) Stream(c context.Context, r modelclient.Request, d func(modelclient.Delta)) (*modelclient.Final, error) {
+func (f modelFunc) Stream(c context.Context, r model.Request, d func(model.Delta)) (*model.Final, error) {
 	return f(c, r, d)
 }
 
@@ -236,7 +236,7 @@ func TestResultCommitFailureStopsProgress(t *testing.T) {
 }
 
 func TestCompleteHistory(t *testing.T) {
-	m := []modelclient.Message{{Role: "assistant", ToolCalls: []modelclient.ToolCall{{ID: "a"}, {ID: "b"}}}, {Role: "tool", ToolCallID: "a", Content: "known"}, {Role: "user", Content: "continue"}}
+	m := []model.Message{{Role: "assistant", ToolCalls: []model.ToolCall{{ID: "a"}, {ID: "b"}}}, {Role: "tool", ToolCallID: "a", Content: "known"}, {Role: "user", Content: "continue"}}
 	got := completeHistory(m)
 	if len(got) != 4 || got[2].ToolCallID != "b" || got[3].Role != "user" {
 		t.Fatal(got)
@@ -255,7 +255,7 @@ func TestSteeringWaitsForToolBoundary(t *testing.T) {
 	if e := db.Model(&Input{}).Where(eq("task_id", x.ID)).Update("consumed", true).Error; e != nil {
 		t.Fatal(e)
 	}
-	msgs := []modelclient.Message{{Role: "system", Content: "test"}, {Role: "assistant", ToolCalls: []modelclient.ToolCall{{ID: "call"}}}}
+	msgs := []model.Message{{Role: "system", Content: "test"}, {Role: "assistant", ToolCalls: []model.ToolCall{{ID: "call"}}}}
 	if e = db.Model(&Task{}).Where(eq("id", x.ID)).Updates(&Task{Messages: msgs, ContextReady: true}).Error; e != nil {
 		t.Fatal(e)
 	}
@@ -294,7 +294,7 @@ func TestModelDrivenDelegation(t *testing.T) {
 		t.Fatal(e)
 	}
 	root := task(t, db, p, s, a)
-	model := modelFunc(func(ctx context.Context, r modelclient.Request, d func(modelclient.Delta)) (*modelclient.Final, error) {
+	model := modelFunc(func(ctx context.Context, r model.Request, d func(model.Delta)) (*model.Final, error) {
 		instruction, _ := r.Messages[0].Content.(string)
 		if !strings.HasPrefix(instruction, "coordinator") {
 			return fakeModel{}.Stream(ctx, r, d)
@@ -312,7 +312,7 @@ func TestModelDrivenDelegation(t *testing.T) {
 		if calls >= 2 {
 			return fakeModel{}.Stream(ctx, r, d)
 		}
-		return &modelclient.Final{ToolCalls: []modelclient.ToolCall{{ID: name, Type: "function", Function: modelclient.FuncCallSpec{Name: name, Arguments: args}}}, StopReason: "tool_calls"}, nil
+		return &model.Final{ToolCalls: []model.ToolCall{{ID: name, Type: "function", Function: model.FuncCallSpec{Name: name, Arguments: args}}}, StopReason: "tool_calls"}, nil
 	})
 	var wg sync.WaitGroup
 	for range 3 {
@@ -334,7 +334,7 @@ func TestCancelActiveModel(t *testing.T) {
 	a := agent(t, db, p, "block", nil)
 	root := task(t, db, p, s, a)
 	started := make(chan struct{}, 1)
-	model := modelFunc(func(ctx context.Context, r modelclient.Request, d func(modelclient.Delta)) (*modelclient.Final, error) {
+	model := modelFunc(func(ctx context.Context, r model.Request, d func(model.Delta)) (*model.Final, error) {
 		select {
 		case started <- struct{}{}:
 		default:
@@ -362,7 +362,7 @@ func TestCompactedHistorySurvivesNextRoot(t *testing.T) {
 	a := agent(t, db, p, "current instructions", nil)
 	previous := task(t, db, p, s, a)
 	finished := time.Now()
-	messages := []modelclient.Message{{Role: "system", Content: "previous instructions"}, {Role: "user", Content: "Conversation summary: retained fact"}, {Role: "assistant", Content: "recent answer"}}
+	messages := []model.Message{{Role: "system", Content: "previous instructions"}, {Role: "user", Content: "Conversation summary: retained fact"}, {Role: "assistant", Content: "recent answer"}}
 	if e := db.Model(&Task{}).Where(eq("id", previous.ID)).Updates(&Task{Messages: messages, State: "succeeded", FinishedAt: &finished}).Error; e != nil {
 		t.Fatal(e)
 	}

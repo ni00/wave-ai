@@ -14,60 +14,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"wave-ai.local/wave/internal/platform/model"
 )
-
-// ToolDef is an OpenAI-style function tool definition.
-type ToolDef struct {
-	Type     string   `json:"type"` // "function"
-	Function FuncSpec `json:"function"`
-}
-
-type FuncSpec struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Parameters  map[string]any `json:"parameters"`
-}
-
-// Message is one model conversation message.
-type Message struct {
-	Role       string     `json:"role"`
-	Content    any        `json:"content"` // string or []block
-	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string     `json:"tool_call_id,omitempty"`
-	Name       string     `json:"name,omitempty"`
-}
-
-// ToolCall mirrors the OpenAI assistant tool_calls entry.
-type ToolCall struct {
-	ID       string       `json:"id" validate:"required"`
-	Type     string       `json:"type" validate:"required"` // function
-	Function FuncCallSpec `json:"function" validate:"required"`
-}
-
-type FuncCallSpec struct {
-	Name      string `json:"name" validate:"required"`
-	Arguments string `json:"arguments" validate:"required"` // JSON string
-}
-
-// Usage carries real provider numbers; pointers stay nil when unknown.
-type Usage struct {
-	PromptTokens     *int64 `json:"prompt_tokens" validate:"required" format:"int64" extensions:"x-nullable"`           // 供应商报告的输入 token 数；未知时为 null，不能按 0 计费。 || Provider-reported input token count; null when unknown and must not be billed as zero.
-	CompletionTokens *int64 `json:"completion_tokens" validate:"required" format:"int64" extensions:"x-nullable"`       // 供应商报告的输出 token 数；未知时为 null。 || Provider-reported output token count; null when unknown.
-	CacheReadTokens  *int64 `json:"cache_read_input_tokens" validate:"required" format:"int64" extensions:"x-nullable"` // 供应商报告的缓存读取 token 数；未知时为 null。 || Provider-reported cache-read token count; null when unknown.
-}
-
-// Final is the authoritative response of one model request.
-type Final struct {
-	Content    []ContentBlock
-	ToolCalls  []ToolCall
-	Usage      Usage
-	StopReason string // stop | tool_calls | length | error
-}
-
-type ContentBlock struct {
-	Type string `json:"type"` // text | thinking
-	Text string `json:"text,omitempty"`
-}
 
 // Client talks to an OpenAI-compatible endpoint.
 type Client struct {
@@ -81,26 +30,10 @@ func New(baseURL, apiKey string, timeout time.Duration) *Client {
 		HTTP: &http.Client{Timeout: timeout}}
 }
 
-// Request is one chat completion call.
-type Request struct {
-	MaxOutputTokens int
-	Model           string
-	Effort          string
-	Messages        []Message
-	Tools           []ToolDef
-	Stream          bool
-}
-
-// Delta is an incremental preview frame.
-type Delta struct {
-	Text     string // visible content delta
-	Thinking string // thinking delta
-}
-
 // Stream invokes chat/completions with stream=true. It invokes onDelta for
 // preview increments and returns the authoritative final response. The
 // caller-supplied ctx cancels the HTTP request only.
-func (c *Client) Stream(ctx context.Context, req Request, onDelta func(Delta)) (*Final, error) {
+func (c *Client) Stream(ctx context.Context, req model.Request, onDelta func(model.Delta)) (*model.Final, error) {
 	body := map[string]any{
 		"model":          req.Model,
 		"messages":       req.Messages,
@@ -140,7 +73,7 @@ func (c *Client) Stream(ctx context.Context, req Request, onDelta func(Delta)) (
 		return nil, fmt.Errorf("model api %d: %s", resp.StatusCode, string(b))
 	}
 
-	final := &Final{}
+	final := &model.Final{}
 	done := false
 	received := 0
 	var contentBuf strings.Builder
@@ -213,13 +146,13 @@ func (c *Client) Stream(ctx context.Context, req Request, onDelta func(Delta)) (
 			if d.Content != "" {
 				contentBuf.WriteString(d.Content)
 				if onDelta != nil {
-					onDelta(Delta{Text: d.Content})
+					onDelta(model.Delta{Text: d.Content})
 				}
 			}
 			if d.Reasoning != "" {
 				thinkingBuf.WriteString(d.Reasoning)
 				if onDelta != nil {
-					onDelta(Delta{Thinking: d.Reasoning})
+					onDelta(model.Delta{Thinking: d.Reasoning})
 				}
 			}
 			for _, tc := range d.ToolCalls {
@@ -231,10 +164,10 @@ func (c *Client) Stream(ctx context.Context, req Request, onDelta func(Delta)) (
 				if sc == nil {
 					sc = &streamCall{pos: len(final.ToolCalls)}
 					streamArgs[idx] = sc
-					final.ToolCalls = append(final.ToolCalls, ToolCall{
+					final.ToolCalls = append(final.ToolCalls, model.ToolCall{
 						ID:       tc.ID,
 						Type:     "function",
-						Function: FuncCallSpec{Name: tc.Function.Name},
+						Function: model.FuncCallSpec{Name: tc.Function.Name},
 					})
 				}
 				if final.ToolCalls[sc.pos].ID == "" {
@@ -284,10 +217,10 @@ func (c *Client) Stream(ctx context.Context, req Request, onDelta func(Delta)) (
 		return nil, fmt.Errorf("model returned no output")
 	}
 	if contentBuf.Len() > 0 {
-		final.Content = append(final.Content, ContentBlock{Type: "text", Text: contentBuf.String()})
+		final.Content = append(final.Content, model.ContentBlock{Type: "text", Text: contentBuf.String()})
 	}
 	if thinkingBuf.Len() > 0 {
-		final.Content = append([]ContentBlock{{Type: "thinking", Text: thinkingBuf.String()}}, final.Content...)
+		final.Content = append([]model.ContentBlock{{Type: "thinking", Text: thinkingBuf.String()}}, final.Content...)
 	}
 	if final.StopReason == "" {
 		final.StopReason = "stop"

@@ -4,30 +4,20 @@ const {localize} = require('./localize.cjs');
 const {readFileSync} = require('node:fs');
 const vm = require('node:vm');
 
-test('translate documentation while preserving examples and contract values', () => {
-  const source = {
-    summary: '创建任务 || Create a task',
-    description: '第一行 || First line\n\n```json\n{"id":"task_1"}\n```',
-    properties: {description: {type: 'string', description: '输入 || Input'}},
-    required: ['description'],
-    example: {description: '示例原文 || Literal example'},
-    enum: ['中文枚举'],
-  };
-  const en = localize(source, 'en');
-  assert.equal(en.summary, 'Create a task');
-  assert.equal(en.properties.description.description, 'Input');
-  assert.equal(en.description, 'First line\n\n```json\n{"id":"task_1"}\n```');
-  assert.deepEqual(en.example, source.example);
-  assert.deepEqual(en.enum, source.enum);
-  assert.equal(localize(source, 'zh-CN').summary, '创建任务');
-  assert.equal(source.summary, '创建任务 || Create a task');
+test('translate documentation while preserving literals and escaped paths', () => {
+ const source={summary:'Create',paths:{'/v1/test':{description:'Test'}},example:{description:'literal'},enum:['literal']};
+ const zh=localize(source,{'/summary':'创建','/paths/~1v1~1test/description':'测试'});
+ assert.equal(zh.summary,'创建');
+ assert.equal(zh.paths['/v1/test'].description,'测试');
+ assert.deepEqual(zh.example,source.example);
+ assert.deepEqual(zh.enum,source.enum);
+ assert.equal(source.summary,'Create');
 });
-
-test('reject missing or malformed translations instead of silently falling back', () => {
-  for (const description of ['仅中文', '中文 || ', '中文 || English || Extra', '中文 || 仍是中文']) {
-    assert.throws(() => localize({description}, 'en'));
-  }
-  assert.throws(() => localize({}, 'fr'));
+test('reject missing and stale translations, including literal modifications', () => {
+ assert.throws(()=>localize({summary:'Create'},{}));
+ assert.throws(()=>localize({summary:'Create'},{'/summary':''}));
+ assert.throws(()=>localize({example:{description:'literal'}},{'/example/description':'changed'}));
+ assert.throws(()=>localize({}, {'/removed':'stale'}));
 });
 
 test('Swagger initializer selects the page language and exposes both contracts', () => {

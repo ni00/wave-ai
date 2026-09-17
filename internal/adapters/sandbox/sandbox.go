@@ -1,16 +1,16 @@
 // Package sandbox defines the Provider abstraction for session workspaces
-// and process/file operations, plus the local development backend.
+// and process/file operations.
 //
 // Backends must map the contract paths:
 //
 //	/workspace              agent's writable working directory
 //	/mnt/session/uploads    read-only input mounts
 //	/mnt/session/outputs    writable, cataloged artifacts
-//	/mnt/memory/*           memory store projections
 //	/mnt/skills/*           skill package projections
 package sandbox
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 )
@@ -21,7 +21,7 @@ type ExecRequest struct {
 	Cwd        string // sandbox-absolute; default /workspace
 	TimeoutSec int
 	// RequestID is a stable caller-assigned identity used by backends that
-	// deduplicate create retries (sbx CreateProcess.request_id).
+	// deduplicate execution retries.
 	RequestID string
 }
 
@@ -51,8 +51,6 @@ type Provider interface {
 	StageInput(ctx context.Context, sessionID, relPath string, content []byte) error
 	// StageSkill places a skill package directory under /mnt/skills/<name>.
 	StageSkill(ctx context.Context, sessionID, name string, files map[string][]byte) error
-	// StageMemory places memory files under a memory mount path.
-	StageMemory(ctx context.Context, sessionID, mountPath, relPath string, content []byte, writable bool) error
 	// VisitOutputs publishes one bounded file at a time. Returning an error from
 	// visit stops publication immediately; already published artifacts stay valid.
 	VisitOutputs(ctx context.Context, sessionID string, maxFileBytes int64, visit func(string, []byte) error) error
@@ -61,74 +59,26 @@ type Provider interface {
 	fmt.Stringer
 }
 
-// ---------------------------------------------------------------- local
+// maxCaptureBytes bounds captured command output.
+const maxCaptureBytes = 256 * 1024
 
-// Local runs session workspaces as directories on the host with commands
-// executed by the host shell in the workspace cwd. It is a DEVELOPMENT
-// backend: isolation is only per-directory; never expose it to untrusted
-// agent configurations in production.
-type Local struct {
-	Root string // parent dir holding one subdir per session
+// limitedBuffer caps in-memory command output; further bytes are discarded.
+type limitedBuffer struct {
+	buf bytes.Buffer
+	max int
 }
 
-func NewLocal(root string) (*Local, error) {
-	l := &Local{Root: root}
-	return l, nil
-}
-
-func (l *Local) String() string { return "local" }
-
-func (l *Local) sessionRoot(sessionID string) string {
-	return l.Root + "/" + sessionID
-}
-
-// mapPath translates a contract path into a host path under the session root.
-func (l *Local) mapPath(sessionID, p string) (string, error) {
-	if len(p) == 0 || p[0] != '/' {
-		return "", fmt.Errorf("path must be absolute: %s", p)
+func (b *limitedBuffer) Write(p []byte) (int, error) {
+	if b.buf.Len() >= b.max {
+		return len(p), nil
 	}
-	clean := p
-	// collapse .. and .
-	parts := splitPath(clean)
-	var out []string
-	for _, seg := range parts {
-		switch seg {
-		case ".":
-		case "..":
-			if len(out) == 0 {
-				return "", fmt.Errorf("path escapes workspace: %s", p)
-			}
-			out = out[:len(out)-1]
-		default:
-			out = append(out, seg)
-		}
+	if b.buf.Len()+len(p) >= b.max {
+		// fill to the cap and mark the truncation; later writes are dropped
+		b.buf.Write(p[:b.max-b.buf.Len()])
+		b.buf.WriteString("\n…[output truncated]")
+		return len(p), nil
 	}
-	return l.sessionRoot(sessionID) + "/" + joinPath(out), nil
+	return b.buf.Write(p)
 }
 
-func splitPath(p string) []string {
-	var out []string
-	cur := ""
-	for _, r := range p {
-		if r == '/' {
-			if cur != "" {
-				out = append(out, cur)
-				cur = ""
-			}
-		} else {
-			cur += string(r)
-		}
-	}
-	if cur != "" {
-		out = append(out, cur)
-	}
-	return out
-}
-
-func joinPath(parts []string) string {
-	res := ""
-	for _, p := range parts {
-		res += "/" + p
-	}
-	return res
-}
+func (b *limitedBuffer) String() string { return b.buf.String() }

@@ -16,6 +16,7 @@ import (
 
 	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/execution"
+	"wave-ai.local/wave/internal/platform/model"
 )
 
 func TestValidationBeforeDocker(t *testing.T) {
@@ -65,7 +66,7 @@ func TestSyntheticModelUsesRealStreamClient(t *testing.T) {
 	s := httptest.NewServer(modelHandler(o))
 	defer s.Close()
 	var streamed strings.Builder
-	final, err := modelclient.New(s.URL, "", 5*time.Second).Stream(context.Background(), modelclient.Request{Model: "synthetic"}, func(d modelclient.Delta) { streamed.WriteString(d.Text) })
+	final, err := modelclient.New(s.URL, "", 5*time.Second).Stream(context.Background(), model.Request{Model: "synthetic"}, func(d model.Delta) { streamed.WriteString(d.Text) })
 	if err != nil {
 		t.Fatal(err)
 	}

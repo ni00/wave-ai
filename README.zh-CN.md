@@ -74,6 +74,10 @@ curl -fsS "$BASE/v1/tasks/$task" "${auth[@]}" | jq '{id,state,result}'
 
 任务进入 `waiting` 时可能需要审批或工具结果；进入 `unknown` 时需核实执行情况。通过 CLI 或 SDK 查询待处理动作，按[工具处理](skills/wave-client/references/tools.md)与[恢复流程](skills/wave-client/references/recovery.md)继续。
 
+## Agent 记忆
+
+Agent 可以保存偏好、项目约定等信息，在不同任务和会话中继续使用。为会话绑定记忆库，并启用 Agent 的记忆工具即可。具体操作见[配置 Agent 记忆](deploy/agent-memory.zh-CN.md)。
+
 ## 部署
 
 ### 模型与并发配置
@@ -90,7 +94,7 @@ Compose 读取 `deploy/.env`，直接启动的进程读取环境变量。常用�
 
 ### 沙箱与备份
 
-默认使用 Docker + gVisor，也支持 rootless Podman 和 sbx。运行沙箱任务前，按[沙箱部署指南](deploy/sandbox-resources.zh-CN.md)准备宿主机。`local` 后端以服务用户的宿主机权限执行命令，仅适用于可信开发环境。
+生产沙箱使用 Docker + gVisor。运行沙箱任务前，按[沙箱部署指南](deploy/sandbox-resources.zh-CN.md)准备宿主机。
 
 每个沙箱默认分配 1 vCPU、1 GiB 内存；所有副本共享 2 个活动或预留沙箱、合计 4 GiB 客体内存的默认上限。沙箱配额与任务并发分别配置。
 

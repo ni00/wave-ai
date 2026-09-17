@@ -9,22 +9,7 @@ import (
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
-// createVault godoc
-// @ID vaultsCreate
-// @Summary 创建凭据库 || Create a vault
-// @Tags vaults
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param body body VaultRequest true "请求 || Request"
-// @Success 200 {object} Vault
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/vaults [post]
+// createVault handles the documented HTTP operation.
 func (h handler) createVault(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	var in VaultRequest
@@ -40,23 +25,7 @@ func (h handler) createVault(c *gin.Context) {
 	c.JSON(200, v)
 }
 
-// listVaults godoc
-// @ID vaultsList
-// @Summary 列出凭据库 || List vaults
-// @Tags vaults
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param limit query int false "每页条数 || Items per page" minimum(1) maximum(200) default(100)
-// @Param offset query int false "偏移量 || Offset" minimum(0) default(0)
-// @Success 200 {object} VaultsResponse
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/vaults [get]
+// listVaults handles the documented HTTP operation.
 func (h handler) listVaults(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	rows := []Vault{}
@@ -67,22 +36,7 @@ func (h handler) listVaults(c *gin.Context) {
 	httpx.List(c, rows)
 }
 
-// getVault godoc
-// @ID vaultsGet
-// @Summary 查看凭据库 || Get a vault
-// @Tags vaults
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Success 200 {object} Vault
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/vaults/{id} [get]
+// getVault handles the documented HTTP operation.
 func (h handler) getVault(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	v, e := Get(c.Request.Context(), h.db, p, c.Param("id"))
@@ -93,22 +47,7 @@ func (h handler) getVault(c *gin.Context) {
 	c.JSON(200, v)
 }
 
-// archiveVault godoc
-// @ID vaultsArchive
-// @Summary 归档凭据库 || Archive a vault
-// @Tags vaults
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Success 200 {object} Vault
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/vaults/{id} [delete]
+// archiveVault handles the documented HTTP operation.
 func (h handler) archiveVault(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	v, e := Get(c.Request.Context(), h.db, p, c.Param("id"))
@@ -124,23 +63,7 @@ func (h handler) archiveVault(c *gin.Context) {
 	c.JSON(200, v)
 }
 
-// rotate godoc
-// @ID vaultRotate
-// @Summary 轮换凭据 || Rotate a credential
-// @Tags credentials
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Param body body RotateRequest true "请求 || Request"
-// @Success 200 {object} Credential
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/credentials/{id} [put]
+// rotate handles the documented HTTP operation.
 func (h handler) rotate(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	var in RotateRequest
@@ -156,23 +79,7 @@ func (h handler) rotate(c *gin.Context) {
 	c.JSON(200, v)
 }
 
-// validate godoc
-// @ID vaultValidate
-// @Summary 校验凭据绑定与加密数据 || Validate credential binding and encryption
-// @Tags credentials
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "资源 ID || Resource ID"
-// @Param body body ValidateRequest true "请求 || Request"
-// @Success 200 {object} Validation
-// @Failure 400 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 401 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 403 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 404 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 409 {object} apierr.Envelope "请求失败 || Request failed"
-// @Failure 500 {object} apierr.Envelope "请求失败 || Request failed"
-// @Router /v1/credentials/{id}/validate [post]
+// validate handles the documented HTTP operation.
 func (h handler) validate(c *gin.Context) {
 	p := c.MustGet("principal").(*auth.Principal)
 	var in ValidateRequest

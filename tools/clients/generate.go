@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var generatedPaths = []string{"api/openapi.json", "api/openapi.zh-CN.json", "sdks/go/generated", "sdks/go/operations.json", "sdks/go/openapi.json", "sdks/python/wave_ai_generated", "sdks/python/wave_ai/operations.json", "sdks/typescript/src/generated", "sdks/typescript/src/operations.ts", "skills/wave-client/references/commands.md", "tools/clients/manifest.json"}
+var generatedPaths = []string{"api/openapi.zh-CN.json", "sdks/go/generated", "sdks/go/operations.json", "sdks/go/openapi.json", "sdks/python/wave_ai_generated", "sdks/python/wave_ai/operations.json", "sdks/typescript/src/generated", "sdks/typescript/src/operations.ts", "skills/wave-client/references/commands.md", "tools/clients/manifest.json"}
 
 func operationMap(spec, semantics object) (object, []string, error) {
 	operations := object{}
@@ -125,18 +125,17 @@ func (t *tool) generate(ctx context.Context, checkOnly bool) error {
 	if err = os.MkdirAll(filepath.Join(stage, "api"), 0755); err != nil {
 		return err
 	}
-	for _, locale := range []struct{ file, language string }{{"openapi.json", "en"}, {"openapi.zh-CN.json", "zh-CN"}} {
-		if err = t.run(ctx, t.root, nil, "node", "tools/clients/convert.cjs", "internal/platform/apidocs/swagger.json", filepath.Join(stage, "api", locale.file), locale.language); err != nil {
-			return err
-		}
+	if err = copyFile(t.path("api/openapi.json"), filepath.Join(stage, "api/openapi.json")); err != nil {
+		return err
 	}
-	var spec, semantics object
+	if err = t.run(ctx, t.root, nil, "node", "tools/clients/localize.cjs", t.path("api/openapi.json"), t.path("api/translations.zh-CN.json"), filepath.Join(stage, "api/openapi.zh-CN.json")); err != nil {
+		return err
+	}
+	var spec object
 	if err = readJSON(filepath.Join(stage, "api/openapi.json"), &spec); err != nil {
 		return err
 	}
-	if err = readJSON(t.path("tools/clients/operations.json"), &semantics); err != nil {
-		return err
-	}
+	semantics := operationSemantics(spec)
 	operations, order, err := operationMap(spec, semantics)
 	if err != nil {
 		return err
@@ -164,7 +163,7 @@ func (t *tool) generate(ctx context.Context, checkOnly bool) error {
 		return err
 	}
 	manifest := object{"version": t.config.Version, "defaultLanguage": "en", "generatorImage": t.config.GeneratorImage, "operations": len(operations)}
-	for key, path := range map[string]string{"sourceSHA256": t.path("internal/platform/apidocs/swagger.json"), "openapiSHA256": filepath.Join(stage, "api/openapi.json"), "openapiChineseSHA256": filepath.Join(stage, "api/openapi.zh-CN.json")} {
+	for key, path := range map[string]string{"sourceSHA256": t.path("api/openapi.json"), "openapiSHA256": filepath.Join(stage, "api/openapi.json"), "openapiChineseSHA256": filepath.Join(stage, "api/openapi.zh-CN.json")} {
 		sum, err := hashFile(path)
 		if err != nil {
 			return err
@@ -280,4 +279,20 @@ func (t *tool) publishGenerated(stage string, checkOnly bool) error {
 		}
 	}
 	return nil
+}
+
+// Client-specific behavior lives beside each HTTP operation in the contract.
+func operationSemantics(spec object) object {
+	result := object{}
+	for _, methods := range obj(spec["paths"]) {
+		for _, raw := range obj(methods) {
+			op := obj(raw)
+			if id := str(op["operationId"]); id != "" {
+				if metadata, ok := op["x-wave-client"]; ok {
+					result[id] = metadata
+				}
+			}
+		}
+	}
+	return result
 }

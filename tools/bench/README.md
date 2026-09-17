@@ -97,13 +97,13 @@ make bench-sandbox
 make bench-sandbox BENCH_ARGS='-backend gvisor -verify -concurrency 1,2'
 ```
 
-Supports gVisor (default), Podman, and sbx, using the selected backend's settings.
+Tests gVisor using the configured Docker runtime.
 Capacity is independent of deployment limits, so use a dedicated test host.
 This mode does not measure host RSS or peak guest memory.
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `-backend` | `gvisor` | Sandbox backend under test: `gvisor`, `podman` or `sbx` |
+| `-backend` | `gvisor` | Sandbox backend under test: `gvisor` |
 | `-verify` | `false` | Verify results instead of only timing the run |
 | `-concurrency` | `1,2` | Concurrency levels tested in sequence |
 | `-memory-mib` | `512,1024,2048` | Guest memory sizes tested in sequence |

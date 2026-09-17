@@ -120,7 +120,7 @@ func TestConsoleOwnershipPaginationAndImports(t *testing.T) {
 	if err = a.DB.Create(&deployment).Error; err != nil {
 		t.Fatal(err)
 	}
-	box := sandbox.Record{SessionID: s.ID, Backend: "gvisor", EngineHost: "private-engine", Endpoint: "private-endpoint", StagerID: "private-stager", BackendID: "instance-test", Name: "test sandbox", State: "stopped", CPUs: 1, MemoryMiB: 512, Image: "test-image"}
+	box := sandbox.Record{SessionID: s.ID, Backend: "gvisor", EngineHost: "private-engine", StagerID: "private-stager", BackendID: "instance-test", Name: "test sandbox", State: "stopped", CPUs: 1, MemoryMiB: 512, Image: "test-image"}
 	if err = a.DB.Create(&box).Error; err != nil {
 		t.Fatal(err)
 	}

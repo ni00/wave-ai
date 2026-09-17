@@ -10,15 +10,15 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/guardrails"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/observe"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
 type Model interface {
-	Stream(context.Context, modelclient.Request, func(modelclient.Delta)) (*modelclient.Final, error)
+	Stream(context.Context, model.Request, func(model.Delta)) (*model.Final, error)
 }
 type Worker struct {
 	WriteLog      func(observe.Log)

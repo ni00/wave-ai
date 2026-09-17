@@ -43,13 +43,6 @@ type Conflict struct {
 	Content   string    `json:"content" validate:"required"`
 	CreatedAt time.Time `json:"created_at" validate:"required" format:"date-time"`
 }
-type Baseline struct {
-	SessionID string `gorm:"primaryKey"`
-	StoreID   string `gorm:"primaryKey"`
-	Path      string `gorm:"primaryKey"`
-	Version   int
-	SHA       string
-}
 
 // CreateStoreRequest is the POST /v1/memory-stores request body.
 type CreateStoreRequest struct {
@@ -93,7 +86,7 @@ type ConflictsResponse struct {
 	NextOffset int        `json:"next_offset,omitempty"` // 仅有下一页时返回；省略表示末页。 || Returned only when another page exists; omitted on the last page.
 }
 
-func Models() []any { return []any{&Store{}, &Entry{}, &Revision{}, &Conflict{}, &Baseline{}} }
+func Models() []any { return []any{&Store{}, &Entry{}, &Revision{}, &Conflict{}} }
 
 func (Store) TableName() string { return "memory_stores" }
 
@@ -102,5 +95,3 @@ func (Entry) TableName() string { return "memory_entries" }
 func (Revision) TableName() string { return "memory_revisions" }
 
 func (Conflict) TableName() string { return "memory_conflicts" }
-
-func (Baseline) TableName() string { return "memory_baselines" }

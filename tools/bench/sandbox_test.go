@@ -12,7 +12,7 @@ import (
 func TestSandboxBenchmarkValidation(t *testing.T) {
 	for _, args := range [][]string{{"-concurrency", "0"}, {"-concurrency", "2,2"}, {"-memory-mib", "128"}, {"-memory-mib", "1024,1024"}, {"-cpus", "0"}, {"-iterations", "0"}, {"-timeout", "0s"}, {"-format", "csv"}, {"-command", " "}, {"unexpected"}} {
 		err := runSandbox(context.Background(), args, io.Discard, io.Discard)
-		if err == nil || strings.Contains(err.Error(), "sbx API unavailable") {
+		if err == nil || strings.Contains(err.Error(), "Docker") {
 			t.Fatalf("flags were not rejected before network access: %v: %v", args, err)
 		}
 	}

@@ -1,9 +1,7 @@
-// Package mcpclient implements bounded, reusable MCP Streamable HTTP sessions.
+// Package mcpclient applies Wave authorization, bounds, and replay policy to the official MCP SDK.
 package mcpclient
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,20 +9,16 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"wave-ai.local/wave/internal/platform/egress"
 )
 
 const protocolVersion = "2025-11-25"
 const responseLimit = 4 << 20
-
-var requestSequence atomic.Uint64
-var errSessionExpired = errors.New("MCP session expired")
 
 // RejectedError is a definite rejection before a tool was invoked. Other
 // errors may follow external side effects and must not be replayed.
@@ -38,183 +32,106 @@ type Result struct {
 	IsError           bool            `json:"isError"`
 }
 
-// A connection serializes its handshake and calls; separate user sessions never
-// share an MCP protocol session, even when their URLs and credentials match.
+// Client serializes calls; different Wave sessions never share MCP sessions.
 type Client struct {
-	URL        string
-	Server     string
-	HTTP       *http.Client
-	AuthHeader string
-	mu         sync.Mutex
-	sessionID  string
-	ready      bool
+	URL, Server, AuthHeader string
+	HTTP                    *http.Client
+	mu                      sync.Mutex
+	session                 *mcp.ClientSession
 }
 
 func New(server, url, authHeader string) *Client {
-	httpClient := egress.GuardedClient(120*time.Second, false)
-	// Protocol session and authorization headers belong to this exact endpoint.
-	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	return &Client{URL: url, Server: server, AuthHeader: authHeader, HTTP: httpClient}
+	return &Client{URL: url, Server: server, AuthHeader: authHeader, HTTP: egress.GuardedClient(120*time.Second, false)}
 }
 
-func (c *Client) post(ctx context.Context, method string, params, result any) error {
-	id := strconv.FormatUint(requestSequence.Add(1), 10)
-	notification := strings.HasPrefix(method, "notifications/")
-	payload := map[string]any{"jsonrpc": "2.0", "method": method}
-	if !notification {
-		payload["id"] = id
-	}
-	if params != nil {
-		payload["params"] = params
-	}
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		return &RejectedError{Message: "invalid MCP request"}
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.URL, bytes.NewReader(raw))
-	if err != nil {
-		return &RejectedError{Message: "invalid MCP endpoint"}
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/event-stream")
-	if c.AuthHeader != "" {
-		req.Header.Set("Authorization", c.AuthHeader)
-	}
-	if c.sessionID != "" {
-		req.Header.Set("Mcp-Session-Id", c.sessionID)
-	}
-	if method != "initialize" {
-		req.Header.Set("MCP-Protocol-Version", protocolVersion)
-	}
-	if err := ctx.Err(); err != nil {
-		return &RejectedError{Message: "MCP request canceled before dispatch"}
-	}
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		var dial *net.OpError
-		var dns *net.DNSError
-		if (errors.As(err, &dial) && dial.Op == "dial") || errors.As(err, &dns) {
-			return &RejectedError{Message: "MCP connection failed before dispatch"}
-		}
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound && c.sessionID != "" {
-		return errSessionExpired
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Do not reflect server response bodies, which can contain bearer credentials.
-		message := fmt.Sprintf("MCP HTTP %d", resp.StatusCode)
-		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			return &RejectedError{Message: message}
-		}
-		return errors.New(message)
-	}
-	if notification {
-		return nil
-	}
-	if method == "initialize" {
-		c.sessionID = resp.Header.Get("Mcp-Session-Id")
-	}
-	reader := io.LimitReader(resp.Body, responseLimit+1)
-	decode := func(raw []byte) (bool, error) {
-		var envelope struct {
-			ID     json.RawMessage `json:"id"`
-			Result json.RawMessage `json:"result"`
-			Error  *struct {
-				Code    int    `json:"code"`
-				Message string `json:"message"`
-			} `json:"error"`
-		}
-		if err := json.Unmarshal(raw, &envelope); err != nil {
-			return false, errors.New("invalid MCP response")
-		}
-		expected, _ := json.Marshal(id)
-		if !bytes.Equal(envelope.ID, expected) {
-			return false, nil
-		}
-		if envelope.Error != nil {
-			msg := fmt.Sprintf("MCP RPC error %d", envelope.Error.Code)
-			switch envelope.Error.Code {
-			case -32700, -32600, -32601, -32602:
-				return true, &RejectedError{Message: msg}
-			}
-			return true, errors.New(msg)
-		}
-		if len(envelope.Result) == 0 {
-			return true, errors.New("MCP response has no result")
-		}
-		return true, json.Unmarshal(envelope.Result, result)
-	}
-	if strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream") {
-		scanner := bufio.NewScanner(reader)
-		scanner.Buffer(make([]byte, 4096), responseLimit)
-		var event strings.Builder
-		consumed := 0
-		for scanner.Scan() {
-			line := scanner.Text()
-			consumed += len(line) + 1
-			if consumed > responseLimit {
-				return errors.New("MCP response exceeds 4 MiB")
-			}
-			if line == "" {
-				if event.Len() > 0 {
-					found, e := decode([]byte(event.String()))
-					if e != nil {
-						return e
-					}
-					if found {
-						return nil
-					}
-					event.Reset()
-				}
-			} else if value, ok := strings.CutPrefix(line, "data:"); ok {
-				event.WriteString(strings.TrimPrefix(value, " "))
-				event.WriteByte('\n')
-			}
-		}
-		if scanner.Err() != nil {
-			return scanner.Err()
-		}
-		return errors.New("MCP stream interrupted before a matching result")
-	}
-	raw, err = io.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-	if len(raw) > responseLimit {
-		return errors.New("MCP response exceeds 4 MiB")
-	}
-	found, err := decode(raw)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return errors.New("MCP response ID mismatch")
-	}
-	return nil
+type methodKey struct{}
+type attemptKey struct{}
+type attempt struct {
+	mu      sync.Mutex
+	status  int
+	session bool
+	err     error
 }
 
+func (a *attempt) record(status int, session bool, err error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.status, a.session, a.err = status, session, err
+}
+func (a *attempt) snapshot() (int, bool, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.status, a.session, a.err
+}
+
+type policyTransport struct {
+	base   http.RoundTripper
+	bearer string
+}
+
+func (t policyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	if t.bearer != "" {
+		r.Header.Set("Authorization", t.bearer)
+	}
+	resp, err := t.base.RoundTrip(r)
+	if r.Context().Value(methodKey{}) == "tools/call" {
+		if a, ok := r.Context().Value(attemptKey{}).(*attempt); ok {
+			status := 0
+			if resp != nil {
+				status = resp.StatusCode
+			}
+			a.record(status, r.Header.Get("Mcp-Session-Id") != "", err)
+		}
+	}
+	if resp != nil && resp.Body != nil {
+		resp.Body = &boundedBody{ReadCloser: resp.Body, remaining: responseLimit}
+	}
+	return resp, err
+}
+
+type boundedBody struct {
+	io.ReadCloser
+	remaining int
+}
+
+func (b *boundedBody) Read(p []byte) (int, error) {
+	if len(p) > b.remaining+1 {
+		p = p[:b.remaining+1]
+	}
+	n, err := b.ReadCloser.Read(p)
+	b.remaining -= n
+	if b.remaining < 0 {
+		return 0, errors.New("MCP response exceeds 4 MiB")
+	}
+	return n, err
+}
 func (c *Client) initialize(ctx context.Context) error {
-	if c.ready {
+	if c.session != nil {
 		return nil
 	}
-	c.sessionID = ""
-	var result struct {
-		ProtocolVersion string `json:"protocolVersion"`
+	httpClient := *c.HTTP
+	base := httpClient.Transport
+	if base == nil {
+		base = http.DefaultTransport
 	}
-	if err := c.post(ctx, "initialize", map[string]any{"protocolVersion": protocolVersion, "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "wave", "version": "1"}}, &result); err != nil {
-		return err
+	httpClient.Transport = policyTransport{base: base, bearer: c.AuthHeader}
+	httpClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	sdk := mcp.NewClient(&mcp.Implementation{Name: "wave", Version: "1"}, &mcp.ClientOptions{
+		Capabilities: &mcp.ClientCapabilities{}, MultiRoundTrip: &mcp.MultiRoundTripOptions{Disabled: true},
+	})
+	sdk.AddSendingMiddleware(func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			return next(context.WithValue(ctx, methodKey{}, method), method, req)
+		}
+	})
+	session, err := sdk.Connect(ctx, &mcp.StreamableClientTransport{
+		Endpoint: c.URL, HTTPClient: &httpClient, MaxRetries: -1, DisableStandaloneSSE: true, MaxEventSize: responseLimit,
+	}, &mcp.ClientSessionOptions{ProtocolVersion: protocolVersion})
+	if err != nil {
+		return &RejectedError{Message: "MCP initialization failed"}
 	}
-	if result.ProtocolVersion != protocolVersion {
-		return errors.New("unsupported MCP protocol version")
-	}
-	if err := c.post(ctx, "notifications/initialized", nil, nil); err != nil {
-		return err
-	}
-	// Only explicitly configured tools are exposed to the model. Initialization
-	// does not need to download an entire server catalog on every connection.
-	c.ready = true
+	c.session = session
 	return nil
 }
 func (c *Client) Initialize(ctx context.Context) error {
@@ -222,27 +139,78 @@ func (c *Client) Initialize(ctx context.Context) error {
 	defer c.mu.Unlock()
 	return c.initialize(ctx)
 }
+func (c *Client) closeSession() {
+	if c.session != nil {
+		_ = c.session.Close()
+		c.session = nil
+	}
+}
+func (c *Client) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.closeSession()
+	c.HTTP.CloseIdleConnections()
+}
 func (c *Client) Call(ctx context.Context, name string, args map[string]any) (Result, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var result Result
-	if err := c.initialize(ctx); err != nil {
-		return result, &RejectedError{Message: "MCP initialization failed: " + err.Error()}
+	if _, err := json.Marshal(args); err != nil {
+		return Result{}, &RejectedError{Message: "invalid MCP arguments"}
 	}
-	err := c.post(ctx, "tools/call", map[string]any{"name": name, "arguments": args}, &result)
-	// The protocol explicitly rejects expired session IDs before invocation. Only
-	// this rejection permits one new handshake and retry; timeouts never do.
-	if errors.Is(err, errSessionExpired) {
-		c.ready = false
-		if err = c.initialize(ctx); err != nil {
-			return result, &RejectedError{Message: "MCP initialization failed: " + err.Error()}
+	if ctx.Err() != nil {
+		return Result{}, &RejectedError{Message: "MCP request canceled before dispatch"}
+	}
+	for tries := 0; tries < 2; tries++ {
+		if err := c.initialize(ctx); err != nil {
+			return Result{}, err
 		}
-		err = c.post(ctx, "tools/call", map[string]any{"name": name, "arguments": args}, &result)
+		a := &attempt{}
+		result, err := c.session.CallTool(context.WithValue(ctx, attemptKey{}, a), &mcp.CallToolParams{Name: name, Arguments: args})
+		status, hasSession, transportErr := a.snapshot()
+		// Only an expired protocol session proves rejection and permits one replay.
+		if status == 404 && hasSession {
+			c.closeSession()
+			if tries == 0 {
+				continue
+			}
+			return Result{}, &RejectedError{Message: "MCP session expired"}
+		}
+		if err != nil {
+			c.closeSession()
+			if status == 401 || status == 403 {
+				return Result{}, &RejectedError{Message: fmt.Sprintf("MCP HTTP %d", status)}
+			}
+			var dial *net.OpError
+			var dns *net.DNSError
+			if (errors.As(transportErr, &dial) && dial.Op == "dial") || errors.As(transportErr, &dns) {
+				return Result{}, &RejectedError{Message: "MCP connection failed before dispatch"}
+			}
+			var rpc *jsonrpc.Error
+			if errors.As(err, &rpc) && (status == 0 || status >= 200 && status < 300) {
+				switch rpc.Code {
+				case -32700, -32600, -32601, -32602:
+					return Result{}, &RejectedError{Message: fmt.Sprintf("MCP RPC error %d", rpc.Code)}
+				}
+			}
+			// SDK ErrRejected also covers timeouts after dispatch: it is not evidence
+			// that a remote side effect did not happen. Never expose remote error text.
+			return Result{}, errors.New("MCP tool outcome is unknown")
+		}
+		if result == nil || result.NeedsInput() {
+			return Result{}, errors.New("MCP tool requires unsupported input; outcome is unknown")
+		}
+		content, err := json.Marshal(result.Content)
+		if err != nil {
+			return Result{}, errors.New("invalid MCP tool content")
+		}
+		out := Result{Content: content, IsError: result.IsError}
+		if result.StructuredContent != nil {
+			out.StructuredContent, err = json.Marshal(result.StructuredContent)
+		}
+		if err != nil {
+			return Result{}, errors.New("invalid MCP structured content")
+		}
+		return out, nil
 	}
-	if err != nil {
-		c.ready = false
-		c.HTTP.CloseIdleConnections()
-	}
-	return result, err
+	panic("unreachable MCP retry")
 }
-func (c *Client) Close() { c.HTTP.CloseIdleConnections() }

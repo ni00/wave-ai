@@ -31,8 +31,10 @@ jobs:
             git show "$BASE_SHA:api/openapi.json" > /tmp/wave-previous-openapi.json
             if git cat-file -e "$BASE_SHA:tools/clients/operations.json" 2>/dev/null; then
               git show "$BASE_SHA:tools/clients/operations.json" > /tmp/wave-previous-operations.json
-            else
+            elif git cat-file -e "$BASE_SHA:clients/operations.json" 2>/dev/null; then
               git show "$BASE_SHA:clients/operations.json" > /tmp/wave-previous-operations.json
+            else
+              cp /tmp/wave-previous-openapi.json /tmp/wave-previous-operations.json
             fi
             go run ./tools/clients compat /tmp/wave-previous-openapi.json /tmp/wave-previous-operations.json
           fi

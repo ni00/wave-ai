@@ -43,7 +43,12 @@ func TestImpossibleSandboxAndUnpreparedCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := execution.Session{ID: xid.New("session"), OrgID: p.OrgID, OwnerID: p.PrincipalID, EnvironmentID: env.ID}
-	a := &App{DB: db, Sandbox: sandbox.NewSbx(sandbox.SbxOptions{Store: db, Image: "test", BaseURL: "http://127.0.0.1:1", MemoryBudgetMiB: 1024})}
+	box, err := sandbox.NewContainer(sandbox.ContainerOptions{Backend: "gvisor", Store: db, Image: "test", Host: "unix:///nonexistent-wave-test.sock", MemoryBudgetMiB: 1024})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer box.Close()
+	a := &App{DB: db, Sandbox: box}
 	task := execution.Task{ID: xid.New("task"), RootID: xid.New("root")}
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		ok, err := a.admitSandbox(tx, s, &task)

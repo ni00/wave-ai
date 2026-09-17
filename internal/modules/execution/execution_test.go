@@ -13,21 +13,21 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/database"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
 type fakeModel struct{}
 
-func (fakeModel) Stream(ctx context.Context, r modelclient.Request, delta func(modelclient.Delta)) (*modelclient.Final, error) {
+func (fakeModel) Stream(ctx context.Context, r model.Request, delta func(model.Delta)) (*model.Final, error) {
 	if n := len(r.Messages); n > 0 {
 		if c, _ := r.Messages[n-1].Content.(string); strings.HasPrefix(c, "Summarize for continuation") {
-			delta(modelclient.Delta{Text: "s"})
+			delta(model.Delta{Text: "s"})
 			thirty := int64(30)
-			return &modelclient.Final{Content: []modelclient.ContentBlock{{Type: "text", Text: "s"}}, Usage: modelclient.Usage{PromptTokens: &thirty, CompletionTokens: &thirty}, StopReason: "stop"}, nil
+			return &model.Final{Content: []model.ContentBlock{{Type: "text", Text: "s"}}, Usage: model.Usage{PromptTokens: &thirty, CompletionTokens: &thirty}, StopReason: "stop"}, nil
 		}
 	}
 	var instruction string
@@ -47,12 +47,12 @@ func (fakeModel) Stream(ctx context.Context, r modelclient.Request, delta func(m
 			}
 		}
 		if !has {
-			return &modelclient.Final{ToolCalls: []modelclient.ToolCall{{ID: "model-call", Type: "function", Function: modelclient.FuncCallSpec{Name: instruction, Arguments: `{"path":"/workspace/a","content":"hello"}`}}}, StopReason: "tool_calls"}, nil
+			return &model.Final{ToolCalls: []model.ToolCall{{ID: "model-call", Type: "function", Function: model.FuncCallSpec{Name: instruction, Arguments: `{"path":"/workspace/a","content":"hello"}`}}}, StopReason: "tool_calls"}, nil
 		}
 	}
-	delta(modelclient.Delta{Text: "answer"})
+	delta(model.Delta{Text: "answer"})
 	n := int64(3)
-	return &modelclient.Final{Content: []modelclient.ContentBlock{{Type: "text", Text: "answer"}}, Usage: modelclient.Usage{PromptTokens: &n, CompletionTokens: &n}, StopReason: "stop"}, nil
+	return &model.Final{Content: []model.ContentBlock{{Type: "text", Text: "answer"}}, Usage: model.Usage{PromptTokens: &n, CompletionTokens: &n}, StopReason: "stop"}, nil
 }
 func setup(t *testing.T) (*gorm.DB, *auth.Principal, Session) {
 	t.Helper()

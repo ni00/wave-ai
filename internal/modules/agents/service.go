@@ -110,7 +110,7 @@ func Validate(c Config) error {
 		switch t.Kind {
 		case "builtin":
 			switch t.Name {
-			case "bash", "read", "write", "edit", "ls", "grep", "find":
+			case "bash", "read", "write", "edit", "ls", "grep", "find", "memory_read", "memory_write", "memory_delete":
 			default:
 				return apierr.Invalid("unknown builtin %q", t.Name)
 			}

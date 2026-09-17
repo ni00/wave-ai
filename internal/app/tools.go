@@ -53,6 +53,9 @@ func (a *App) execute(ctx context.Context, s execution.Session, call execution.T
 		}
 		return execution.ToolResult{Output: string(raw), IsError: res.IsError, ErrorCode: code}, e
 	}
+	if call.Tool.Kind == "builtin" && (call.Tool.Name == "memory_read" || call.Tool.Name == "memory_write" || call.Tool.Name == "memory_delete") {
+		return a.memoryTool(ctx, s, call)
+	}
 	if s.EnvironmentID == "" {
 		return execution.ToolFailed("environment_required", "This tool requires an environment"), nil
 	}

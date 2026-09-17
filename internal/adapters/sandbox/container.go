@@ -28,8 +28,7 @@ type ContainerOptions struct {
 	Store                                  *gorm.DB
 }
 
-// Container uses the official Docker Go SDK. Podman is accessed through its
-// documented Docker v1.40 compatibility API, with a rootless daemon required.
+// Container runs gVisor sandboxes through the official Docker Go SDK.
 type Container struct {
 	opts    ContainerOptions
 	api     *client.Client
@@ -39,17 +38,11 @@ type Container struct {
 }
 
 func NewContainer(o ContainerOptions) (*Container, error) {
-	if o.Backend != "gvisor" && o.Backend != "podman" {
-		return nil, errors.New("container backend must be gvisor or podman")
+	if o.Backend != "gvisor" {
+		return nil, errors.New("container backend must be gvisor")
 	}
 	if o.Host == "" {
 		o.Host = "unix:///var/run/docker.sock"
-		if o.Backend == "podman" {
-			o.Host = "unix:///run/wave-podman/podman.sock"
-		}
-	}
-	if o.Backend == "podman" {
-		o.Runtime = ""
 	}
 	if !strings.HasPrefix(o.Host, "unix://") {
 		return nil, errors.New("container API requires a local Unix socket; use a secured local tunnel for remote engines")
@@ -75,13 +68,10 @@ func NewContainer(o ContainerOptions) (*Container, error) {
 	if o.MemoryBudgetMiB == 0 {
 		o.MemoryBudgetMiB = 4096
 	}
-	if o.Backend == "gvisor" && o.Runtime == "" {
+	if o.Runtime == "" {
 		o.Runtime = "wave-runsc"
 	}
 	options := []client.Opt{client.WithHost(o.Host)}
-	if o.Backend == "podman" {
-		options = append(options, client.WithAPIVersion("1.40"))
-	}
 	api, err := client.New(options...)
 	if err != nil {
 		return nil, err
@@ -121,29 +111,18 @@ func (c *Container) probe(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("%s engine unavailable: %w", c.opts.Backend, err)
 	}
-	if c.opts.Backend == "gvisor" {
-		runtime, ok := info.Info.Runtimes[c.opts.Runtime]
-		if !ok || !strings.Contains(runtime.Path, "runsc") {
-			return fmt.Errorf("gVisor runtime %q is not registered as runsc; refusing ordinary-container fallback", c.opts.Runtime)
-		}
-		for _, required := range []string{"--platform=systrap", "--overlay2=none", "--file-access=shared"} {
-			if !slices.Contains(runtime.Args, required) {
-				return fmt.Errorf("gVisor runtime requires %s; run deploy/install-sandbox-host.sh", required)
-			}
-		}
-	} else {
-		rootless := false
-		for _, option := range info.Info.SecurityOptions {
-			if option == "name=rootless" || option == "rootless" {
-				rootless = true
-			}
-		}
-		if !rootless {
-			return errors.New("podman backend requires a rootless Podman API socket")
+	runtime, ok := info.Info.Runtimes[c.opts.Runtime]
+	if !ok || !strings.Contains(runtime.Path, "runsc") {
+		return fmt.Errorf("gVisor runtime %q is not registered as runsc; refusing ordinary-container fallback", c.opts.Runtime)
+	}
+	for _, required := range []string{"--platform=systrap", "--overlay2=none", "--file-access=shared"} {
+		if !slices.Contains(runtime.Args, required) {
+			return fmt.Errorf("gVisor runtime requires %s; run deploy/install-sandbox-host.sh", required)
 		}
 	}
-	if !info.Info.MemoryLimit || (c.opts.Backend == "gvisor" && !info.Info.CPUCfsQuota) || (c.opts.Backend == "podman" && info.Info.CgroupVersion != "2") || !info.Info.PidsLimit {
-		return errors.New("container host must enforce memory, CPU quota and PID limits (rootless Podman needs cgroup v2 delegation)")
+
+	if !info.Info.MemoryLimit || !info.Info.CPUCfsQuota || !info.Info.PidsLimit {
+		return errors.New("container host must enforce memory, CPU quota and PID limits")
 	}
 	c.probed = true
 	return nil
@@ -200,7 +179,7 @@ func (c *Container) ensure(ctx context.Context, sid string) (Record, error) {
 		return r, errors.New("container has no state")
 	}
 	if !inspected.Container.State.Running {
-		if err = c.copyDirectories(ctx, r.BackendID, []string{"workspace", "mnt/session/outputs", "mnt/memory"}); err != nil {
+		if err = c.copyDirectories(ctx, r.BackendID, []string{"workspace", "mnt/session/outputs"}); err != nil {
 			return r, err
 		}
 		if err = c.state(ctx, sid, "starting"); err != nil {

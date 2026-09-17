@@ -5,10 +5,10 @@ import (
 
 	"gorm.io/gorm"
 
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/modules/agents"
 	"wave-ai.local/wave/internal/platform/apierr"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
@@ -49,14 +49,14 @@ func Spawn(ctx context.Context, db *gorm.DB, p *auth.Principal, parentID, agentI
 			State:        "queued",
 			Budget:       budget,
 			UsageKnown:   true,
-			Messages:     []modelclient.Message{{Role: "system", Content: cfg.Instructions + "\nCoordinator task ID: " + parent.ID}},
+			Messages:     []model.Message{{Role: "system", Content: cfg.Instructions + "\nCoordinator task ID: " + parent.ID}},
 		}
 		manifest, e := resourceManifest(ctx, tx, p, *s, cfg)
 		if e != nil {
 			return e
 		}
 		if manifest != "" {
-			child.Messages = append(child.Messages, modelclient.Message{Role: "user", Content: manifest})
+			child.Messages = append(child.Messages, model.Message{Role: "user", Content: manifest})
 		}
 		if e = tx.Create(&child).Error; e != nil {
 			return e

@@ -13,7 +13,7 @@ AGENT_ID=$(wavectl agents create --name researcher --model "$MODEL" --select /id
 SESSION_ID=$(wavectl sessions create --title research --select /id --raw)
 ```
 
-For skills, mounted files or memory stores, inspect the session's environment constraints first:
+For skills and mounted files, inspect the session's environment constraints first. Memory stores need no environment; bind their IDs to the session and enable the agent's `memory_read`, `memory_write`, and `memory_delete` built-ins. Writes persist immediately and require the current entry version (0 for a new path):
 
 ```bash
 wavectl schema sessions create --request

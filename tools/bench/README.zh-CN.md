@@ -77,11 +77,11 @@ make bench-sandbox
 make bench-sandbox BENCH_ARGS='-backend gvisor -verify -concurrency 1,2'
 ```
 
-支持 gVisor（默认）、Podman 和 sbx，读取对应后端配置。测试不受现有部署的沙箱容量上限约束，应在专用测试主机上运行；不测量宿主机 RSS 或客体内存峰值。
+测试 gVisor，使用已配置的 Docker runtime。测试不受现有部署的沙箱容量上限约束，应在专用测试主机上运行；不测量宿主机 RSS 或客体内存峰值。
 
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
-| `-backend` | `gvisor` | 被测沙箱后端：`gvisor`、`podman` 或 `sbx` |
+| `-backend` | `gvisor` | 被测沙箱后端：`gvisor` |
 | `-verify` | `false` | 校验执行结果，而不只是计时 |
 | `-concurrency` | `1,2` | 依次测试的并发档位 |
 | `-memory-mib` | `512,1024,2048` | 依次测试的客体内存规格 |

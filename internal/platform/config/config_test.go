@@ -30,7 +30,7 @@ func TestDataDirectoryLocation(t *testing.T) {
 }
 
 func TestStorageConfiguration(t *testing.T) {
-	t.Setenv("WAVE_SANDBOX_BACKEND", "sbx")
+	t.Setenv("WAVE_SANDBOX_BACKEND", "gvisor")
 	t.Setenv("WAVE_ROLE", "all")
 	t.Setenv("WAVE_S3_ENDPOINT", "")
 	t.Setenv("WAVE_S3_PREFIX", "wave")
@@ -74,19 +74,19 @@ func TestStorageConfiguration(t *testing.T) {
 
 func TestSandboxBudgets(t *testing.T) {
 	t.Setenv("WAVE_STORAGE_BACKEND", "local")
-	t.Setenv("WAVE_SANDBOX_BACKEND", "sbx")
+	t.Setenv("WAVE_SANDBOX_BACKEND", "gvisor")
 	t.Setenv("WAVE_MASTER_KEY", "")
-	for _, name := range []string{"WAVE_SBX_CPUS", "WAVE_SBX_MEMORY_MIB", "WAVE_SBX_MAX_RUNNING", "WAVE_SBX_MEMORY_BUDGET_MIB"} {
+	for _, name := range []string{"WAVE_SANDBOX_CPUS", "WAVE_SANDBOX_MEMORY_MIB", "WAVE_SANDBOX_MAX_RUNNING", "WAVE_SANDBOX_MEMORY_BUDGET_MIB"} {
 		t.Setenv(name, "")
 	}
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.SbxCPUs != 1 || cfg.SbxMemoryMiB != 1024 || cfg.SbxMaxRunning != 2 || cfg.SbxMemoryBudgetMiB != 4096 {
+	if cfg.SandboxCPUs != 1 || cfg.SandboxMemoryMiB != 1024 || cfg.SandboxMaxRunning != 2 || cfg.SandboxMemoryBudgetMiB != 4096 {
 		t.Fatal("unexpected sandbox defaults")
 	}
-	for _, tc := range []struct{ key, value string }{{"WAVE_SBX_CPUS", "4294967297"}, {"WAVE_SBX_MEMORY_MIB", "128"}, {"WAVE_SBX_MAX_RUNNING", "0"}, {"WAVE_SBX_MEMORY_BUDGET_MIB", "512"}} {
+	for _, tc := range []struct{ key, value string }{{"WAVE_SANDBOX_CPUS", "4294967297"}, {"WAVE_SANDBOX_MEMORY_MIB", "128"}, {"WAVE_SANDBOX_MAX_RUNNING", "0"}, {"WAVE_SANDBOX_MEMORY_BUDGET_MIB", "512"}} {
 		t.Run(tc.key, func(t *testing.T) {
 			t.Setenv(tc.key, tc.value)
 			if _, err := Load(); err == nil {
@@ -100,21 +100,22 @@ func TestSandboxBackendSelection(t *testing.T) {
 	t.Setenv("WAVE_STORAGE_BACKEND", "local")
 	t.Setenv("WAVE_MASTER_KEY", "")
 	t.Setenv("WAVE_SANDBOX_BACKEND", "")
-	t.Setenv("WAVE_SBX_MEMORY_MIB", "superseded-invalid-value")
 	t.Setenv("WAVE_SANDBOX_MEMORY_MIB", "1024")
 	c, err := Load()
-	if err != nil || c.SandboxBackend != "gvisor" || c.SbxMemoryMiB != 1024 {
+	if err != nil || c.SandboxBackend != "gvisor" || c.SandboxMemoryMiB != 1024 {
 		t.Fatalf("defaults/precedence: %+v %v", c, err)
 	}
-	for _, backend := range []string{"gvisor", "podman", "sbx"} {
+	for _, backend := range []string{"gvisor"} {
 		t.Setenv("WAVE_SANDBOX_BACKEND", backend)
 		c, err = Load()
 		if err != nil || c.SandboxBackend != backend {
 			t.Fatalf("%s: %v", backend, err)
 		}
 	}
-	t.Setenv("WAVE_SANDBOX_BACKEND", "runc")
-	if _, err = Load(); err == nil {
-		t.Fatal("unisolated backend accepted")
+	for _, backend := range []string{"local", "runc", "podman", "sbx"} {
+		t.Setenv("WAVE_SANDBOX_BACKEND", backend)
+		if _, err = Load(); err == nil {
+			t.Fatalf("unsupported backend %s accepted", backend)
+		}
 	}
 }

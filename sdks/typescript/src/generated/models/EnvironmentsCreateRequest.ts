@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Wave AI API
- * Managed Agents service. All /v1 endpoints require a Bearer Wave API Key; issue it with `wave bootstrap`. Enter the raw Wave API Key in the SDK and Swagger UI bearer configuration. Offset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence. JSON errors return {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses. JSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use nullable; omission is not equivalent to null. Interactive documentation: /swagger/index.html. OpenAPI 3 spec: /swagger/openapi.json; legacy Swagger 2: /swagger/doc.json.  [English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)
+ * Managed Agents service. All /v1 endpoints require a Bearer Wave API Key; issue it with `wave bootstrap`. Enter the raw Wave API Key in the SDK and Swagger UI bearer configuration. Offset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence. JSON errors return {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses. JSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use nullable; omission is not equivalent to null. Interactive documentation: /swagger/index.html. OpenAPI 3 spec: /swagger/openapi.json.  [English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)
  *
  * The version of the OpenAPI document: 1.0
  * 
@@ -42,9 +42,7 @@ export interface EnvironmentsCreateRequest {
  * @export
  */
 export const EnvironmentsCreateRequestSandboxBackendEnum = {
-    Sbx: 'sbx',
     Gvisor: 'gvisor',
-    Podman: 'podman',
 } as const;
 export type EnvironmentsCreateRequestSandboxBackendEnum = typeof EnvironmentsCreateRequestSandboxBackendEnum[keyof typeof EnvironmentsCreateRequestSandboxBackendEnum];
 

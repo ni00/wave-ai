@@ -17,9 +17,7 @@ func (a *App) admitSandbox(tx *gorm.DB, session execution.Session, task *executi
 	if err != nil {
 		return false, err
 	}
-	if router, ok := a.Sandbox.(*sandbox.Router); ok {
-		err = router.ReserveSession(tx, session.ID, env.SandboxBackend, env.SandboxProfile)
-	} else if box, ok := a.Sandbox.(sandbox.Managed); ok {
+	if box, ok := a.Sandbox.(sandbox.Managed); ok {
 		resources, e := box.Resources(env.SandboxProfile)
 		if e != nil {
 			return false, e

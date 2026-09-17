@@ -34,12 +34,12 @@ func capacityDB(t *testing.T) (*gorm.DB, string) {
 
 func TestCapacityAcrossReplicas(t *testing.T) {
 	db, prefix := capacityDB(t)
-	opts := SbxOptions{Store: db, CPUs: 1, MemoryMiB: 1024, Image: "test-image", MaxRunning: 2, MemoryBudgetMiB: 3072}
+	opts := ContainerOptions{Backend: "gvisor", Store: db, CPUs: 1, MemoryMiB: 1024, Image: "test-image", MaxRunning: 2, MemoryBudgetMiB: 3072}
 	var successes atomic.Int32
 	var wg sync.WaitGroup
 	for range 16 {
 		wg.Go(func() {
-			box := NewSbx(opts)
+			box := capacityContainer(t, opts)
 			err := db.Transaction(func(tx *gorm.DB) error { return box.Reserve(tx, prefix+xid.New("s"), Resources{1, 1024}) })
 			if err == nil {
 				successes.Add(1)
@@ -56,7 +56,7 @@ func TestCapacityAcrossReplicas(t *testing.T) {
 	if err := db.Where("session_id LIKE ?", prefix+"%").Find(&rows).Error; err != nil {
 		t.Fatal(err)
 	}
-	box := NewSbx(opts)
+	box := capacityContainer(t, opts)
 	// A new provider instance (worker restart) and repeat admission consume no extra slot.
 	for _, r := range rows {
 		if err := db.Transaction(func(tx *gorm.DB) error { return box.Reserve(tx, r.SessionID, Resources{2, 2048}) }); err != nil {
@@ -68,7 +68,7 @@ func TestCapacityAcrossReplicas(t *testing.T) {
 	}
 	// Retained specifications survive changes to defaults and profile requests.
 	opts.Image, opts.MemoryMiB = "replacement-image", 2048
-	box = NewSbx(opts)
+	box = capacityContainer(t, opts)
 	if err := db.Transaction(func(tx *gorm.DB) error { return box.Reserve(tx, rows[0].SessionID, Resources{2, 2048}) }); err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestCapacityAcrossReplicas(t *testing.T) {
 	}
 	// Memory budget applies even when there are free count slots.
 	opts.MaxRunning, opts.MemoryBudgetMiB = 8, 2048
-	box = NewSbx(opts)
+	box = capacityContainer(t, opts)
 	if err := db.Transaction(func(tx *gorm.DB) error { return box.Reserve(tx, prefix+"large", Resources{2, 2048}) }); err != nil {
 		t.Fatal(err)
 	}
@@ -94,14 +94,16 @@ func TestCapacityAcrossReplicas(t *testing.T) {
 	}
 	// Unknown outcomes continue to consume capacity after a process restart.
 	db.Model(&Record{}).Where("session_id = ?", prefix+"large").Update("state", "creating")
-	if err := db.Transaction(func(tx *gorm.DB) error { return NewSbx(opts).Reserve(tx, prefix+"unknown", Resources{1, 512}) }); !errors.Is(err, ErrCapacity) {
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return capacityContainer(t, opts).Reserve(tx, prefix+"unknown", Resources{1, 512})
+	}); !errors.Is(err, ErrCapacity) {
 		t.Fatalf("unknown allocation released: %v", err)
 	}
 }
 
 func TestReservationRollsBackWithClaim(t *testing.T) {
 	db, prefix := capacityDB(t)
-	box := NewSbx(SbxOptions{Store: db, Image: "test", MaxRunning: 1, MemoryBudgetMiB: 1024})
+	box := capacityContainer(t, ContainerOptions{Backend: "gvisor", Store: db, Image: "test", MaxRunning: 1, MemoryBudgetMiB: 1024})
 	abort := errors.New("claim aborted")
 	err := db.Transaction(func(tx *gorm.DB) error {
 		if err := box.Reserve(tx, prefix+"aborted", Resources{1, 1024}); err != nil {
@@ -115,4 +117,14 @@ func TestReservationRollsBackWithClaim(t *testing.T) {
 	if err := db.Transaction(func(tx *gorm.DB) error { return box.Reserve(tx, prefix+"next", Resources{1, 1024}) }); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func capacityContainer(t *testing.T, opts ContainerOptions) *Container {
+	t.Helper()
+	c, err := NewContainer(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c.Close() })
+	return c
 }

@@ -33,37 +33,6 @@ func Register(r *gin.RouterGroup, db *gorm.DB, blobs *blobstore.Store) {
 	r.GET("/console/metrics", h.metrics)
 	r.POST("/console/benchmarks", h.importBench)
 }
-
-// @ID consoleBrowse
-// @Summary 浏览后台资源 || Browse console resources
-// @Tags console
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Description 按当前所有者过滤。列表只含元数据，以不透明游标倒序分页；logs 是结构化应用日志，events 是执行事件（排除 token delta）。 || Owner-scoped metadata only, with descending opaque cursor pagination. Logs are structured application logs; events are execution events excluding token deltas.
-// @Param kind path string true "资源类型 || Resource kind" Enums(traces,logs,events,environments,sandboxes,skills,agents,deployments,vaults,webhooks,files,memory,sessions,tasks,benchmarks)
-// @Param q query string false "名称或 ID（最多 128 字节） || Name or ID (maximum 128 bytes)"
-// @Param state query string false "状态；日志级别；事件类型 || State, log level, or event type"
-// @Param module query string false "日志模块 || Log module"
-// @Param trace_id query string false "链路 ID || Trace ID"
-// @Param span_id query string false "Span ID"
-// @Param time_field query string false "时间字段 || Time field" Enums(created_at,finished_at)
-// @Param session_id query string false "会话 ID || Session ID"
-// @Param agent_id query string false "Agent ID"
-// @Param environment_id query string false "环境 ID || Environment ID"
-// @Param skill_id query string false "关联技能 ID || Referenced skill ID"
-// @Param task_id query string false "任务 ID || Task ID"
-// @Param before query string false "早于 RFC3339 时间 || Before RFC3339 timestamp"
-// @Param after query string false "不早于 RFC3339 时间 || At or after RFC3339 timestamp"
-// @Param cursor query string false "上一页 next_cursor || Previous next_cursor"
-// @Param limit query int false "每页条数 || Items per page" minimum(1) maximum(200) default(100)
-// @Success 200 {object} List
-// @Failure 400 {object} apierr.Envelope "参数或报告无效 || Invalid parameters or report"
-// @Failure 401 {object} apierr.Envelope "身份验证失败 || Authentication required"
-// @Failure 403 {object} apierr.Envelope "权限不足 || Insufficient scope"
-// @Failure 404 {object} apierr.Envelope "资源不存在 || Resource not found"
-// @Failure 500 {object} apierr.Envelope "内部错误 || Internal error"
-// @Router /v1/console/resources/{kind} [get]
 func (h handler) browse(c *gin.Context) {
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "100"))
 	if err != nil {
@@ -80,22 +49,6 @@ func (h handler) browse(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	c.JSON(200, out)
 }
-
-// @ID consoleEvent
-// @Summary 读取执行事件 || Read an execution event
-// @Tags console
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param session path string true "会话 ID || Session ID"
-// @Param sequence path int true "事件序号 || Event sequence" format(int64)
-// @Success 200 {object} execution.Event
-// @Failure 400 {object} apierr.Envelope "参数或报告无效 || Invalid parameters or report"
-// @Failure 401 {object} apierr.Envelope "身份验证失败 || Authentication required"
-// @Failure 403 {object} apierr.Envelope "权限不足 || Insufficient scope"
-// @Failure 404 {object} apierr.Envelope "资源不存在 || Resource not found"
-// @Failure 500 {object} apierr.Envelope "内部错误 || Internal error"
-// @Router /v1/console/events/{session}/{sequence} [get]
 func (h handler) event(c *gin.Context) {
 	seq, err := strconv.ParseInt(c.Param("sequence"), 10, 64)
 	if err != nil || seq < 1 {
@@ -117,21 +70,6 @@ func (h handler) event(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	c.JSON(200, row)
 }
-
-// @ID consoleImportBench
-// @Summary 导入压测报告 || Import a benchmark report
-// @Tags console
-// @Accept multipart/form-data
-// @Produce json
-// @Security BearerAuth
-// @Param file formData file true "Wave bench v2 JSON 报告，最多 16 MiB || Wave bench v2 JSON report, maximum 16 MiB"
-// @Success 201 {object} files.File
-// @Failure 400 {object} apierr.Envelope "参数或报告无效 || Invalid parameters or report"
-// @Failure 401 {object} apierr.Envelope "身份验证失败 || Authentication required"
-// @Failure 403 {object} apierr.Envelope "权限不足 || Insufficient scope"
-// @Failure 404 {object} apierr.Envelope "资源不存在 || Resource not found"
-// @Failure 500 {object} apierr.Envelope "内部错误 || Internal error"
-// @Router /v1/console/benchmarks [post]
 func (h handler) importBench(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, (16<<20)+(64<<10))
 	header, err := c.FormFile("file")

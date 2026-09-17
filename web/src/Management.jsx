@@ -482,7 +482,7 @@ function Editor({ kind, agent, initialDeployment, close }) {
                 />
               </label>
               <div className="tool-presets">
-                {["bash", "read", "write", "edit", "ls", "grep", "find"].map(
+                {["bash", "read", "write", "edit", "ls", "grep", "find", "memory_read", "memory_write", "memory_delete"].map(
                   (name) => (
                     <button
                       type="button"

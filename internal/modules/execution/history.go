@@ -6,28 +6,28 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"wave-ai.local/wave/internal/adapters/modelclient"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/model"
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
 // Message is immutable history; Task.Messages is only a compactable model checkpoint.
 // Previews are events and never appear here until an authoritative result commits.
 type Message struct {
-	ID           string                 `gorm:"primaryKey" json:"id" validate:"required"`
-	SessionID    string                 `gorm:"uniqueIndex:message_sequence,priority:1" json:"session_id" validate:"required"`
-	Seq          int64                  `gorm:"uniqueIndex:message_sequence,priority:2" json:"sequence" validate:"required" format:"int64"`
-	TaskID       string                 `gorm:"index" json:"task_id" validate:"required"`
-	RootID       string                 `gorm:"index" json:"root_id" validate:"required"`
-	Source       string                 `json:"source" validate:"required"`
-	SourceTaskID string                 `json:"source_task_id,omitempty"`
-	Role         string                 `json:"role" validate:"required"`
-	Text         string                 `json:"text" validate:"required"`
-	ToolCalls    []modelclient.ToolCall `gorm:"serializer:json;type:jsonb" json:"tool_calls,omitempty"`
-	CallID       string                 `json:"call_id,omitempty"`
-	IsError      bool                   `json:"is_error,omitempty"`
-	ErrorCode    string                 `json:"error_code,omitempty"`
-	CreatedAt    time.Time              `json:"created_at" validate:"required" format:"date-time"`
+	ID           string           `gorm:"primaryKey" json:"id" validate:"required"`
+	SessionID    string           `gorm:"uniqueIndex:message_sequence,priority:1" json:"session_id" validate:"required"`
+	Seq          int64            `gorm:"uniqueIndex:message_sequence,priority:2" json:"sequence" validate:"required" format:"int64"`
+	TaskID       string           `gorm:"index" json:"task_id" validate:"required"`
+	RootID       string           `gorm:"index" json:"root_id" validate:"required"`
+	Source       string           `json:"source" validate:"required"`
+	SourceTaskID string           `json:"source_task_id,omitempty"`
+	Role         string           `json:"role" validate:"required"`
+	Text         string           `json:"text" validate:"required"`
+	ToolCalls    []model.ToolCall `gorm:"serializer:json;type:jsonb" json:"tool_calls,omitempty"`
+	CallID       string           `json:"call_id,omitempty"`
+	IsError      bool             `json:"is_error,omitempty"`
+	ErrorCode    string           `json:"error_code,omitempty"`
+	CreatedAt    time.Time        `json:"created_at" validate:"required" format:"date-time"`
 }
 
 // appendMessage requires the session lock and shares the caller's transaction.
