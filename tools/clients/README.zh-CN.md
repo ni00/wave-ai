@@ -34,11 +34,9 @@ go run ./tools/clients compat BASELINE_SPEC BASELINE_OPERATIONS
 
 将占位符替换为基线 OpenAPI 和操作元数据路径。基线包含 `x-wave-client` 时，两个参数均传入基线 OpenAPI 路径。除兼容性检查外，还需运行行为测试。
 
-## 双语文档
+## 翻译契约
 
 在 `api/translations.zh-CN.json` 中修改中文摘要和说明，以英文契约中的 JSON Pointer 为键。运行 `make docs` 更新 `api/openapi.zh-CN.json`。缺失或过时的翻译会使生成失败。两版只允许说明文字不同，标识符、类型、示例和默认值保持一致。不要翻译示例中的字面数据。
-
-用户指南分别使用英文 `NAME.md` 和中文 `NAME.zh-CN.md`，提供语言切换链接，示例保持对应。技能指令和生成的命令参考保留英文。
 
 ## 构建发布包
 

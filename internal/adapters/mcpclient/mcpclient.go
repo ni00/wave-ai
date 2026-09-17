@@ -38,6 +38,10 @@ type Client struct {
 	HTTP                    *http.Client
 	mu                      sync.Mutex
 	session                 *mcp.ClientSession
+	// closed is set when the pool evicts the client. Without it, a Call on
+	// an evicted reference would silently rebuild a session that nothing
+	// will ever close.
+	closed bool
 }
 
 func New(server, url, authHeader string) *Client {
@@ -148,12 +152,16 @@ func (c *Client) closeSession() {
 func (c *Client) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.closed = true
 	c.closeSession()
 	c.HTTP.CloseIdleConnections()
 }
 func (c *Client) Call(ctx context.Context, name string, args map[string]any) (Result, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.closed {
+		return Result{}, &RejectedError{Message: "MCP client evicted; retry the tool call"}
+	}
 	if _, err := json.Marshal(args); err != nil {
 		return Result{}, &RejectedError{Message: "invalid MCP arguments"}
 	}

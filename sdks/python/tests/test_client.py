@@ -8,7 +8,7 @@ import time
 
 import pytest
 from wave_ai import Client, AsyncClient, APIError
-from wave_ai_generated import ModelclientUsage, AgentsApi
+from wave_ai_generated import ModelclientUsage
 
 FIXTURE = json.loads((Path(__file__).resolve().parents[3] / 'tests/clients/fixtures.json').read_text())
 
@@ -26,9 +26,8 @@ def test_sync():
         with pytest.raises(APIError) as error: c.call('agentsList')
         assert error.value.code == 'permission_error'
         assert error.value.request_id == 'req_contract'
-        with c.raw() as raw:
-            with pytest.raises(Exception) as raw_error: AgentsApi(raw).agents_list()
-            assert raw_error.value.status == 403
+        with pytest.raises(APIError) as typed_error: c.agents_list()
+        assert typed_error.value.status == 403
     with client('approve') as c: c.approve('task','call',False)
     with client('empty') as c: c.submit_result('task','call','')
     for scenario, op in [('offset','agentsList'),('after','executionMessages'),('sequence','executionListEvents')]:

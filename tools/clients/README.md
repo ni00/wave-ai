@@ -44,17 +44,13 @@ Replace the placeholders with baseline OpenAPI and operation metadata paths. For
 pass the baseline OpenAPI path twice.
 Run behavior tests as well as compatibility checks.
 
-## Bilingual documentation
+## Translate the contract
 
 Edit Chinese summaries and descriptions in `api/translations.zh-CN.json`, keyed
 by JSON Pointer into the English contract. Run `make docs` to update
 `api/openapi.zh-CN.json`. Missing or obsolete translations fail generation.
 Only documentation text may differ; identifiers, types, examples, and defaults
 stay identical. Never translate literal example payloads.
-
-User guides use English `NAME.md` and Chinese
-`NAME.zh-CN.md`, with reciprocal language links and matching examples. Keep skill
-instructions and generated command references in English.
 
 ## Build release packages
 

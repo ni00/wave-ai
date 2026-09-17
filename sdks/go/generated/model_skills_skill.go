@@ -25,6 +25,7 @@ type SkillsSkill struct {
 	Description string `json:"description"`
 	Id string `json:"id"`
 	Name string `json:"name"`
+	Size int64 `json:"size"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -34,12 +35,13 @@ type _SkillsSkill SkillsSkill
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewSkillsSkill(createdAt time.Time, description string, id string, name string) *SkillsSkill {
+func NewSkillsSkill(createdAt time.Time, description string, id string, name string, size int64) *SkillsSkill {
 	this := SkillsSkill{}
 	this.CreatedAt = createdAt
 	this.Description = description
 	this.Id = id
 	this.Name = name
+	this.Size = size
 	return &this
 }
 
@@ -147,6 +149,30 @@ func (o *SkillsSkill) SetName(v string) {
 	o.Name = v
 }
 
+// GetSize returns the Size field value
+func (o *SkillsSkill) GetSize() int64 {
+	if o == nil {
+		var ret int64
+		return ret
+	}
+
+	return o.Size
+}
+
+// GetSizeOk returns a tuple with the Size field value
+// and a boolean to check if the value has been set.
+func (o *SkillsSkill) GetSizeOk() (*int64, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Size, true
+}
+
+// SetSize sets field value
+func (o *SkillsSkill) SetSize(v int64) {
+	o.Size = v
+}
+
 func (o SkillsSkill) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -161,6 +187,7 @@ func (o SkillsSkill) ToMap() (map[string]interface{}, error) {
 	toSerialize["description"] = o.Description
 	toSerialize["id"] = o.Id
 	toSerialize["name"] = o.Name
+	toSerialize["size"] = o.Size
 
 	for key, value := range o.AdditionalProperties {
 		toSerialize[key] = value
@@ -178,6 +205,7 @@ func (o *SkillsSkill) UnmarshalJSON(data []byte) (err error) {
 		"description",
 		"id",
 		"name",
+		"size",
 	}
 
 	allProperties := make(map[string]interface{})
@@ -211,6 +239,7 @@ func (o *SkillsSkill) UnmarshalJSON(data []byte) (err error) {
 		delete(additionalProperties, "description")
 		delete(additionalProperties, "id")
 		delete(additionalProperties, "name")
+		delete(additionalProperties, "size")
 		o.AdditionalProperties = additionalProperties
 	}
 

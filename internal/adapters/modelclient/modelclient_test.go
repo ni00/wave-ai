@@ -61,6 +61,26 @@ func TestStreamSparseToolCallIndices(t *testing.T) {
 	}
 }
 
+func TestStreamNoArgumentToolCall(t *testing.T) {
+	// A no-argument tool streams an empty arguments string that is never
+	// supplemented; it must normalize to "{}" instead of failing the turn.
+	srv := sse(t, []string{
+		`{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_a","type":"function","function":{"name":"clock","arguments":""}}]}}]}`,
+		`{"choices":[{"delta":{},"finish_reason":"tool_calls"}]}`,
+		`{"choices":[],"usage":{"prompt_tokens":3,"completion_tokens":1}}`,
+	})
+	defer srv.Close()
+
+	c := New(srv.URL, "k", 0)
+	final, err := c.Stream(t.Context(), model.Request{Model: "m"}, nil)
+	if err != nil {
+		t.Fatalf("stream: %v", err)
+	}
+	if len(final.ToolCalls) != 1 || final.ToolCalls[0].Function.Arguments != "{}" {
+		t.Fatalf("empty arguments not normalized: %+v", final.ToolCalls)
+	}
+}
+
 func TestStreamContentAndUsage(t *testing.T) {
 	srv := sse(t, []string{
 		`{"choices":[{"delta":{"content":"he"}}]}`,
@@ -112,5 +132,18 @@ func TestOutputBudgetReachesProvider(t *testing.T) {
 	defer server.Close()
 	if _, e := New(server.URL, "", 0).Stream(t.Context(), model.Request{Model: "any", MaxOutputTokens: 512}, nil); e != nil {
 		t.Fatal(e)
+	}
+}
+
+func TestErrorDetailNeverReturnsRawBody(t *testing.T) {
+	if got := errorDetail([]byte(`{"error":{"message":"Incorrect API key"}}`)); got != "Incorrect API key" {
+		t.Fatalf("structured message: %q", got)
+	}
+	if got := errorDetail([]byte(`<html>502 Bad Gateway ... internal host 10.0.0.9</html>`)); got != "" {
+		t.Fatalf("raw body leaked: %q", got)
+	}
+	long := strings.Repeat("x", 900)
+	if got := errorDetail([]byte(`{"error":{"message":"` + long + `"}}`)); len(got) != 512 {
+		t.Fatalf("unbounded message: %d", len(got))
 	}
 }

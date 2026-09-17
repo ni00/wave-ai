@@ -34,7 +34,7 @@ ssh -N -L 18080:127.0.0.1:8080 "${VPS_USER}@${VPS_HOST}"
 - **Files**：以文本预览前 128 KiB。浏览器下载上限为 64 MiB，更大文件使用 `wavectl files download`。
 - **Memory**：查看条目、版本和冲突。
 
-指标口径、采集限制和保留时间见[可观测性](../tools/bench/OBSERVABILITY.zh-CN.md)。
+指标口径、采集限制和保留时间见[可观测性](../docs/operations.zh-CN.md)。
 
 ## 对比压测结果
 

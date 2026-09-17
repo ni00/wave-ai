@@ -1,5 +1,5 @@
-// Package wave provides Wave's streaming and workflow APIs alongside the
-// complete generated API exposed by Client.Raw.
+// Package wave provides Wave's complete typed API together with streaming,
+// pagination, task-waiting, and file-transfer workflow methods.
 package wave
 
 import (
@@ -15,8 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/ni00/wave-ai/sdks/go/generated"
 )
 
 //go:embed operations.json
@@ -86,17 +84,6 @@ func New(baseURL, key string) (*Client, error) {
 	return &Client{BaseURL: strings.TrimRight(baseURL, "/"), APIKey: key, HTTPClient: &http.Client{}, MaxRetries: 2}, nil
 }
 
-// Raw exposes every typed generated endpoint. Its methods have generator-level
-// semantics; use this package's Events and Download for streaming.
-func (c *Client) Raw() *generated.APIClient {
-	cfg := generated.NewConfiguration()
-	cfg.Servers = generated.ServerConfigurations{{URL: c.BaseURL}}
-	cfg.HTTPClient = c.httpClient()
-	if c.APIKey != "" {
-		cfg.DefaultHeader["Authorization"] = "Bearer " + c.APIKey
-	}
-	return generated.NewAPIClient(cfg)
-}
 func (c *Client) httpClient() *http.Client {
 	if c.HTTPClient != nil {
 		return c.HTTPClient

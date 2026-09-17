@@ -35,6 +35,10 @@ export interface SkillsSkill {
      * 
      */
     name: string;
+    /**
+     * 
+     */
+    size: number;
 }
 
 /**
@@ -45,6 +49,7 @@ export function instanceOfSkillsSkill(value: object): value is SkillsSkill {
     if (!('description' in value) || value['description'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
+    if (!('size' in value) || value['size'] === undefined) return false;
     return true;
 }
 
@@ -62,6 +67,7 @@ export function SkillsSkillFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'description': json['description'],
         'id': json['id'],
         'name': json['name'],
+        'size': json['size'],
     };
 }
 
@@ -80,6 +86,7 @@ export function SkillsSkillToJSONTyped(value?: SkillsSkill | null, ignoreDiscrim
         'description': value['description'],
         'id': value['id'],
         'name': value['name'],
+        'size': value['size'],
     };
 }
 

@@ -59,7 +59,7 @@ func (t *tool) smoke(ctx context.Context) error {
 	if err = t.run(ctx, work, nil, "uv", "pip", "install", "--python", python, wheel); err != nil {
 		return err
 	}
-	pythonCheck := fmt.Sprintf(`from wave_ai import Client, AsyncClient, OPERATIONS; from wave_ai_generated import AgentsApi; assert len(OPERATIONS)==%d; assert Client().raw().configuration.host == "http://localhost:8080"`, count)
+	pythonCheck := fmt.Sprintf(`from wave_ai import Client, AsyncClient, OPERATIONS; from wave_ai_generated import FilesFile; assert len(OPERATIONS)==%d; assert Client().base_url == "http://localhost:8080" and callable(Client().agents_list)`, count)
 	if err = t.run(ctx, work, nil, python, "-c", pythonCheck); err != nil {
 		return err
 	}
@@ -74,7 +74,8 @@ func (t *tool) smoke(ctx context.Context) error {
 		return err
 	}
 	packageName, _ := json.Marshal(t.config.NPMPackage)
-	js := fmt.Sprintf(`import {Client,operations,generated} from %s; if(Object.keys(operations).length!==%d || !new generated.AgentsApi(new Client().rawConfiguration())) process.exit(1);`, packageName, count)
+	usage := `{"cache_read_input_tokens":null,"completion_tokens":null,"prompt_tokens":null}`
+	js := fmt.Sprintf(`import {Client,operations,models} from %s; if(Object.keys(operations).length!==%d || typeof new Client().agentsList!=='function' || JSON.stringify(models.ModelclientUsageToJSON(models.ModelclientUsageFromJSON(%s)))!==JSON.stringify(%s)) process.exit(1);`, packageName, count, usage, usage)
 	if err = t.run(ctx, work, nil, "node", "--input-type=module", "-e", js); err != nil {
 		return err
 	}

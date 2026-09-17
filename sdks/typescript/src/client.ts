@@ -1,5 +1,4 @@
 import { operations, OperationID } from './operations.js';
-import { Configuration } from './generated/runtime.js';
 
 type JSONRecord = Record<string, any>;
 interface Operation {
@@ -134,8 +133,6 @@ export class Client {
     if (!Number.isInteger(maxRetries) || maxRetries < 0) throw new TypeError('maxRetries must be a non-negative integer');
     this.fetch = (input, init) => fetch(input, init); this.maxRetries = maxRetries;
   }
-  /** Configuration for every typed generated API class. */
-  rawConfiguration(): Configuration { return new Configuration({basePath: this.baseURL, accessToken: this.apiKey, fetchApi: this.fetch}); }
   private request(operation: OperationID, options: Options = {}): [Operation, string, RequestInit] {
     const op = registry[operation]; if (!op) throw new TypeError(`unknown operation: ${operation}`);
     let path = op.path;

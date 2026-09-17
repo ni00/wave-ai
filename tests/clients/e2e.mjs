@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {Client, generated} from '../../sdks/typescript/dist/index.js';
+import {Client} from '../../sdks/typescript/dist/index.js';
 
 const f=JSON.parse(readFileSync(new URL('./workflow.json',import.meta.url),'utf8'));
 const c=new Client({baseURL:process.env.WAVE_BASE_URL,apiKey:process.env.WAVE_API_KEY});
@@ -16,7 +16,7 @@ action=await c.wait(task.id,{signal,interval:10});
 assert.equal(action.required_actions[0].type,'submit_tool_result');
 await c.submitResult(task.id,call,'',{signal});
 assert.equal((await c.wait(task.id,{signal,interval:10})).task.state,'succeeded');
-assert.equal((await new generated.ExecutionApi(c.rawConfiguration()).executionGetTask({id:task.id})).state,'succeeded');
+assert.equal((await c.executionGetTask(task.id)).state,'succeeded');
 for await(const event of c.events(session.id,{lastEventID:'0',taskID:task.id,signal})){assert.ok(event.id);break;}
 async function* source(){yield new TextEncoder().encode(f.file);}
 const file=(await c.upload('filesUpload','中文.txt',source(),{},signal)).data;

@@ -68,7 +68,7 @@ func (a *App) memoryTool(ctx context.Context, s execution.Session, call executio
 				err = nil // Version zero is the precondition for creating this path.
 			}
 			if len(entry.Content) > 1<<20 {
-				return execution.ToolFailed("memory_too_large", "memory entry exceeds 1 MiB; use the API to edit it"), nil
+				return execution.ToolFailed("memory_too_large", "memory entry exceeds 1 MiB"), nil
 			}
 		case "memory_write", "memory_delete":
 			if in.Version == nil || *in.Version < 0 || (call.Tool.Name == "memory_write" && (in.Content == nil || len(*in.Content) > 1<<20)) {

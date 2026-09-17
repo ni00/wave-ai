@@ -74,7 +74,7 @@ func TestRealService(t *testing.T) {
 	if result.Task["state"] != "succeeded" {
 		t.Fatal(result)
 	}
-	typed, _, e := c.Raw().ExecutionAPI.ExecutionGetTask(ctx, tid).Execute()
+	typed, e := c.ExecutionGetTask(ctx, tid)
 	if e != nil || typed.State != "succeeded" {
 		t.Fatal(typed, e)
 	}

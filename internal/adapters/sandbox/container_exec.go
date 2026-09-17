@@ -28,6 +28,7 @@ type Process struct {
 	Stdout    string
 	Stderr    string
 	ExitCode  int
+	CreatedAt time.Time
 }
 
 func (Process) TableName() string { return "sandbox_processes" }
@@ -51,7 +52,7 @@ func (c *Container) Exec(ctx context.Context, sid string, req ExecRequest) (*Exe
 	}
 	raw, _ := json.Marshal(req)
 	digest := fmt.Sprintf("%x", sha256.Sum256(raw))
-	intent := Process{SessionID: sid, RequestID: req.RequestID, Digest: digest, State: "starting"}
+	intent := Process{SessionID: sid, RequestID: req.RequestID, Digest: digest, State: "starting", CreatedAt: time.Now()}
 	inserted := c.opts.Store.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&intent)
 	if inserted.Error != nil {
 		return nil, inserted.Error
@@ -180,7 +181,11 @@ func (c *Container) Destroy(ctx context.Context, sid string) error {
 			return e
 		}
 	}
-	for _, kind := range []string{"uploads", "skills"} {
+	kinds := []string{"uploads", "skills"}
+	if r.WorkspaceGiB > 0 {
+		kinds = append(kinds, "workspace")
+	}
+	for _, kind := range kinds {
 		v, e := c.api.VolumeInspect(ctx, volumeName(r, kind), client.VolumeInspectOptions{})
 		if errdefs.IsNotFound(e) {
 			continue

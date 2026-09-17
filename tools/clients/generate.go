@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var generatedPaths = []string{"api/openapi.zh-CN.json", "sdks/go/generated", "sdks/go/operations.json", "sdks/go/openapi.json", "sdks/python/wave_ai_generated", "sdks/python/wave_ai/operations.json", "sdks/typescript/src/generated", "sdks/typescript/src/operations.ts", "skills/wave-client/references/commands.md", "tools/clients/manifest.json"}
+var generatedPaths = []string{"api/openapi.zh-CN.json", "sdks/go/generated", "sdks/go/operations.json", "sdks/go/openapi.json", "sdks/go/operations_gen.go", "sdks/python/wave_ai_generated", "sdks/python/wave_ai/operations.json", "sdks/python/wave_ai/typed.py", "sdks/typescript/src/generated", "sdks/typescript/src/operations.ts", "sdks/typescript/src/typed.ts", "skills/wave-client/references/commands.md", "tools/clients/manifest.json"}
 
 func operationMap(spec, semantics object) (object, []string, error) {
 	operations := object{}
@@ -173,6 +173,9 @@ func (t *tool) generate(ctx context.Context, checkOnly bool) error {
 	if err = writeJSON(filepath.Join(stage, "tools/clients/manifest.json"), manifest); err != nil {
 		return err
 	}
+	if err = t.emitTypedClients(stage, spec); err != nil {
+		return err
+	}
 	if err = ctx.Err(); err != nil {
 		return err
 	}
@@ -216,15 +219,19 @@ func (t *tool) generateSDKs(ctx context.Context, stage string) error {
 		return err
 	}
 	for _, name := range files {
-		if err = copyFile(name, filepath.Join(stage, "sdks/go/generated", filepath.Base(name))); err != nil {
+		base := filepath.Base(name)
+		if !strings.HasPrefix(base, "model_") && base != "utils.go" {
+			continue
+		}
+		if err = copyFile(name, filepath.Join(stage, "sdks/go/generated", base)); err != nil {
 			return err
 		}
 	}
-	if err = copyTree(filepath.Join(stage, "raw/python/wave_ai_generated"), filepath.Join(stage, "sdks/python/wave_ai_generated")); err != nil {
+	if err = copyTree(filepath.Join(stage, "raw/python/wave_ai_generated/models"), filepath.Join(stage, "sdks/python/wave_ai_generated/models")); err != nil {
 		return err
 	}
 	ts := filepath.Join(stage, "sdks/typescript/src/generated")
-	if err = copyTree(filepath.Join(stage, "raw/typescript-fetch/src"), ts); err != nil {
+	if err = copyTree(filepath.Join(stage, "raw/typescript-fetch/src/models"), filepath.Join(ts, "models")); err != nil {
 		return err
 	}
 	files, err = treeFiles(ts)

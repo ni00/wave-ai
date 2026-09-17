@@ -52,4 +52,15 @@ func TestGuardedClientPolicyOnlyBlocksPrivate(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "refusing") {
 		t.Errorf("cloud metadata IP must be policy-blocked, got: %v", err)
 	}
+	for _, target := range []string{
+		"http://100.64.0.1:1/",  // CGNAT / k8s CNI
+		"http://198.18.0.5:1/",  // benchmarking range
+		"http://240.1.2.3:1/",   // reserved for future use
+		"http://0.0.0.5:1/",     // "this network"
+		"http://192.88.99.1:1/", // deprecated 6to4 relay
+	} {
+		if _, err = c.Get(target); err == nil || !strings.Contains(err.Error(), "refusing") {
+			t.Errorf("reserved range %s must be policy-blocked, got: %v", target, err)
+		}
+	}
 }

@@ -165,8 +165,14 @@ func walkArchive(reader io.Reader, root string, maxFileBytes int64, visit func(s
 	for entries := 0; ; entries++ {
 		h, err := tr.Next()
 		if err == io.EOF {
+			// N==0 only means the budget was consumed; an archive ending
+			// exactly at the budget is valid. Probe the raw stream: any
+			// further byte proves truncation.
 			if limited.N == 0 {
-				return errors.New("sandbox archive size exceeded")
+				var probe [1]byte
+				if n, _ := reader.Read(probe[:]); n > 0 {
+					return errors.New("sandbox archive size exceeded")
+				}
 			}
 			return nil
 		}

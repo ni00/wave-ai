@@ -25,7 +25,10 @@ type ContainerOptions struct {
 	MemoryMiB                              uint64
 	MaxRunning                             int
 	MemoryBudgetMiB                        uint64
-	Store                                  *gorm.DB
+	// WorkspaceGiB moves /workspace onto a size-capped named volume (0 keeps
+	// the container writable layer, which has no disk quota).
+	WorkspaceGiB int
+	Store        *gorm.DB
 }
 
 // Container runs gVisor sandboxes through the official Docker Go SDK.
@@ -84,7 +87,7 @@ func (c *Container) Resources(profile string) (Resources, error) {
 	return profileResources(profile, Resources{c.opts.CPUs, c.opts.MemoryMiB})
 }
 func (c *Container) Reserve(tx *gorm.DB, sid string, r Resources) error {
-	return reserve(tx, sid, r, allocation{Backend: c.opts.Backend, Host: c.opts.Host, Image: c.opts.Image, Runtime: c.opts.Runtime, Network: c.opts.Network, MaxRunning: c.opts.MaxRunning, MemoryBudgetMiB: c.opts.MemoryBudgetMiB})
+	return reserve(tx, sid, r, allocation{Backend: c.opts.Backend, Host: c.opts.Host, Image: c.opts.Image, Runtime: c.opts.Runtime, Network: c.opts.Network, MaxRunning: c.opts.MaxRunning, MemoryBudgetMiB: c.opts.MemoryBudgetMiB, WorkspaceGiB: c.opts.WorkspaceGiB})
 }
 func (c *Container) lock(sid string) func() {
 	v, _ := c.locks.LoadOrStore(sid, &sync.Mutex{})
@@ -301,6 +304,9 @@ func (c *Container) createOptions(r Record, stager bool) client.ContainerCreateO
 		}
 		host.Mounts = append(host.Mounts, mount.Mount{Type: mount.TypeVolume, Source: volumeName(r, kind), Target: dest, ReadOnly: !stager})
 	}
+	if !stager && r.WorkspaceGiB > 0 {
+		host.Mounts = append(host.Mounts, mount.Mount{Type: mount.TypeVolume, Source: volumeName(r, "workspace"), Target: "/workspace"})
+	}
 	if stager {
 		name += "-stager"
 		host.NetworkMode = "none"
@@ -324,11 +330,26 @@ func (c *Container) verify(info container.InspectResponse, r Record, stager bool
 	if r.Backend == "gvisor" && h.Runtime != r.Runtime {
 		return errors.New("container is not using the required gVisor runtime")
 	}
-	if h.Memory != int64(r.MemoryMiB)<<20 || h.CPUQuota != int64(r.CPUs)*100000 || h.CPUPeriod != 100000 || h.PidsLimit == nil || *h.PidsLimit != 256 {
+	if h.Memory != int64(r.MemoryMiB)<<20 || h.MemorySwap != h.Memory || h.CPUQuota != int64(r.CPUs)*100000 || h.CPUPeriod != 100000 || h.PidsLimit == nil || *h.PidsLimit != 256 {
 		return errors.New("container resource limits do not match reserved specification")
 	}
-	if len(info.Mounts) != 2 {
+	expected := 2
+	if !stager && r.WorkspaceGiB > 0 {
+		expected = 3
+	}
+	if len(info.Mounts) != expected {
 		return errors.New("unexpected sandbox mounts")
+	}
+	if !stager && r.WorkspaceGiB > 0 {
+		found := false
+		for _, m := range info.Mounts {
+			if m.Type == mount.TypeVolume && m.Destination == "/workspace" && m.Name == volumeName(r, "workspace") && m.RW {
+				found = true
+			}
+		}
+		if !found {
+			return errors.New("workspace volume missing or mounted read-only")
+		}
 	}
 	for _, kind := range []string{"uploads", "skills"} {
 		dest := "/mnt/session/uploads"
@@ -372,6 +393,22 @@ func (c *Container) prepareStorage(ctx context.Context, r *Record) error {
 		v, err := c.api.VolumeCreate(ctx, client.VolumeCreateOptions{Name: volumeName(*r, kind), Labels: labels(*r, true)})
 		if err != nil {
 			return err
+		}
+		if v.Volume.Labels["wave.session"] != r.SessionID {
+			return errors.New("sandbox volume name collision")
+		}
+	}
+	if r.WorkspaceGiB > 0 {
+		// The local driver enforces the size option on ext4/XFS hosts; on
+		// other filesystems volume creation fails loudly instead of silently
+		// losing the quota.
+		v, err := c.api.VolumeCreate(ctx, client.VolumeCreateOptions{
+			Name:       volumeName(*r, "workspace"),
+			Labels:     labels(*r, true),
+			DriverOpts: map[string]string{"size": fmt.Sprintf("%dg", r.WorkspaceGiB)},
+		})
+		if err != nil {
+			return fmt.Errorf("workspace volume (size option requires an ext4/XFS docker storage host): %w", err)
 		}
 		if v.Volume.Labels["wave.session"] != r.SessionID {
 			return errors.New("sandbox volume name collision")

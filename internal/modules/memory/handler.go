@@ -8,7 +8,6 @@ import (
 
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/httpx"
-	"wave-ai.local/wave/internal/platform/xid"
 )
 
 type handler struct{ db *gorm.DB }
@@ -62,8 +61,8 @@ func (h handler) createStore(c *gin.Context) {
 		return
 	}
 	p := c.MustGet("principal").(*auth.Principal)
-	s := Store{ID: xid.New("memory"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: in.Name}
-	if e := h.db.WithContext(c.Request.Context()).Create(&s).Error; e != nil {
+	s, e := Create(c.Request.Context(), h.db, p, in.Name)
+	if e != nil {
 		httpx.Error(c, e)
 		return
 	}

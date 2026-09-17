@@ -110,8 +110,6 @@ func Signature(secret []byte, timestamp string, body []byte) string {
 }
 func Run(ctx context.Context, db *gorm.DB, box *secrets.Box) {
 	client := egress.GuardedClient(15*time.Second, false)
-	// A proxy could resolve the target independently of the guarded dialer.
-	client.Transport.(*http.Transport).Proxy = nil
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	defer client.CloseIdleConnections()
 	tick := time.NewTicker(time.Second)

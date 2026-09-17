@@ -34,6 +34,7 @@ type allocation struct {
 	Backend, Host, Image, Runtime, Network string
 	MaxRunning                             int
 	MemoryBudgetMiB                        uint64
+	WorkspaceGiB                           int
 }
 
 // Managed extends Provider with shared, transactional capacity admission.
@@ -88,5 +89,5 @@ func reserve(tx *gorm.DB, sessionID string, resources Resources, policy allocati
 	if exists {
 		return tx.Model(&record).Update("state", "reserved").Error
 	}
-	return tx.Create(&Record{SessionID: sessionID, Name: "wave-" + sessionID, State: "reserved", CPUs: resources.CPUs, MemoryMiB: resources.MemoryMiB, Image: policy.Image, Backend: policy.Backend, EngineHost: policy.Host, Runtime: policy.Runtime, Network: policy.Network}).Error
+	return tx.Create(&Record{SessionID: sessionID, Name: "wave-" + sessionID, State: "reserved", CPUs: resources.CPUs, MemoryMiB: resources.MemoryMiB, WorkspaceGiB: policy.WorkspaceGiB, Image: policy.Image, Backend: policy.Backend, EngineHost: policy.Host, Runtime: policy.Runtime, Network: policy.Network}).Error
 }

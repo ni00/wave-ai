@@ -15,6 +15,7 @@ type Skill struct {
 	OwnerID      string            `gorm:"type:uuid;index" json:"-"`
 	Description  string            `json:"description" validate:"required"`
 	Name         string            `json:"name" validate:"required"`
+	Size         int64             `json:"size" validate:"required" format:"int64"`
 	BlobKey      string            `json:"-"`
 	CreatedAt    time.Time         `json:"created_at" validate:"required" format:"date-time"`
 }

@@ -133,7 +133,7 @@ JSON 与文本输入上限为 2 MiB，`false` 和空字符串均为有效值。s
 | `wave bootstrap` | 创建组织、用户和 API 密钥；`-org` 必填 |
 | `wave init-db` | 在空数据库中创建当前表结构 |
 | `wave config check` | 校验配置，输出不含密钥的 JSON 摘要 |
-| `wave bench`、`wave bench sandbox` | 容量压测，见[压测说明](../tools/bench/README.zh-CN.md) |
+| `wave bench`、`wave bench sandbox` | 容量压测，见[压测说明](../docs/benchmarks.zh-CN.md) |
 
 `wave bootstrap -format key` 只输出原始密钥，可传给 `wavectl config set NAME --key-stdin`。完整部署、备份和诊断流程见 [wave-admin](../skills/wave-admin/SKILL.md)。
 

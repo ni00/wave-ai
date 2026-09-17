@@ -1,45 +1,95 @@
-# coding: utf-8
+"""Generated Wave AI models. Do not edit."""
+from wave_ai_generated.models.agents_acceptance_check import AgentsAcceptanceCheck
+from wave_ai_generated.models.agents_agent import AgentsAgent
+from wave_ai_generated.models.agents_config import AgentsConfig
+from wave_ai_generated.models.agents_list_response import AgentsListResponse
+from wave_ai_generated.models.agents_tool import AgentsTool
+from wave_ai_generated.models.agents_update_request import AgentsUpdateRequest
+from wave_ai_generated.models.agents_version import AgentsVersion
+from wave_ai_generated.models.agents_versions_response import AgentsVersionsResponse
+from wave_ai_generated.models.apierr_envelope import ApierrEnvelope
+from wave_ai_generated.models.apierr_envelope_er import ApierrEnvelopeEr
+from wave_ai_generated.models.console_list import ConsoleList
+from wave_ai_generated.models.console_record import ConsoleRecord
+from wave_ai_generated.models.deployments_create_request import DeploymentsCreateRequest
+from wave_ai_generated.models.deployments_deployment import DeploymentsDeployment
+from wave_ai_generated.models.deployments_list_response import DeploymentsListResponse
+from wave_ai_generated.models.deployments_pause_request import DeploymentsPauseRequest
+from wave_ai_generated.models.deployments_run import DeploymentsRun
+from wave_ai_generated.models.deployments_runs_response import DeploymentsRunsResponse
+from wave_ai_generated.models.deployments_schedule_response import DeploymentsScheduleResponse
+from wave_ai_generated.models.deployments_update_request import DeploymentsUpdateRequest
+from wave_ai_generated.models.deployments_version import DeploymentsVersion
+from wave_ai_generated.models.deployments_versions_response import DeploymentsVersionsResponse
+from wave_ai_generated.models.environments_create_request import EnvironmentsCreateRequest
+from wave_ai_generated.models.environments_environment import EnvironmentsEnvironment
+from wave_ai_generated.models.environments_list_response import EnvironmentsListResponse
+from wave_ai_generated.models.execution_budget import ExecutionBudget
+from wave_ai_generated.models.execution_check_result import ExecutionCheckResult
+from wave_ai_generated.models.execution_create_session_request import ExecutionCreateSessionRequest
+from wave_ai_generated.models.execution_evaluation import ExecutionEvaluation
+from wave_ai_generated.models.execution_event import ExecutionEvent
+from wave_ai_generated.models.execution_events_response import ExecutionEventsResponse
+from wave_ai_generated.models.execution_generation import ExecutionGeneration
+from wave_ai_generated.models.execution_generations_response import ExecutionGenerationsResponse
+from wave_ai_generated.models.execution_input import ExecutionInput
+from wave_ai_generated.models.execution_inputs_response import ExecutionInputsResponse
+from wave_ai_generated.models.execution_message import ExecutionMessage
+from wave_ai_generated.models.execution_messages_response import ExecutionMessagesResponse
+from wave_ai_generated.models.execution_reconcile_request import ExecutionReconcileRequest
+from wave_ai_generated.models.execution_required_action import ExecutionRequiredAction
+from wave_ai_generated.models.execution_required_actions_response import ExecutionRequiredActionsResponse
+from wave_ai_generated.models.execution_session import ExecutionSession
+from wave_ai_generated.models.execution_sessions_response import ExecutionSessionsResponse
+from wave_ai_generated.models.execution_task import ExecutionTask
+from wave_ai_generated.models.execution_task_request import ExecutionTaskRequest
+from wave_ai_generated.models.execution_tasks_response import ExecutionTasksResponse
+from wave_ai_generated.models.execution_text_request import ExecutionTextRequest
+from wave_ai_generated.models.execution_tool_call import ExecutionToolCall
+from wave_ai_generated.models.execution_tool_calls_response import ExecutionToolCallsResponse
+from wave_ai_generated.models.execution_tool_result_request import ExecutionToolResultRequest
+from wave_ai_generated.models.execution_trace import ExecutionTrace
+from wave_ai_generated.models.execution_trace_summary import ExecutionTraceSummary
+from wave_ai_generated.models.files_file import FilesFile
+from wave_ai_generated.models.files_list_response import FilesListResponse
+from wave_ai_generated.models.memory_conflict import MemoryConflict
+from wave_ai_generated.models.memory_conflicts_response import MemoryConflictsResponse
+from wave_ai_generated.models.memory_create_store_request import MemoryCreateStoreRequest
+from wave_ai_generated.models.memory_delete_entry_request import MemoryDeleteEntryRequest
+from wave_ai_generated.models.memory_entries_response import MemoryEntriesResponse
+from wave_ai_generated.models.memory_entry import MemoryEntry
+from wave_ai_generated.models.memory_list_response import MemoryListResponse
+from wave_ai_generated.models.memory_revision import MemoryRevision
+from wave_ai_generated.models.memory_revisions_response import MemoryRevisionsResponse
+from wave_ai_generated.models.memory_store import MemoryStore
+from wave_ai_generated.models.memory_write_entry_request import MemoryWriteEntryRequest
+from wave_ai_generated.models.modelclient_func_call_spec import ModelclientFuncCallSpec
+from wave_ai_generated.models.modelclient_tool_call import ModelclientToolCall
+from wave_ai_generated.models.modelclient_usage import ModelclientUsage
+from wave_ai_generated.models.observe_log import ObserveLog
+from wave_ai_generated.models.observe_span import ObserveSpan
+from wave_ai_generated.models.skills_list_response import SkillsListResponse
+from wave_ai_generated.models.skills_skill import SkillsSkill
+from wave_ai_generated.models.telemetry_metrics import TelemetryMetrics
+from wave_ai_generated.models.telemetry_point import TelemetryPoint
+from wave_ai_generated.models.telemetry_value import TelemetryValue
+from wave_ai_generated.models.vault_create_request import VaultCreateRequest
+from wave_ai_generated.models.vault_credential import VaultCredential
+from wave_ai_generated.models.vault_list_response import VaultListResponse
+from wave_ai_generated.models.vault_rotate_request import VaultRotateRequest
+from wave_ai_generated.models.vault_validate_request import VaultValidateRequest
+from wave_ai_generated.models.vault_validation import VaultValidation
+from wave_ai_generated.models.vault_vault import VaultVault
+from wave_ai_generated.models.vault_vault_request import VaultVaultRequest
+from wave_ai_generated.models.vault_vaults_response import VaultVaultsResponse
+from wave_ai_generated.models.webhooks_create_request import WebhooksCreateRequest
+from wave_ai_generated.models.webhooks_deliveries_response import WebhooksDeliveriesResponse
+from wave_ai_generated.models.webhooks_delivery import WebhooksDelivery
+from wave_ai_generated.models.webhooks_list_response import WebhooksListResponse
+from wave_ai_generated.models.webhooks_subscription import WebhooksSubscription
+from wave_ai_generated.models.webhooks_update_request import WebhooksUpdateRequest
 
-# flake8: noqa
-
-"""
-    Wave AI API
-
-    Managed Agents service. All /v1 endpoints require a Bearer Wave API Key; issue it with `wave bootstrap`. Enter the raw Wave API Key in the SDK and Swagger UI bearer configuration. Offset pagination returns data and an optional next_offset (omitted on the last page); message history uses next_after, and event lists resume from the last sequence. JSON errors return {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"...\"},\"request_id\":\"req_...\"}. File-transfer Range errors return text/plain; conditional downloads and health checks may return empty responses. JSON requests reject unknown fields; non-multipart request bodies are limited to 2 MiB. Nullable fields use nullable; omission is not equivalent to null. Interactive documentation: /swagger/index.html. OpenAPI 3 spec: /swagger/openapi.json.  [English](/swagger/index.html?lang=en) · [中文](/swagger/index.html?lang=zh-CN)
-
-    The version of the OpenAPI document: 1.0
-    Generated by OpenAPI Generator (https://openapi-generator.tech)
-
-    Do not edit the class manually.
-"""  # noqa: E501
-
-
-__version__ = "0.1.0"
-
-# Define package exports
 __all__ = [
-    "AgentsApi",
-    "ConsoleApi",
-    "CredentialsApi",
-    "DeploymentsApi",
-    "EnvironmentsApi",
-    "ExecutionApi",
-    "FilesApi",
-    "MemoryApi",
-    "SkillsApi",
-    "SystemApi",
-    "VaultApi",
-    "VaultsApi",
-    "WebhooksApi",
-    "ApiResponse",
-    "ApiClient",
-    "Configuration",
-    "OpenApiException",
-    "ApiTypeError",
-    "ApiValueError",
-    "ApiKeyError",
-    "ApiAttributeError",
-    "ApiException",
     "AgentsAcceptanceCheck",
     "AgentsAgent",
     "AgentsConfig",
@@ -130,121 +180,3 @@ __all__ = [
     "WebhooksSubscription",
     "WebhooksUpdateRequest",
 ]
-
-# import apis into sdk package
-from wave_ai_generated.api.agents_api import AgentsApi as AgentsApi
-from wave_ai_generated.api.console_api import ConsoleApi as ConsoleApi
-from wave_ai_generated.api.credentials_api import CredentialsApi as CredentialsApi
-from wave_ai_generated.api.deployments_api import DeploymentsApi as DeploymentsApi
-from wave_ai_generated.api.environments_api import EnvironmentsApi as EnvironmentsApi
-from wave_ai_generated.api.execution_api import ExecutionApi as ExecutionApi
-from wave_ai_generated.api.files_api import FilesApi as FilesApi
-from wave_ai_generated.api.memory_api import MemoryApi as MemoryApi
-from wave_ai_generated.api.skills_api import SkillsApi as SkillsApi
-from wave_ai_generated.api.system_api import SystemApi as SystemApi
-from wave_ai_generated.api.vault_api import VaultApi as VaultApi
-from wave_ai_generated.api.vaults_api import VaultsApi as VaultsApi
-from wave_ai_generated.api.webhooks_api import WebhooksApi as WebhooksApi
-
-# import ApiClient
-from wave_ai_generated.api_response import ApiResponse as ApiResponse
-from wave_ai_generated.api_client import ApiClient as ApiClient
-from wave_ai_generated.configuration import Configuration as Configuration
-from wave_ai_generated.exceptions import OpenApiException as OpenApiException
-from wave_ai_generated.exceptions import ApiTypeError as ApiTypeError
-from wave_ai_generated.exceptions import ApiValueError as ApiValueError
-from wave_ai_generated.exceptions import ApiKeyError as ApiKeyError
-from wave_ai_generated.exceptions import ApiAttributeError as ApiAttributeError
-from wave_ai_generated.exceptions import ApiException as ApiException
-
-# import models into sdk package
-from wave_ai_generated.models.agents_acceptance_check import AgentsAcceptanceCheck as AgentsAcceptanceCheck
-from wave_ai_generated.models.agents_agent import AgentsAgent as AgentsAgent
-from wave_ai_generated.models.agents_config import AgentsConfig as AgentsConfig
-from wave_ai_generated.models.agents_list_response import AgentsListResponse as AgentsListResponse
-from wave_ai_generated.models.agents_tool import AgentsTool as AgentsTool
-from wave_ai_generated.models.agents_update_request import AgentsUpdateRequest as AgentsUpdateRequest
-from wave_ai_generated.models.agents_version import AgentsVersion as AgentsVersion
-from wave_ai_generated.models.agents_versions_response import AgentsVersionsResponse as AgentsVersionsResponse
-from wave_ai_generated.models.apierr_envelope import ApierrEnvelope as ApierrEnvelope
-from wave_ai_generated.models.apierr_envelope_er import ApierrEnvelopeEr as ApierrEnvelopeEr
-from wave_ai_generated.models.console_list import ConsoleList as ConsoleList
-from wave_ai_generated.models.console_record import ConsoleRecord as ConsoleRecord
-from wave_ai_generated.models.deployments_create_request import DeploymentsCreateRequest as DeploymentsCreateRequest
-from wave_ai_generated.models.deployments_deployment import DeploymentsDeployment as DeploymentsDeployment
-from wave_ai_generated.models.deployments_list_response import DeploymentsListResponse as DeploymentsListResponse
-from wave_ai_generated.models.deployments_pause_request import DeploymentsPauseRequest as DeploymentsPauseRequest
-from wave_ai_generated.models.deployments_run import DeploymentsRun as DeploymentsRun
-from wave_ai_generated.models.deployments_runs_response import DeploymentsRunsResponse as DeploymentsRunsResponse
-from wave_ai_generated.models.deployments_schedule_response import DeploymentsScheduleResponse as DeploymentsScheduleResponse
-from wave_ai_generated.models.deployments_update_request import DeploymentsUpdateRequest as DeploymentsUpdateRequest
-from wave_ai_generated.models.deployments_version import DeploymentsVersion as DeploymentsVersion
-from wave_ai_generated.models.deployments_versions_response import DeploymentsVersionsResponse as DeploymentsVersionsResponse
-from wave_ai_generated.models.environments_create_request import EnvironmentsCreateRequest as EnvironmentsCreateRequest
-from wave_ai_generated.models.environments_environment import EnvironmentsEnvironment as EnvironmentsEnvironment
-from wave_ai_generated.models.environments_list_response import EnvironmentsListResponse as EnvironmentsListResponse
-from wave_ai_generated.models.execution_budget import ExecutionBudget as ExecutionBudget
-from wave_ai_generated.models.execution_check_result import ExecutionCheckResult as ExecutionCheckResult
-from wave_ai_generated.models.execution_create_session_request import ExecutionCreateSessionRequest as ExecutionCreateSessionRequest
-from wave_ai_generated.models.execution_evaluation import ExecutionEvaluation as ExecutionEvaluation
-from wave_ai_generated.models.execution_event import ExecutionEvent as ExecutionEvent
-from wave_ai_generated.models.execution_events_response import ExecutionEventsResponse as ExecutionEventsResponse
-from wave_ai_generated.models.execution_generation import ExecutionGeneration as ExecutionGeneration
-from wave_ai_generated.models.execution_generations_response import ExecutionGenerationsResponse as ExecutionGenerationsResponse
-from wave_ai_generated.models.execution_input import ExecutionInput as ExecutionInput
-from wave_ai_generated.models.execution_inputs_response import ExecutionInputsResponse as ExecutionInputsResponse
-from wave_ai_generated.models.execution_message import ExecutionMessage as ExecutionMessage
-from wave_ai_generated.models.execution_messages_response import ExecutionMessagesResponse as ExecutionMessagesResponse
-from wave_ai_generated.models.execution_reconcile_request import ExecutionReconcileRequest as ExecutionReconcileRequest
-from wave_ai_generated.models.execution_required_action import ExecutionRequiredAction as ExecutionRequiredAction
-from wave_ai_generated.models.execution_required_actions_response import ExecutionRequiredActionsResponse as ExecutionRequiredActionsResponse
-from wave_ai_generated.models.execution_session import ExecutionSession as ExecutionSession
-from wave_ai_generated.models.execution_sessions_response import ExecutionSessionsResponse as ExecutionSessionsResponse
-from wave_ai_generated.models.execution_task import ExecutionTask as ExecutionTask
-from wave_ai_generated.models.execution_task_request import ExecutionTaskRequest as ExecutionTaskRequest
-from wave_ai_generated.models.execution_tasks_response import ExecutionTasksResponse as ExecutionTasksResponse
-from wave_ai_generated.models.execution_text_request import ExecutionTextRequest as ExecutionTextRequest
-from wave_ai_generated.models.execution_tool_call import ExecutionToolCall as ExecutionToolCall
-from wave_ai_generated.models.execution_tool_calls_response import ExecutionToolCallsResponse as ExecutionToolCallsResponse
-from wave_ai_generated.models.execution_tool_result_request import ExecutionToolResultRequest as ExecutionToolResultRequest
-from wave_ai_generated.models.execution_trace import ExecutionTrace as ExecutionTrace
-from wave_ai_generated.models.execution_trace_summary import ExecutionTraceSummary as ExecutionTraceSummary
-from wave_ai_generated.models.files_file import FilesFile as FilesFile
-from wave_ai_generated.models.files_list_response import FilesListResponse as FilesListResponse
-from wave_ai_generated.models.memory_conflict import MemoryConflict as MemoryConflict
-from wave_ai_generated.models.memory_conflicts_response import MemoryConflictsResponse as MemoryConflictsResponse
-from wave_ai_generated.models.memory_create_store_request import MemoryCreateStoreRequest as MemoryCreateStoreRequest
-from wave_ai_generated.models.memory_delete_entry_request import MemoryDeleteEntryRequest as MemoryDeleteEntryRequest
-from wave_ai_generated.models.memory_entries_response import MemoryEntriesResponse as MemoryEntriesResponse
-from wave_ai_generated.models.memory_entry import MemoryEntry as MemoryEntry
-from wave_ai_generated.models.memory_list_response import MemoryListResponse as MemoryListResponse
-from wave_ai_generated.models.memory_revision import MemoryRevision as MemoryRevision
-from wave_ai_generated.models.memory_revisions_response import MemoryRevisionsResponse as MemoryRevisionsResponse
-from wave_ai_generated.models.memory_store import MemoryStore as MemoryStore
-from wave_ai_generated.models.memory_write_entry_request import MemoryWriteEntryRequest as MemoryWriteEntryRequest
-from wave_ai_generated.models.modelclient_func_call_spec import ModelclientFuncCallSpec as ModelclientFuncCallSpec
-from wave_ai_generated.models.modelclient_tool_call import ModelclientToolCall as ModelclientToolCall
-from wave_ai_generated.models.modelclient_usage import ModelclientUsage as ModelclientUsage
-from wave_ai_generated.models.observe_log import ObserveLog as ObserveLog
-from wave_ai_generated.models.observe_span import ObserveSpan as ObserveSpan
-from wave_ai_generated.models.skills_list_response import SkillsListResponse as SkillsListResponse
-from wave_ai_generated.models.skills_skill import SkillsSkill as SkillsSkill
-from wave_ai_generated.models.telemetry_metrics import TelemetryMetrics as TelemetryMetrics
-from wave_ai_generated.models.telemetry_point import TelemetryPoint as TelemetryPoint
-from wave_ai_generated.models.telemetry_value import TelemetryValue as TelemetryValue
-from wave_ai_generated.models.vault_create_request import VaultCreateRequest as VaultCreateRequest
-from wave_ai_generated.models.vault_credential import VaultCredential as VaultCredential
-from wave_ai_generated.models.vault_list_response import VaultListResponse as VaultListResponse
-from wave_ai_generated.models.vault_rotate_request import VaultRotateRequest as VaultRotateRequest
-from wave_ai_generated.models.vault_validate_request import VaultValidateRequest as VaultValidateRequest
-from wave_ai_generated.models.vault_validation import VaultValidation as VaultValidation
-from wave_ai_generated.models.vault_vault import VaultVault as VaultVault
-from wave_ai_generated.models.vault_vault_request import VaultVaultRequest as VaultVaultRequest
-from wave_ai_generated.models.vault_vaults_response import VaultVaultsResponse as VaultVaultsResponse
-from wave_ai_generated.models.webhooks_create_request import WebhooksCreateRequest as WebhooksCreateRequest
-from wave_ai_generated.models.webhooks_deliveries_response import WebhooksDeliveriesResponse as WebhooksDeliveriesResponse
-from wave_ai_generated.models.webhooks_delivery import WebhooksDelivery as WebhooksDelivery
-from wave_ai_generated.models.webhooks_list_response import WebhooksListResponse as WebhooksListResponse
-from wave_ai_generated.models.webhooks_subscription import WebhooksSubscription as WebhooksSubscription
-from wave_ai_generated.models.webhooks_update_request import WebhooksUpdateRequest as WebhooksUpdateRequest
-

@@ -70,7 +70,7 @@ func (c *Client) Stream(ctx context.Context, req model.Request, onDelta func(mod
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
-		return nil, fmt.Errorf("model api %d: %s", resp.StatusCode, string(b))
+		return nil, fmt.Errorf("model api %d: %s", resp.StatusCode, errorDetail(b))
 	}
 
 	final := &model.Final{}
@@ -207,8 +207,17 @@ func (c *Client) Stream(ctx context.Context, req model.Request, onDelta func(mod
 		final.ToolCalls[sc.pos].Function.Arguments = sc.args.String()
 	}
 	seen := map[string]bool{}
-	for _, call := range final.ToolCalls {
-		if call.ID == "" || call.Function.Name == "" || seen[call.ID] || !json.Valid([]byte(call.Function.Arguments)) {
+	for i, call := range final.ToolCalls {
+		if call.ID == "" || call.Function.Name == "" || seen[call.ID] {
+			return nil, fmt.Errorf("invalid model tool call")
+		}
+		// No-argument tools legitimately stream empty arguments; normalize
+		// instead of rejecting, which would fail the whole model turn.
+		if call.Function.Arguments == "" {
+			final.ToolCalls[i].Function.Arguments = "{}"
+			call.Function.Arguments = "{}"
+		}
+		if !json.Valid([]byte(call.Function.Arguments)) {
 			return nil, fmt.Errorf("invalid model tool call")
 		}
 		seen[call.ID] = true
@@ -226,4 +235,24 @@ func (c *Client) Stream(ctx context.Context, req model.Request, onDelta func(mod
 		final.StopReason = "stop"
 	}
 	return final, nil
+}
+
+// errorDetail extracts the provider's structured error message. The raw
+// body is never returned: it is persisted as the generation/task error and
+// exposed through the API and SSE, and can echo credentials, account IDs or
+// internal endpoint details that the provider page otherwise includes.
+func errorDetail(body []byte) string {
+	var envelope struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(body, &envelope) != nil || strings.TrimSpace(envelope.Error.Message) == "" {
+		return ""
+	}
+	message := strings.TrimSpace(envelope.Error.Message)
+	if len(message) > 512 {
+		message = message[:512]
+	}
+	return message
 }

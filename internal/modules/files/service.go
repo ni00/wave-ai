@@ -22,18 +22,46 @@ func Get(ctx context.Context, db *gorm.DB, p *auth.Principal, id string) (File, 
 	e := auth.Owned(db.WithContext(ctx), p).Where(clause.And(clause.Eq{Column: "id", Value: id}, clause.Eq{Column: "deleted", Value: false})).Take(&f).Error
 	return f, e
 }
+
+// ownerQuotaBytes caps the live (not deleted) upload bytes per owner. The
+// per-request size cap alone cannot stop one key from filling the blob store.
+var ownerQuotaBytes int64 = 2 << 30
+
+func OwnerBytes(ctx context.Context, db *gorm.DB, p *auth.Principal) (int64, error) {
+	var total int64
+	e := auth.Owned(db.WithContext(ctx).Model(&File{}), p).Where(clause.Eq{Column: "deleted", Value: false}).
+		Select("COALESCE(SUM(size), 0)").Scan(&total).Error
+	return total, e
+}
+
 func Put(ctx context.Context, db *gorm.DB, b *blobstore.Store, p *auth.Principal, sid, name string, data []byte) (File, error) {
 	f := File{ID: xid.New("file"), OrgID: p.OrgID, OwnerID: p.PrincipalID, SessionID: sid, Name: name, MIME: http.DetectContentType(data)}
 	if name == "" || path.Base(name) != name || strings.ContainsAny(name, "\\\x00") {
 		return f, apierr.Invalid("invalid filename")
 	}
-	key, size, e := b.PutBytes(ctx, blobstore.Scope{OrgID: p.OrgID, OwnerID: p.PrincipalID}, data)
-	if e != nil {
-		return f, e
-	}
-	f.BlobKey = key
-	f.Size = size
-	return f, db.WithContext(ctx).Create(&f).Error
+	// The quota check runs inside a transaction that locks the owner's
+	// identity row, so concurrent uploads cannot each pass the check and
+	// together overshoot the cap.
+	e := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var identity auth.Identity
+		if e := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where(clause.Eq{Column: "id", Value: p.PrincipalID}).Take(&identity).Error; e != nil {
+			return e
+		}
+		used, e := OwnerBytes(ctx, tx, p)
+		if e != nil {
+			return e
+		}
+		if used+int64(len(data)) > ownerQuotaBytes {
+			return apierr.Invalid("owner file storage quota exceeded (2 GiB); delete files to reclaim space")
+		}
+		key, size, e := b.PutBytes(ctx, blobstore.Scope{OrgID: p.OrgID, OwnerID: p.PrincipalID}, data)
+		if e != nil {
+			return e
+		}
+		f.BlobKey, f.Size = key, size
+		return tx.Create(&f).Error
+	})
+	return f, e
 }
 
 func PutArtifact(ctx context.Context, db *gorm.DB, b *blobstore.Store, p *auth.Principal, sid, taskID, name string, data []byte) (File, error) {

@@ -198,3 +198,45 @@ func TestRegressionAdmissionFailurePersisted(t *testing.T) {
 		t.Fatalf("admission failure lost: pending_finish=%q error=%q", row.PendingFinish, row.Error)
 	}
 }
+
+func TestRegressionParkRequeuesProgressedCalls(t *testing.T) {
+	db, p, s := setup(t)
+	a := agent(t, db, p, "", nil)
+	for _, tc := range []struct {
+		status    string
+		delivered bool
+		want      string
+	}{
+		// A call still awaiting the client is a legitimate waiting state.
+		{"custom", false, "waiting"},
+		// Resolve committing between the worker snapshot and park must not
+		// strand the call: the task requeues instead of parking.
+		{"ready", false, "queued"},
+		{"completed", false, "queued"},
+		{"completed", true, "waiting"},
+	} {
+		tr := task(t, db, p, s, a)
+		// Simulate a claimed task so the worker fence accepts the park.
+		claim := tr
+		claim.Owner, claim.Epoch = "test", 1
+		lease := time.Now().Add(time.Minute)
+		if e := db.Model(&Task{}).Where(eq("id", tr.ID)).Updates(map[string]any{"owner": "test", "epoch": 1, "state": "running", "lease_until": lease}).Error; e != nil {
+			t.Fatal(e)
+		}
+		call := ToolCall{ID: xid.New("call"), TaskID: tr.ID, ModelID: "m1", Tool: agents.Tool{Name: "t", Kind: "custom"}, Arguments: "{}", Status: tc.status, Delivered: tc.delivered, Result: "r"}
+		if e := db.Create(&call).Error; e != nil {
+			t.Fatal(e)
+		}
+		w := &Worker{DB: db}
+		if e := w.park(context.Background(), &claim, "waiting"); e != nil {
+			t.Fatal(e)
+		}
+		var row Task
+		if e := db.Where(eq("id", tr.ID)).Take(&row).Error; e != nil {
+			t.Fatal(e)
+		}
+		if row.State != tc.want {
+			t.Fatalf("call status=%s delivered=%v: task state=%s want=%s", tc.status, tc.delivered, row.State, tc.want)
+		}
+	}
+}

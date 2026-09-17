@@ -3,7 +3,9 @@ package execution
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -115,7 +117,7 @@ func (w *Worker) run(ctx context.Context, t *Task) {
 			return emit(tx, s, t.ID, "generation.interrupted", map[string]any{"attempt": current.Attempts})
 		})
 		if rec := recover(); rec != nil {
-			observe.Logger(ctx).Error("worker.panic")
+			observe.Logger(ctx).Error("worker.panic", "panic", fmt.Sprintf("%v", rec), "stack", string(debug.Stack()))
 		}
 	}()
 	for run.Err() == nil {

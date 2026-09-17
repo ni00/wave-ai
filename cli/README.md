@@ -157,7 +157,7 @@ nonzero task-wait results, especially codes 6 and 7.
 | `wave bootstrap` | Create an organization, user, and API key; requires `-org` |
 | `wave init-db` | Create the current schema in an empty database |
 | `wave config check` | Validate configuration and print a summary without secrets |
-| `wave bench`, `wave bench sandbox` | Capacity baselines; see the [benchmark guide](../tools/bench/README.md) |
+| `wave bench`, `wave bench sandbox` | Capacity baselines; see the [benchmark guide](../docs/benchmarks.md) |
 
 `wave bootstrap -format key` prints only the raw key, which can be piped into
 `wavectl config set NAME --key-stdin`. See [wave-admin](../skills/wave-admin/SKILL.md)

@@ -45,7 +45,7 @@ Optional live refresh runs every five seconds while the page is visible.
   64 MiB; use `wavectl files download` for larger files.
 - **Memory:** inspect entries, revisions, and conflicts.
 
-See [observability](../tools/bench/OBSERVABILITY.md) for metric definitions,
+See [observability](../docs/operations.md) for metric definitions,
 collection limits, and retention.
 
 ## Compare benchmarks

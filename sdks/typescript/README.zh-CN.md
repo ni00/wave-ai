@@ -60,14 +60,13 @@ console.log(result.reason, result.task.state);
 | `download` | 通过回调流式接收文件字节 |
 | `upload` | 从 `Blob` 或异步可迭代对象流式上传 |
 
-需要类型化端点时，使用 `generated` 导出：
+每个 JSON 接口也有从契约生成的类型化方法。类型化方法与 `call` 走同一条请求链路，共享重试、校验、安全整数检查和 `APIError` 错误：
 
 ```typescript
-import { generated } from '@wave-ai/client';
-
-const api = new generated.AgentsApi(wave.rawConfiguration());
-const agents = await api.agentsList();
+const page = await wave.agentsList({limit: 10});
 ```
+
+请求和响应类型从 `models` 命名空间和 `@wave-ai/client/models` 子路径导出。
 
 生成 API 不提供封装层的请求校验、自动分页、重试和安全整数检查。
 

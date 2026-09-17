@@ -130,12 +130,6 @@ class _Base:
         self.api_key = api_key[7:].strip() if api_key.lower().startswith('bearer ') else api_key
         self.max_retries = max_retries
 
-    def raw(self):
-        """Return an owned generated ApiClient; use it as a context manager."""
-        from wave_ai_generated import ApiClient, Configuration
-        config = Configuration(host=self.base_url, access_token=self.api_key)
-        return ApiClient(config)
-
     def _request(self, operation: str, path=None, query=None, headers=None):
         op = OPERATIONS[operation]
         target = op['path']

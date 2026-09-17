@@ -59,18 +59,16 @@ open `wave` client.
 | `download` | Stream file bytes into a binary file object |
 | `upload` | Stream a multipart upload from a file object |
 
-For typed endpoints, use `wave_ai_generated`:
+Every JSON endpoint also has a typed method on the client. Typed methods share
+the same request path as `call`, including retries, validation, and `APIError`
+results:
 
 ```python
-from wave_ai_generated import AgentsApi
-
 with Client(api_key=os.environ["WAVE_API_KEY"]) as wave:
-    with wave.raw() as raw:
-        agents = AgentsApi(raw).agents_list()
+    page = wave.agents_list(limit=10)
 ```
 
-Generated calls bypass wrapper validation, automatic pagination, and retries,
-and raise subclasses of `OpenApiException`.
+Request and response models are re-exported from `wave_ai_generated`.
 
 ## Resolve required actions
 

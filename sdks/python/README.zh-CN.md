@@ -53,17 +53,14 @@ with Client(api_key=os.environ["WAVE_API_KEY"]) as wave:
 | `download` | 把文件字节流写入二进制文件对象 |
 | `upload` | 从文件对象流式发送 multipart 上传 |
 
-需要类型化端点时，使用 `wave_ai_generated`：
+每个 JSON 接口在客户端上也有类型化方法。类型化方法与 `call` 走同一条请求链路，共享重试、校验和 `APIError` 错误：
 
 ```python
-from wave_ai_generated import AgentsApi
-
 with Client(api_key=os.environ["WAVE_API_KEY"]) as wave:
-    with wave.raw() as raw:
-        agents = AgentsApi(raw).agents_list()
+    page = wave.agents_list(limit=10)
 ```
 
-生成 API 不提供封装层的请求校验、自动分页和重试，错误类型为 `OpenApiException` 的子类。
+请求和响应模型从 `wave_ai_generated` 导出。
 
 ## 处理待办动作
 

@@ -3,8 +3,10 @@ package httpx
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 	"wave-ai.local/wave/internal/platform/observe"
@@ -40,7 +42,7 @@ func Observe() gin.HandlerFunc {
 				if rec == http.ErrAbortHandler {
 					panic(rec)
 				}
-				observe.Logger(c.Request.Context()).Error("http.panic")
+				observe.Logger(c.Request.Context()).Error("http.panic", "panic", fmt.Sprintf("%v", rec), "stack", string(debug.Stack()), "method", c.Request.Method, "path", c.Request.URL.Path)
 				if c.Writer.Written() {
 					panic(http.ErrAbortHandler)
 				}

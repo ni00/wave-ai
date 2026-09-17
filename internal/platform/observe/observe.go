@@ -100,7 +100,7 @@ func Do(ctx context.Context, name string, fn func(context.Context) error) (err e
 	ctx, end := Start(ctx, name)
 	defer func() {
 		if p := recover(); p != nil {
-			end(fmt.Errorf("panic"))
+			end(fmt.Errorf("panic: %v", p))
 			panic(p)
 		}
 		end(err)

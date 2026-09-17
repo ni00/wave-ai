@@ -18,7 +18,7 @@ import re  # noqa: F401
 import json
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List
 from typing import Optional, Set
 from typing_extensions import Self
@@ -32,8 +32,9 @@ class SkillsSkill(BaseModel):
     description: StrictStr
     id: StrictStr
     name: StrictStr
+    size: StrictInt
     additional_properties: Dict[str, Any] = {}
-    __properties: ClassVar[List[str]] = ["created_at", "description", "id", "name"]
+    __properties: ClassVar[List[str]] = ["created_at", "description", "id", "name", "size"]
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -96,7 +97,8 @@ class SkillsSkill(BaseModel):
             "created_at": obj.get("created_at"),
             "description": obj.get("description"),
             "id": obj.get("id"),
-            "name": obj.get("name")
+            "name": obj.get("name"),
+            "size": obj.get("size")
         })
         # store additional fields in additional_properties
         for _key in obj.keys():

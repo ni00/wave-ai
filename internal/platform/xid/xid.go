@@ -31,6 +31,9 @@ func ulid(t time.Time) string {
 		lastSeq++
 		if lastSeq >= 3200 { // entropy budget per millisecond
 			ms++
+			// Advance the bucket: leaving lastMS behind would reissue
+			// earlier sequence numbers and move IDs backwards in time.
+			lastMS = ms
 			lastSeq = 0
 		}
 	} else if ms > lastMS {
@@ -50,9 +53,7 @@ func ulid(t time.Time) string {
 	b[4] = byte(ms >> 8)
 	b[5] = byte(ms)
 	binary.BigEndian.PutUint16(b[6:8], seq)
-	if _, err := rand.Read(b[8:16]); err != nil {
-		panic(fmt.Sprintf("xid: entropy source failed: %v", err))
-	}
+	rand.Read(b[8:16])
 	return encodeULID(b)
 }
 
@@ -60,11 +61,13 @@ const crockford = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 func encodeULID(b [16]byte) string {
 	var out [26]byte
-	// 128 bits -> 26 chars of 5 bits (last char only 2 bits).
+	// Two leading zero bits plus the 128 payload bits fill 26 Crockford
+	// chars exactly, so no bit of the random suffix is dropped. The old tail
+	// encoding silently discarded the final bit (63 of 64 random bits).
 	n := 0
 	var acc uint64
-	var accBits uint
-	for i := 0; i < 16; i++ {
+	var accBits uint = 2
+	for i := 0; i < 16 && n < 26; i++ {
 		acc = acc<<8 | uint64(b[i])
 		accBits += 8
 		for accBits >= 5 && n < 26 {
@@ -72,9 +75,6 @@ func encodeULID(b [16]byte) string {
 			accBits -= 5
 			n++
 		}
-	}
-	if n < 26 {
-		out[n] = crockford[acc&0x03]
 	}
 	return string(out[:])
 }

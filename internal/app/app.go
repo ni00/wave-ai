@@ -98,7 +98,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		Runtime: cfg.GVisorRuntime, Network: cfg.ContainerNetwork,
 		CPUs: uint32(cfg.SandboxCPUs), MemoryMiB: uint64(cfg.SandboxMemoryMiB),
 		MaxRunning: cfg.SandboxMaxRunning, MemoryBudgetMiB: uint64(cfg.SandboxMemoryBudgetMiB), Store: db,
-	})
+		WorkspaceGiB: cfg.SandboxWorkspaceGiB})
 	if e != nil {
 		return nil, e
 	}
@@ -225,7 +225,10 @@ func (a *App) serve(ctx context.Context) error {
 		Addr:              a.Config.HTTPAddr,
 		Handler:           a.Handler(),
 		ReadHeaderTimeout: 15 * time.Second,
-		IdleTimeout:       120 * time.Second,
+		// Generous body budget: uploads stream up to 32 MiB. WriteTimeout
+		// stays unset on purpose; SSE responses manage their own deadlines.
+		ReadTimeout: 5 * time.Minute,
+		IdleTimeout: 120 * time.Second,
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}
 	result := make(chan error, 1)

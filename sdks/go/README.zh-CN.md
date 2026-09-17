@@ -74,13 +74,13 @@ func create(ctx context.Context, c *wave.Client, op string, path map[string]stri
 
 `Call` 通过 OpenAPI 的 `operationId` 调用 JSON 接口；`Options` 接收路径、查询参数、请求头和请求体。上传、下载和事件流使用专用方法。
 
-需要类型化端点时，使用生成客户端：
+每个 JSON 接口也有从契约生成的类型化方法。类型化方法与 `Call` 走同一条请求链路，共享重试、校验和 `*APIError` 错误：
 
 ```go
-agents, response, err := client.Raw().AgentsAPI.AgentsList(ctx).Execute()
+page, err := client.AgentsList(ctx, nil, nil)
 ```
 
-生成客户端不提供封装层的请求校验、自动分页和重试。
+请求和响应类型位于 `generated` 包。分页响应用 `Each` 遍历；需要状态码或响应头时使用 `Call`。
 
 ### 方法参考
 

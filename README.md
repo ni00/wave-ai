@@ -49,7 +49,7 @@ OpenAI Chat Completions API. Run commands from the repository root.
 
 `make down` stops the containers and retains data volumes. Database initialization
 creates the current schema in an empty database. Historical schema migrations
-are not provided; see [database initialization](deploy/sandbox-resources.md#initialize-the-database)
+are not provided; see [database initialization](docs/deployment.md#initialize-the-database)
 before changing versions.
 
 ### Submit a task
@@ -99,38 +99,16 @@ then follow the [tool workflow](skills/wave-client/references/tools.md) or
 
 Agents can save preferences, project conventions, and other information for use
 across tasks and sessions. Bind a memory store to the session and enable the
-agent's memory tools. See [Configure agent memory](deploy/agent-memory.md).
+agent's memory tools. See [Configure agents](docs/agents.md).
 
 ## Deployment
 
-### Model and worker configuration
+The [deployment guide](docs/deployment.md) covers service settings, the gVisor
+sandbox backend, resource limits, database initialization, and backups.
 
-Compose reads `deploy/.env`; directly started processes read environment
-variables. Common settings are listed below; see the [full configuration example](deploy/.env.example).
-
-| Setting | Default | Purpose |
-| --- | --- | --- |
-| `WAVE_WORKER_CONCURRENCY` | `10` | Concurrent task workers per process |
-| `WAVE_CONTEXT_TOKENS` | `32000` | Context token budget; keep within the model's limit |
-| `WAVE_MODEL_TIMEOUT_SEC` | `300` | Model request timeout in seconds |
-
-Adjust concurrency for provider limits and queue latency. Use the
-[benchmarks](tools/bench/README.md) to measure host capacity. Use HTTPS for external
-access and keep the database and storage on a private network.
-
-### Sandboxes and backups
-
-Docker with gVisor is the production sandbox backend.
-Follow the [sandbox setup guide](deploy/sandbox-resources.md) before running
-sandboxed tasks.
-
-Each sandbox defaults to 1 vCPU and 1 GiB of memory. Replicas share default limits
-of 2 active or reserved sandboxes and 4 GiB of guest memory. Sandbox quotas and
-task concurrency are configured separately.
-
-Back up `deploy/.env`, the database, file storage, and sandbox data. Keep
-`WAVE_MASTER_KEY` and storage credentials; replacing the master key makes existing
-encrypted credentials unreadable.
+Docker with gVisor is the production sandbox backend. Each sandbox defaults to
+1 vCPU and 1 GiB of memory; replicas share default limits of 2 active or reserved
+sandboxes and 4 GiB of guest memory.
 
 For development without Compose, see the [local setup instructions](skills/wave-admin/references/setup.md).
 
@@ -143,8 +121,8 @@ For development without Compose, see the [local setup instructions](skills/wave-
 | Give an external agent Wave workflows | [wave-client skill](skills/wave-client/SKILL.md) |
 | Operate a deployment | [wave-admin skill](skills/wave-admin/SKILL.md) |
 | Inspect API requests and responses | [English OpenAPI](api/openapi.json), [Chinese OpenAPI](api/openapi.zh-CN.json) |
-| Measure runtime, model, and sandbox performance | [Benchmarks](tools/bench/README.md) |
-| Query logs, traces, and metrics | [Observability](tools/bench/OBSERVABILITY.md) |
+| Measure runtime, model, and sandbox performance | [Benchmarks](docs/benchmarks.md) |
+| Query logs, traces, and metrics | [Observability](docs/operations.md) |
 | Use the web console | [Console guide](web/README.md) |
 
 Swagger UI supports English and Chinese. Use the language menu or open
@@ -165,4 +143,4 @@ make clients-check clients-test  # Check generated clients and behavior.
 See [client tooling](tools/clients/README.md) for dependencies, integration tests,
 and packaging.
 
-[Configure schedules, delegation, Vaults, Webhooks, and acceptance checks](deploy/managed-agents.md).
+[Configure schedules, delegation, Vaults, Webhooks, and acceptance checks](docs/agents.md).

@@ -14,6 +14,25 @@ import (
 
 func (w *Worker) park(ctx context.Context, t *Task, state string) error {
 	return fenced(ctx, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {
+		if state == "waiting" {
+			// Resolve may have committed between the worker's snapshot and
+			// this park; parking over it would strand a call that is ready
+			// to run or whose result still needs delivery. Calls still in
+			// approval/custom/unknown are legitimate waiting states. Requeue
+			// so another worker picks the progressed call up.
+			var progressed int64
+			if e := tx.Model(&ToolCall{}).Where(clause.And(
+				clause.Eq{Column: "task_id", Value: current.ID},
+				clause.Or(
+					clause.Eq{Column: "status", Value: "ready"},
+					clause.And(clause.Eq{Column: "status", Value: "completed"}, clause.Eq{Column: "delivered", Value: false}),
+				))).Count(&progressed).Error; e != nil {
+				return e
+			}
+			if progressed > 0 {
+				state = "queued"
+			}
+		}
 		current.State = state
 		current.Owner = ""
 		current.LeaseUntil = nil
@@ -91,7 +110,9 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 	}
 	if task.ParentID == "" && w.Finish != nil {
 		if e := observe.Do(ctx, "workspace.finish", func(ctx context.Context) error { return w.Finish(ctx, s, task) }); e != nil {
-			return w.parkUnknown(ctx, claim, e)
+			// Not retried automatically: reconcile through the documented
+			// unknown-task workflow after fixing the underlying cause.
+			return w.parkUnknown(ctx, claim, fmt.Errorf("artifact publish failed, awaiting client reconcile: %w", e))
 		}
 	}
 	var evaluation *Evaluation

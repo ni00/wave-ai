@@ -48,12 +48,21 @@ func loadOrCreateKey(keyFile string) ([]byte, error) {
 	if err == nil {
 		key := make([]byte, 32)
 		if _, err := rand.Read(key); err != nil {
-			f.Close()
+			_ = f.Close()
+			_ = os.Remove(keyFile)
 			return nil, err
 		}
 		_, werr := f.Write([]byte(hex.EncodeToString(key)))
-		f.Close()
+		if werr == nil {
+			werr = f.Sync()
+		}
+		if cerr := f.Close(); werr == nil {
+			werr = cerr
+		}
 		if werr != nil {
+			// A zero-byte or partial key file would permanently fail every
+			// future startup; losing the election race instead is recoverable.
+			_ = os.Remove(keyFile)
 			return nil, werr
 		}
 		return key, nil

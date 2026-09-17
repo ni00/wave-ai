@@ -3156,7 +3156,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "通过 multipart/form-data 上传单个文件，整个 multipart 请求体上限 32 MiB（含边界与字段开销）。内容按所有者维度以 SHA-256 对象键写入对象存储，相同内容在同一所有者内复用，不会重复存储。返回新建的文件元数据。",
+        "description": "通过 multipart/form-data 上传单个文件，整个 multipart 请求体上限 32 MiB（含边界与字段开销）。内容按所有者维度以 SHA-256 对象键写入对象存储，相同内容在同一所有者内复用，不会重复存储。返回新建的文件元数据；所有者存活（未删除）上传字节上限 2 GiB，删除文件可释放空间。",
         "tags": [
           "files"
         ],
@@ -3697,7 +3697,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "为当前所有者创建一个命名的记忆库。",
+        "description": "为当前所有者创建一个命名的记忆库。每个所有者最多持有 20 个记忆库。",
         "tags": [
           "memory"
         ],
@@ -4008,7 +4008,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "按乐观锁写入指定路径的记忆条目；版本匹配才生效并产生新版本与修订记录，版本不匹配时保留冲突内容并返回 409。",
+        "description": "在指定路径写入记忆条目，采用乐观锁。版本匹配时创建新版本和修订；不匹配时保留冲突内容并返回 409。单条内容上限 1 MiB，每个记忆库最多 1,000 个路径；每个路径保留最近 10 个修订和 10 条冲突记录。",
         "tags": [
           "memory"
         ],
@@ -5453,7 +5453,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "通过 multipart/form-data 上传技能 ZIP 包（请求体上限 24 MiB）。ZIP 根目录必须包含带 YAML frontmatter（name 和 description）的 SKILL.md，最多 200 个文件且路径必须安全；包内容解压后上限 20 MiB。技能 ID 不可变，创建后不可更换。",
+        "description": "通过 multipart/form-data 上传技能 ZIP 包（请求体上限 24 MiB）。ZIP 根目录必须包含带 YAML frontmatter（name 和 description）的 SKILL.md，最多 200 个文件且路径必须安全；包内容解压后上限 20 MiB。技能 ID 不可变，创建后不可更换；所有者技能包存储上限 512 MiB。",
         "tags": [
           "skills"
         ],
@@ -10200,7 +10200,8 @@
           "created_at",
           "description",
           "id",
-          "name"
+          "name",
+          "size"
         ],
         "properties": {
           "created_at": {
@@ -10215,6 +10216,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

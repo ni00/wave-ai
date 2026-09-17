@@ -3,6 +3,7 @@ package execution
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -110,7 +111,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 			if errors.Is(e, ErrPending) {
 				return w.park(ctx, claim, "queued")
 			}
-			return w.parkUnknown(ctx, claim, e)
+			return w.parkUnknown(ctx, claim, fmt.Errorf("workspace prepare failed: %w", e))
 		}
 	}
 

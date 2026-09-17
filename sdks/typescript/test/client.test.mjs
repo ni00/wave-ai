@@ -1,18 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {Client, APIError, generated, parseJSON} from '../dist/index.js';
+import {Client, APIError, models, parseJSON} from '../dist/index.js';
 
 const fixtures=JSON.parse(readFileSync(new URL('../../../tests/clients/fixtures.json',import.meta.url),'utf8'));
 const base=process.env.WAVE_CLIENT_TEST_URL;
 const client=scenario=>new Client({baseURL:`${base}/ts/${scenario}`,apiKey:'Bearer '+fixtures.key});
 test('null and unsafe numbers',()=>{
-  assert.deepEqual(generated.ModelclientUsageToJSON(generated.ModelclientUsageFromJSON(fixtures.usage)),fixtures.usage);
+  assert.deepEqual(models.ModelclientUsageToJSON(models.ModelclientUsageFromJSON(fixtures.usage)),fixtures.usage);
   assert.throws(()=>parseJSON('{"sequence":9007199254740993}'),RangeError);
 });
 test('shared HTTP contracts',{skip:!base},async()=>{
   await assert.rejects(client('error').call('agentsList'),e=>e instanceof APIError&&e.code==='permission_error'&&e.requestID==='req_contract');
-  await assert.rejects(new generated.AgentsApi(client('error').rawConfiguration()).agentsList(),e=>e.response.status===403);
+  await assert.rejects(client('error').agentsList(),e=>e instanceof APIError&&e.status===403);
   await client('approve').approve('task','call',false);
   await client('empty').submitResult('task','call','');
   for(const [scenario,op] of [['offset','agentsList'],['after','executionMessages'],['sequence','executionListEvents']]){
@@ -40,6 +40,19 @@ test('shared HTTP contracts',{skip:!base},async()=>{
   assert.equal((await client('upload').upload('filesUpload','中文.txt',new Blob([fixtures.binary]))).status,201);
   async function* data(){yield new TextEncoder().encode(fixtures.binary);}
   assert.equal((await client('upload').upload('filesUpload','中文.txt',data())).status,201);
+});
+
+test('typed methods convert snake_case wire format',async()=>{
+ let captured;
+ const stub=async(url,init)=>{captured={url,body:init?.body};return new Response(JSON.stringify({
+   id:'sess_1',title:'t',archived:false,created_at:'2026-09-18T00:00:00Z',
+   event_sequence:1,message_sequence:1,file_ids:null,memory_store_ids:['memory_1'],
+ }),{status:201,headers:{'content-type':'application/json'}});};
+ const sdk=new Client({baseURL:'http://localhost:8080',fetch:stub});
+ const session=await sdk.executionCreateSession({title:'t',memoryStoreIds:['memory_1']});
+ assert.deepEqual(JSON.parse(captured.body),{title:'t',memory_store_ids:['memory_1']});
+ assert.equal(session.memoryStoreIds[0],'memory_1');
+ assert.ok(session.createdAt instanceof Date);
 });
 
 test('browser fetch receiver and explicit JSON transport',async()=>{

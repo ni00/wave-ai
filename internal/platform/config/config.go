@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,6 +33,7 @@ type Config struct {
 	SandboxMemoryMiB       int
 	SandboxMaxRunning      int
 	SandboxMemoryBudgetMiB int
+	SandboxWorkspaceGiB    int
 	MasterKey              []byte
 	GuardrailInputBlock    []string
 	GuardrailOutputRedact  []string
@@ -67,6 +69,18 @@ func Load() (*Config, error) {
 		}
 		return n
 	}
+	// nonNegative accepts 0, which switches a feature off (workspace quota).
+	nonNegative := func(k string, d int) int {
+		v := os.Getenv(k)
+		if v == "" {
+			return d
+		}
+		n, e := strconv.Atoi(v)
+		if e != nil || n < 0 {
+			parseErr = fmt.Errorf("%s must be a non-negative integer", k)
+		}
+		return n
+	}
 	dir, err := dataDir()
 	if err != nil {
 		return nil, err
@@ -96,6 +110,7 @@ func Load() (*Config, error) {
 		SandboxMemoryMiB:       integer("WAVE_SANDBOX_MEMORY_MIB", 1024),
 		SandboxMaxRunning:      integer("WAVE_SANDBOX_MAX_RUNNING", 2),
 		SandboxMemoryBudgetMiB: integer("WAVE_SANDBOX_MEMORY_BUDGET_MIB", 4096),
+		SandboxWorkspaceGiB:    nonNegative("WAVE_SANDBOX_WORKSPACE_GIB", 0),
 	}
 	c.ContextTokens = integer("WAVE_CONTEXT_TOKENS", 32000)
 	if raw := os.Getenv("WAVE_GUARDRAIL_INPUT_BLOCK"); raw != "" {
@@ -109,6 +124,9 @@ func Load() (*Config, error) {
 	}
 	if c.SandboxCPUs > 16 || c.SandboxMemoryMiB < 512 || c.SandboxMemoryMiB > 32768 {
 		return nil, fmt.Errorf("sandbox resources require 1–16 CPUs and 512–32768 MiB; verify support with your sandbox runtime")
+	}
+	if c.SandboxWorkspaceGiB < 0 || c.SandboxWorkspaceGiB > 1024 {
+		return nil, fmt.Errorf("WAVE_SANDBOX_WORKSPACE_GIB must be between 0 and 1024")
 	}
 	if c.SandboxMemoryBudgetMiB < c.SandboxMemoryMiB {
 		return nil, fmt.Errorf("WAVE_SANDBOX_MEMORY_BUDGET_MIB must fit WAVE_SANDBOX_MEMORY_MIB")
@@ -149,6 +167,7 @@ func DatabaseURL() string {
 	if value := os.Getenv("WAVE_DATABASE_URL"); value != "" {
 		return value
 	}
+	slog.Warn("database credentials falling back to the built-in weak default; set WAVE_DATABASE_URL or WAVE_DB_PASSWORD")
 	return "postgres://wave:wave@localhost:5432/wave?sslmode=disable"
 }
 

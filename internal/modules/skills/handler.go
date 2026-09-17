@@ -11,7 +11,6 @@ import (
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/blobstore"
 	"wave-ai.local/wave/internal/platform/httpx"
-	"wave-ai.local/wave/internal/platform/xid"
 )
 
 type handler struct {
@@ -59,13 +58,8 @@ func (h handler) upload(c *gin.Context) {
 		return
 	}
 	p := c.MustGet("principal").(*auth.Principal)
-	key, _, e := h.b.PutBytes(c.Request.Context(), blobstore.Scope{OrgID: p.OrgID, OwnerID: p.PrincipalID}, raw)
+	s, e := Create(c.Request.Context(), h.db, h.b, p, meta, raw)
 	if e != nil {
-		httpx.Error(c, e)
-		return
-	}
-	s := Skill{ID: xid.New("skill"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: meta.Name, Description: meta.Description, BlobKey: key}
-	if e = h.db.WithContext(c.Request.Context()).Create(&s).Error; e != nil {
 		httpx.Error(c, e)
 		return
 	}

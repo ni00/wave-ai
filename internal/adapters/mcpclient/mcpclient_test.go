@@ -186,6 +186,19 @@ func TestPoolScopeAndCredentialIsolation(t *testing.T) {
 	}
 }
 
+func TestEvictedClientRefusesCalls(t *testing.T) {
+	client := New("tool", "https://mcp.example", "")
+	client.Close()
+	if _, err := client.Call(t.Context(), "ping", nil); err == nil {
+		t.Fatal("evicted client accepted a call")
+	} else {
+		var rejected *RejectedError
+		if !errors.As(err, &rejected) {
+			t.Fatalf("not a rejection: %v", err)
+		}
+	}
+}
+
 func TestDialFailureBeforeDispatchIsConfirmed(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

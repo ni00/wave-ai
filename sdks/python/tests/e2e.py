@@ -20,9 +20,7 @@ with Client(os.environ['WAVE_BASE_URL'],os.environ['WAVE_API_KEY']) as wave:
     assert wave.wait(task['id'],interval=.01).task['state']=='succeeded'
     with closing(wave.events(session['id'],last_event_id='0',task_id=task['id'])) as events:
         assert next(events).id
-    with wave.raw() as raw:
-        from wave_ai_generated import ExecutionApi
-        assert ExecutionApi(raw).execution_get_task(task['id']).state=='succeeded'
+    assert wave.execution_get_task(task['id']).state=='succeeded'
     file=wave.upload('filesUpload','中文.txt',BytesIO(fixture['file'].encode())).data
     output=BytesIO();wave.download('filesContent',file['id'],output)
     assert output.getvalue()==fixture['file'].encode()

@@ -3,9 +3,16 @@ package skills
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"os"
 	"strings"
+	"sync"
 	"testing"
+
+	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/blobstore"
+	"wave-ai.local/wave/internal/platform/database"
+	"wave-ai.local/wave/internal/platform/xid"
 )
 
 func TestUnpackRejectsUnsafeArchives(t *testing.T) {
@@ -49,5 +56,67 @@ func TestSkillMetadata(t *testing.T) {
 		if _, e := ParseMetadata([]byte(raw)); e == nil {
 			t.Fatal("accepted invalid metadata")
 		}
+	}
+}
+
+func TestConcurrentUploadsShareOwnerQuota(t *testing.T) {
+	dsn := os.Getenv("WAVE_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("isolated PostgreSQL required")
+	}
+	ctx := context.Background()
+	db, e := database.Open(ctx, dsn)
+	if e != nil {
+		t.Fatal(e)
+	}
+	pool, _ := db.DB()
+	t.Cleanup(func() { pool.Close() })
+	store, e := blobstore.New(t.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e := db.AutoMigrate(append(auth.Models(), &Skill{})...); e != nil {
+		t.Fatal(e)
+	}
+	key, e := auth.Bootstrap(ctx, db, xid.New("org"), "admin", "test", auth.ScopeAPI)
+	if e != nil {
+		t.Fatal(e)
+	}
+	p, e := auth.Authenticate(ctx, db, key)
+	if e != nil {
+		t.Fatal(e)
+	}
+	old := ownerQuotaBytes
+	ownerQuotaBytes = 64
+	defer func() { ownerQuotaBytes = old }()
+
+	start := make(chan struct{})
+	results := make(chan error, 2)
+	var workers sync.WaitGroup
+	for range 2 {
+		workers.Go(func() {
+			<-start
+			_, e := Create(ctx, db, store, p, Metadata{Name: "test", Description: "test"}, []byte(strings.Repeat("x", 40)))
+			results <- e
+		})
+	}
+	close(start)
+	workers.Wait()
+	close(results)
+
+	succeeded, rejected := 0, 0
+	for e := range results {
+		switch {
+		case e == nil:
+			succeeded++
+		case strings.Contains(e.Error(), "quota"):
+			rejected++
+		default:
+			t.Fatalf("unexpected upload error: %v", e)
+		}
+	}
+	used, e := OwnerBytes(ctx, db, p)
+	if e != nil || succeeded != 1 || rejected != 1 || used != 40 {
+		t.Fatalf("success=%d quota_rejections=%d used=%d error=%v", succeeded, rejected, used, e)
 	}
 }

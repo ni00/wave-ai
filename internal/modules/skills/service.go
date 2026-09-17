@@ -16,7 +16,44 @@ import (
 	"wave-ai.local/wave/internal/platform/apierr"
 	"wave-ai.local/wave/internal/platform/auth"
 	"wave-ai.local/wave/internal/platform/blobstore"
+	"wave-ai.local/wave/internal/platform/xid"
 )
+
+// ownerQuotaBytes caps stored skill packages per owner; the per-request cap
+// alone cannot stop one key from filling the blob store.
+var ownerQuotaBytes int64 = 512 << 20
+
+func OwnerBytes(ctx context.Context, db *gorm.DB, p *auth.Principal) (int64, error) {
+	var total int64
+	e := auth.Owned(db.WithContext(ctx).Model(&Skill{}), p).Select("COALESCE(SUM(size), 0)").Scan(&total).Error
+	return total, e
+}
+
+func Create(ctx context.Context, db *gorm.DB, b *blobstore.Store, p *auth.Principal, meta Metadata, raw []byte) (Skill, error) {
+	s := Skill{ID: xid.New("skill"), OrgID: p.OrgID, OwnerID: p.PrincipalID, Name: meta.Name, Description: meta.Description, Size: int64(len(raw))}
+	// Identity lock serializes concurrent uploads so the quota check cannot
+	// be raced past.
+	e := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var identity auth.Identity
+		if e := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where(clause.Eq{Column: "id", Value: p.PrincipalID}).Take(&identity).Error; e != nil {
+			return e
+		}
+		used, e := OwnerBytes(ctx, tx, p)
+		if e != nil {
+			return e
+		}
+		if used+int64(len(raw)) > ownerQuotaBytes {
+			return apierr.Invalid("owner skill storage quota exceeded (512 MiB)")
+		}
+		key, _, e := b.PutBytes(ctx, blobstore.Scope{OrgID: p.OrgID, OwnerID: p.PrincipalID}, raw)
+		if e != nil {
+			return e
+		}
+		s.BlobKey = key
+		return tx.Create(&s).Error
+	})
+	return s, e
+}
 
 func Unpack(raw []byte) (map[string][]byte, error) {
 	z, e := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))

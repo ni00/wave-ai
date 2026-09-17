@@ -15,8 +15,11 @@ type Record struct {
 	State      string
 	CPUs       uint32 `gorm:"column:cpus;not null"`
 	MemoryMiB  uint64 `gorm:"column:memory_mib;not null"`
-	Image      string
-	UpdatedAt  time.Time
+	// WorkspaceGiB is reserved at admission: 0 keeps /workspace on the
+	// writable layer; a positive value caps it on a size-limited volume.
+	WorkspaceGiB int
+	Image        string
+	UpdatedAt    time.Time
 }
 
 func (Record) TableName() string { return "sandbox_instances" }

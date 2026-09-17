@@ -143,17 +143,23 @@ func (t *tool) checkLinks(path string, data []byte) error {
 	return nil
 }
 func (t *tool) checkDocumentation() error {
+	var docs [][2]string
 	for _, dir := range []string{".", "cli", "tools/clients", "sdks/go", "sdks/python", "sdks/typescript"} {
-		for file, peer := range map[string]string{"README.md": "README.zh-CN.md", "README.zh-CN.md": "README.md"} {
-			path := t.path(filepath.Join(dir, file))
-			data, err := os.ReadFile(path)
+		docs = append(docs, [2]string{filepath.Join(dir, "README.md"), filepath.Join(dir, "README.zh-CN.md")})
+	}
+	for _, name := range []string{"deployment", "agents", "operations", "benchmarks"} {
+		docs = append(docs, [2]string{filepath.Join("docs", name+".md"), filepath.Join("docs", name+".zh-CN.md")})
+	}
+	for _, pair := range docs {
+		for i, path := range pair {
+			data, err := os.ReadFile(t.path(path))
 			if err != nil {
 				return err
 			}
-			if !strings.Contains(string(data), "]("+peer+")") {
-				return fmt.Errorf("missing language switch: %s", path)
+			if !strings.Contains(string(data), "]("+filepath.Base(pair[1-i])+")") {
+				return fmt.Errorf("missing language switch: %s", t.path(path))
 			}
-			if err = t.checkLinks(path, data); err != nil {
+			if err = t.checkLinks(t.path(path), data); err != nil {
 				return err
 			}
 		}

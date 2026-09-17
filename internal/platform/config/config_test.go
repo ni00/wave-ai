@@ -119,3 +119,14 @@ func TestSandboxBackendSelection(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkspaceZeroDisablesQuota(t *testing.T) {
+	t.Setenv("WAVE_SANDBOX_WORKSPACE_GIB", "0")
+	if _, err := Load(); err != nil {
+		t.Fatalf("explicit 0 rejected: %v", err)
+	}
+	t.Setenv("WAVE_SANDBOX_WORKSPACE_GIB", "-1")
+	if _, err := Load(); err == nil {
+		t.Fatal("negative value accepted")
+	}
+}

@@ -36,7 +36,7 @@ Wave AI 是可自行部署的 Agent 服务。通过 API 定义 Agent、提交任
 
 4. 打开 [Swagger UI](http://localhost:8080/swagger/index.html)，在 **Authorize** 中填写 Wave API 密钥，无需 `Bearer` 前缀。
 
-`make down` 停止容器并保留数据卷。数据库初始化只在空库中创建当前表结构，项目不提供历史迁移；切换版本前参见[数据库初始化说明](deploy/sandbox-resources.zh-CN.md#初始化数据库)。
+`make down` 停止容器并保留数据卷。数据库初始化只在空库中创建当前表结构，项目不提供历史迁移；切换版本前参见[数据库初始化说明](docs/deployment.zh-CN.md#初始化数据库)。
 
 ### 提交任务
 
@@ -76,29 +76,13 @@ curl -fsS "$BASE/v1/tasks/$task" "${auth[@]}" | jq '{id,state,result}'
 
 ## Agent 记忆
 
-Agent 可以保存偏好、项目约定等信息，在不同任务和会话中继续使用。为会话绑定记忆库，并启用 Agent 的记忆工具即可。具体操作见[配置 Agent 记忆](deploy/agent-memory.zh-CN.md)。
+Agent 可以保存偏好、项目约定等信息，在不同任务和会话中继续使用。为会话绑定记忆库，并启用 Agent 的记忆工具即可。具体操作见[配置 Agent](docs/agents.zh-CN.md)。
 
 ## 部署
 
-### 模型与并发配置
+[部署指南](docs/deployment.zh-CN.md)涵盖服务配置、gVisor 沙箱后端、资源限额、数据库初始化和备份。
 
-Compose 读取 `deploy/.env`，直接启动的进程读取环境变量。常用配置如下，完整列表见[配置示例](deploy/.env.example)。
-
-| 配置项 | 默认值 | 用途 |
-| --- | --- | --- |
-| `WAVE_WORKER_CONCURRENCY` | `10` | 每个进程的任务执行并发数 |
-| `WAVE_CONTEXT_TOKENS` | `32000` | 上下文 token 预算，不应超过模型限制 |
-| `WAVE_MODEL_TIMEOUT_SEC` | `300` | 模型请求超时，单位为秒 |
-
-根据模型供应商限额和排队延迟调整并发，可用[压测工具](tools/bench/README.zh-CN.md)测量主机容量。对外访问使用 HTTPS，数据库和存储放在私有网络中。
-
-### 沙箱与备份
-
-生产沙箱使用 Docker + gVisor。运行沙箱任务前，按[沙箱部署指南](deploy/sandbox-resources.zh-CN.md)准备宿主机。
-
-每个沙箱默认分配 1 vCPU、1 GiB 内存；所有副本共享 2 个活动或预留沙箱、合计 4 GiB 客体内存的默认上限。沙箱配额与任务并发分别配置。
-
-备份 `deploy/.env`、数据库、文件存储和沙箱数据。保留 `WAVE_MASTER_KEY` 及存储凭据；更换主密钥会导致已有加密凭据无法解密。
+生产沙箱使用 Docker + gVisor。每个沙箱默认分配 1 vCPU、1 GiB 内存；所有副本共享 2 个活动或预留沙箱、合计 4 GiB 客体内存的默认上限。
 
 不使用 Compose 时，参阅[本机启动说明](skills/wave-admin/references/setup.md)。
 
@@ -111,8 +95,8 @@ Compose 读取 `deploy/.env`，直接启动的进程读取环境变量。常用�
 | 为外部 Agent 提供 Wave 操作流程 | [wave-client 技能](skills/wave-client/SKILL.md) |
 | 部署与运维 | [wave-admin 技能](skills/wave-admin/SKILL.md) |
 | 查询 API 请求与响应 | [英文 OpenAPI](api/openapi.json)、[中文 OpenAPI](api/openapi.zh-CN.json) |
-| 测量运行时、模型与沙箱性能 | [压测指南](tools/bench/README.zh-CN.md) |
-| 查询日志、Trace 和指标 | [可观测性](tools/bench/OBSERVABILITY.zh-CN.md) |
+| 测量运行时、模型与沙箱性能 | [压测指南](docs/benchmarks.zh-CN.md) |
+| 查询日志、Trace 和指标 | [可观测性](docs/operations.zh-CN.md) |
 | 使用 Web 后台 | [后台指南](web/README.zh-CN.md) |
 
 Swagger UI 支持中英文切换，也可直接打开[中文界面](http://localhost:8080/swagger/index.html?lang=zh-CN)。
@@ -131,4 +115,4 @@ make clients-check clients-test  # 检查生成一致性与客户端行为。
 
 依赖安装、集成测试和打包见[客户端工具链](tools/clients/README.zh-CN.md)。
 
-[配置定时运行、专家协作、Vaults、Webhooks 和验收规则](deploy/managed-agents.zh-CN.md)。
+[配置定时运行、专家协作、Vaults、Webhooks 和验收规则](docs/agents.zh-CN.md)。

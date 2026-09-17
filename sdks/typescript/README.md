@@ -67,17 +67,16 @@ provides static typing; it does not validate response data.
 | `download` | Stream file bytes into a callback |
 | `upload` | Stream a multipart upload from a `Blob` or async iterable |
 
-For typed endpoints, use `generated`:
+Every JSON endpoint also has a typed method generated from the contract. Typed
+methods share the same request path as `call`, including retries, validation,
+safe-integer checks, and `APIError` results:
 
 ```typescript
-import { generated } from '@wave-ai/client';
-
-const api = new generated.AgentsApi(wave.rawConfiguration());
-const agents = await api.agentsList();
+const page = await wave.agentsList({limit: 10});
 ```
 
-Generated calls bypass wrapper validation, automatic pagination, retries, and
-safe-integer checks.
+Request and response types are re-exported from the `models` namespace and the
+`@wave-ai/client/models` subpath.
 
 ## Resolve required actions
 

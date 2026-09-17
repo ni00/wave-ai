@@ -3156,7 +3156,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "Upload one file using multipart/form-data. The entire multipart request is limited to 32 MiB, including boundaries and field overhead. Content is stored under owner-scoped SHA-256 object keys; identical content is reused within the same owner. Return metadata for the newly created file.",
+        "description": "Upload one file using multipart/form-data. The entire multipart request is limited to 32 MiB, including boundaries and field overhead. Content is stored under owner-scoped SHA-256 object keys; identical content is reused within the same owner. Live (not deleted) upload bytes are capped at 2 GiB per owner; delete files to reclaim space. Returns metadata for the newly created file.",
         "tags": [
           "files"
         ],
@@ -3697,7 +3697,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "Create a named memory store for the current owner.",
+        "description": "Create a named memory store for the current owner. Each owner can hold at most 20 stores.",
         "tags": [
           "memory"
         ],
@@ -4008,7 +4008,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "Write a memory entry at the specified path using optimistic locking. A matching version creates a new version and revision; a mismatch retains the conflicting content and returns 409.",
+        "description": "Write a memory entry at the specified path using optimistic locking. A matching version creates a new version and revision; a mismatch retains the conflicting content and returns 409. Entries are limited to 1 MiB of content and 1,000 paths per store; the 10 most recent revisions and conflicts per path are retained.",
         "tags": [
           "memory"
         ],
@@ -5453,7 +5453,7 @@
             "BearerAuth": []
           }
         ],
-        "description": "Upload a skill ZIP using multipart/form-data, with a 24 MiB request limit. The ZIP root must contain SKILL.md with YAML frontmatter (name and description). At most 200 files with safe paths are allowed; extracted content is limited to 20 MiB. Skill IDs are immutable and packages cannot be replaced after creation.",
+        "description": "Upload a skill ZIP using multipart/form-data, with a 24 MiB request limit. The ZIP root must contain SKILL.md with YAML frontmatter (name and description). At most 200 files with safe paths are allowed; extracted content is limited to 20 MiB. Skill IDs are immutable and packages cannot be replaced after creation. Stored skill bytes are capped at 512 MiB per owner.",
         "tags": [
           "skills"
         ],
@@ -10200,7 +10200,8 @@
           "created_at",
           "description",
           "id",
-          "name"
+          "name",
+          "size"
         ],
         "properties": {
           "created_at": {
@@ -10215,6 +10216,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

@@ -45,16 +45,16 @@ func TestSerialization(t *testing.T) {
 		t.Fatal("accepted mutually exclusive fields")
 	}
 }
-func TestErrorAndRawAuth(t *testing.T) {
+func TestErrorAndTypedAuth(t *testing.T) {
 	c := fixture(t, "error")
 	_, e := c.Call(context.Background(), "agentsList", Options{})
 	var api *APIError
 	if !errors.As(e, &api) || api.RequestID != "req_contract" || api.Code != "permission_error" {
 		t.Fatalf("%#v", e)
 	}
-	_, response, e := c.Raw().AgentsAPI.AgentsList(context.Background()).Execute()
-	if e == nil || response.StatusCode != 403 {
-		t.Fatal("raw auth", e, response)
+	_, e = c.AgentsList(context.Background(), nil, nil)
+	if !errors.As(e, &api) || api.StatusCode != 403 {
+		t.Fatal("typed endpoint auth", e)
 	}
 }
 func TestExplicitValues(t *testing.T) {

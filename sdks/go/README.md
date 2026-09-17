@@ -81,13 +81,16 @@ or proxy, and `MaxRetries` to change the retry limit.
 path values, query parameters, headers, and a request body. Use dedicated methods
 for uploads, downloads, and event streams.
 
-For typed endpoints, use the generated client:
+Every JSON endpoint also has a typed method generated from the contract. Typed
+methods share the same request path as `Call`, including retries, validation,
+and `*APIError` results:
 
 ```go
-agents, response, err := client.Raw().AgentsAPI.AgentsList(ctx).Execute()
+page, err := client.AgentsList(ctx, nil, nil)
 ```
 
-Generated calls bypass wrapper validation, automatic pagination, and retries.
+Request and response types live in the `generated` package. Use `Each` to
+iterate a paginated typed response, and `Call` when you need status or headers.
 
 ### Method reference
 

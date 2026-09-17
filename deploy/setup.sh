@@ -17,7 +17,7 @@ if [ -f "$env_file" ]; then
 else
   cat "$deploy_dir/.env.example" > "$temp_file"
 fi
-for name in WAVE_MASTER_KEY AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+for name in WAVE_MASTER_KEY WAVE_DB_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
   # Do not source .env: it is configuration, not executable shell code.
   if awk -v name="$name" '
     $0 ~ "^" name "=" {
