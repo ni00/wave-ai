@@ -13,7 +13,7 @@ Measure task throughput, latency, and sandbox performance on a target host.
 Synthetic and sandbox modes need no existing deployment or model key. Live mode
 consumes model quota; see [real model tests](OBSERVABILITY.md#benchmark-a-real-model).
 
-Run Make commands from the repository root with Go 1.27+, or use a built `wave`
+Run Make commands from the repository root with Go 1.27+, Node.js 22+, and npm, or use a built `wave`
 binary. Synthetic and sandbox modes require a host with the Docker CLI.
 
 ## Run the runtime benchmark

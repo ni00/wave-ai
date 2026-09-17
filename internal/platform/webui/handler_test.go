@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"io"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -35,6 +36,23 @@ func TestEmbeddedConsole(t *testing.T) {
 	reader.Close()
 	if !bytes.Equal(data, w.Body.Bytes()) {
 		t.Fatal("compressed asset differs")
+	}
+	// The embedded index must reference embedded scripts and styles from the same build.
+	refs := regexp.MustCompile(`(?:src|href)="(/console/assets/[^"?]+)"`).FindAllStringSubmatch(w.Body.String(), -1)
+	if len(refs) == 0 {
+		t.Fatal("console has no script or stylesheet references")
+	}
+	for _, ref := range refs {
+		t.Run(ref[1], func(t *testing.T) {
+			asset := httptest.NewRecorder()
+			serve(asset, httptest.NewRequest("GET", ref[1], nil))
+			if asset.Code != 200 || asset.Body.Len() == 0 {
+				t.Fatalf("console asset unavailable: status %d", asset.Code)
+			}
+			if asset.Header().Get("Cache-Control") != "public, max-age=31536000, immutable" {
+				t.Fatal("hashed asset must use immutable caching")
+			}
+		})
 	}
 	for _, path := range []string{"/console/assets/missing.js", "/console/../secret", "/console/not-found"} {
 		w := httptest.NewRecorder()

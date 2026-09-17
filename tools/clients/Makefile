@@ -19,7 +19,7 @@ cli-build:
 	cd cli && go build -trimpath -o "$(abspath $(BINDIR))/wavectl" .
 clients-build: cli-build
 	npm run build --prefix sdks/typescript
-clients-integration:
+clients-integration: web-build
 	$(CLIENTS_TOOL) integration
 clients-package:
 	$(CLIENTS_TOOL) package

@@ -21,3 +21,9 @@ Use the shared `PageHeader` for every workspace page. Take its title and icon fr
 Use consistent, slim native scrollbars across workspace panels: rounded gray thumbs, transparent tracks, and darker hover/drag states. Preserve native scrolling and system high-contrast styling.
 
 Keep build artifacts, Git submission rules, asset caching, and optional hosting internals out of user guides. Put contributor instructions in `AGENTS.md`.
+
+## Build integration
+
+Keep frontend sources, generated assets, and the Go embedding entry point in this directory. `npm run build` writes browser assets to `dist/client` and gzip assets to `dist/compressed`; `embed.go` embeds only the compressed assets. Do not commit `dist` or copy assets into `internal/`. The `internal/platform/webui` package serves the embedded assets over HTTP.
+
+Run `make build`, `make test`, or `make check` from the repository root to build the frontend before compiling Go. These commands require Node.js 22+ and npm as well as Go. Before invoking Go commands directly on packages that import the console, run `make web-build`. Docker builds the frontend in its Node stage and copies the compressed assets into the Go stage.

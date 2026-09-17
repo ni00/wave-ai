@@ -152,6 +152,8 @@ Swagger UI supports English and Chinese. Use the language menu or open
 
 ## Development
 
+Install Go 1.27+ and Node.js 22+ with npm to build and test from source.
+
 ```bash
 make build                       # Build the service.
 make test                        # Run unit and architecture tests.

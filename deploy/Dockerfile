@@ -11,7 +11,7 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-COPY --from=web /src/internal/platform/webui/static ./internal/platform/webui/static
+COPY --from=web /src/web/dist/compressed ./web/dist/compressed
 RUN CGO_ENABLED=0 go build -trimpath -tags=nomsgpack -o /out/wave ./cmd/wave
 
 FROM alpine:3.24.1

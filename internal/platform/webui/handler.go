@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
-	"embed"
 	"fmt"
 	"io"
 	"mime"
@@ -15,10 +14,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"wave-ai.local/wave/web"
 )
-
-//go:embed static
-var assets embed.FS
 
 func Register(r *gin.Engine) {
 	h := http.HandlerFunc(serve)
@@ -34,7 +31,7 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	data, err := assets.ReadFile("static/" + name + ".gz")
+	data, err := web.ReadAsset(name + ".gz")
 	if err != nil {
 		http.NotFound(w, r)
 		return

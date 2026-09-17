@@ -4,28 +4,26 @@ COMPOSE := docker compose --project-directory deploy
 DOCS_DIR ?= api
 
 .PHONY: build run test integration check docs docs-check setup up down bench bench-test bench-sandbox
-build:
+build: web-build
 	go build -trimpath -tags=nomsgpack -o "$(BINDIR)/wave" ./cmd/wave
 run: build
 	"$(BINDIR)/wave" serve
-test:
+test: web-build
 	go test ./...
 bench: build
 	"$(BINDIR)/wave" bench $(BENCH_ARGS)
 bench-sandbox: build
 	"$(BINDIR)/wave" bench sandbox $(BENCH_ARGS)
-bench-test:
+bench-test: web-build
 	WAVE_BENCH_INTEGRATION=1 go test -race ./tools/bench -count=1
-integration:
+integration: web-build
 	bash internal/tests/integration.sh
-check:
-	$(MAKE) docs-check
+check: docs-check build
 	go vet ./...
 	go mod verify
-	$(MAKE) build
 docs:
 	node tools/clients/localize.cjs api/openapi.json api/translations.zh-CN.json "$(DOCS_DIR)/openapi.zh-CN.json"
-docs-check:
+docs-check: web-build
 	bash internal/tests/docs.sh
 	go test ./internal/app -run 'TestOpenAPI|TestRoutingErrors' -count=1
 setup:
@@ -39,8 +37,8 @@ include tools/clients/Makefile
 
 .PHONY: web-build web-test web-dev
 web-build:
-	npm ci --ignore-scripts --prefix web
-	npm run build --prefix web
+	npm ci --ignore-scripts --prefix web >&2
+	npm run build --prefix web >&2
 web-test:
 	npm test --prefix web
 web-dev:

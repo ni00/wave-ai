@@ -119,6 +119,8 @@ Swagger UI 支持中英文切换，也可直接打开[中文界面](http://local
 
 ## 开发
 
+从源码构建和测试需要 Go 1.27+、Node.js 22+ 和 npm。
+
 ```bash
 make build                       # 构建服务。
 make test                        # 运行单元测试和架构测试。
