@@ -151,7 +151,7 @@ func (a *App) Handler() http.Handler {
 		httpx.Error(c, apierr.New(http.StatusMethodNotAllowed, apierr.InvalidRequest, "method not allowed"))
 	})
 	r.GET("/health", a.health)
-	v := r.Group("/v1", httpx.Authenticate(a.DB))
+	v := r.Group("/v1", httpx.Authenticate(a.DB), httpx.ValidatePathParams())
 	v.Use(func(c *gin.Context) {
 		if a.Logs != nil {
 			p := c.MustGet("principal").(*auth.Principal)

@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
+	"unicode/utf8"
 	"wave-ai.local/wave/internal/platform/observe"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +31,22 @@ func Error(c *gin.Context, err error) {
 	}
 	c.AbortWithStatusJSON(e.Status, gin.H{"type": "error", "error": gin.H{"type": e.Type, "message": e.Message}, "request_id": c.GetString("request_id")})
 }
+
+// ValidatePathParams rejects control characters and invalid UTF-8 in path
+// parameters: a NUL byte reaching a database query surfaces as an internal
+// error where the client sent a malformed identifier.
+func ValidatePathParams() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		for _, p := range c.Params {
+			if !utf8.ValidString(p.Value) || strings.ContainsFunc(p.Value, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
+				Error(c, apierr.New(400, apierr.InvalidRequest, "malformed path parameter"))
+				return
+			}
+		}
+		c.Next()
+	}
+}
+
 func Observe() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
