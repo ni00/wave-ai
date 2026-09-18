@@ -24,6 +24,7 @@ htmlcov/
 /dist/
 /bin/
 /build/
+/clients
 /cli/wavectl
 /cli/wavectl.exe
 /sdks/python/dist/
