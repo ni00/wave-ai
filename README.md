@@ -132,6 +132,9 @@ Swagger UI supports English and Chinese. Use the language menu or open
 
 Install Go 1.27+ and Node.js 22+ with npm to build and test from source.
 
+Run `make hooks-install` to enable sensitive-content checks before committing
+(requires Python 3.10+). See [commit checks](docs/commit-safety.md).
+
 ```bash
 make build                       # Build the service.
 make test                        # Run unit and architecture tests.

@@ -105,6 +105,8 @@ Swagger UI 支持中英文切换，也可直接打开[中文界面](http://local
 
 从源码构建和测试需要 Go 1.27+、Node.js 22+ 和 npm。
 
+运行 `make hooks-install` 启用提交前的敏感内容检查（需要 Python 3.10+）。详见[提交检查](docs/commit-safety.zh-CN.md)。
+
 ```bash
 make build                       # 构建服务。
 make test                        # 运行单元测试和架构测试。

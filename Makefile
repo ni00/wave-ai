@@ -3,6 +3,16 @@ BINDIR ?= $(CACHE_DIR)/bin
 COMPOSE := docker compose --project-directory deploy
 DOCS_DIR ?= api
 
+.PHONY: hooks-install sensitive-check sensitive-audit sensitive-test
+hooks-install:
+	python3 tools/git/install_hooks.py
+sensitive-check:
+	python3 tools/git/check_sensitive.py
+sensitive-audit:
+	python3 tools/git/check_sensitive.py --all
+sensitive-test:
+	python3 -m unittest discover -s tools/git -p 'test_*.py'
+
 .PHONY: build run test integration check docs docs-check setup up down bench bench-test bench-sandbox
 build: web-build
 	go build -trimpath -tags=nomsgpack -o "$(BINDIR)/wave" ./cmd/wave
