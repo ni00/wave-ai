@@ -144,7 +144,7 @@ func (t *tool) checkLinks(path string, data []byte) error {
 }
 func (t *tool) checkDocumentation() error {
 	var docs [][2]string
-	for _, dir := range []string{".", "cli", "tools/clients", "sdks/go", "sdks/python", "sdks/typescript"} {
+	for _, dir := range []string{".", "cli", "tools/clients", "sdks/go", "sdks/python", "sdks/typescript", "web"} {
 		docs = append(docs, [2]string{filepath.Join(dir, "README.md"), filepath.Join(dir, "README.zh-CN.md")})
 	}
 	for _, name := range []string{"deployment", "agents", "operations", "benchmarks"} {

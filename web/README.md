@@ -22,8 +22,8 @@ Open [the tunneled console](http://localhost:18080/console/).
 | Section | Pages |
 | --- | --- |
 | Monitoring | Overview, Metrics, Traces, Logs |
-| Resources and execution | Agents, Skills, Deployments, Environments, Sandboxes, Files, Memory, Sessions, Tasks |
-| Performance testing | Benchmarks |
+| Resources & Execution | Agents, Skills, Vaults, Webhooks, Deployments, Environments, Sandboxes, Files, Memory, Sessions, Tasks |
+| Performance | Benchmarks |
 
 Search and filter lists, then select a record for details. Press `/` to search,
 ↑/↓ to select list rows, and Escape to close details. Copy the URL to share the
@@ -57,7 +57,7 @@ importing the same report twice creates two records.
 Select a baseline from the latest 200 reports to compare throughput, success
 rate, and P50/P95/P99. Comparisons require matching workloads, load settings,
 models, and worker counts. Use `wave bench compare` for regression checks.
-See the [benchmark guide](../tools/bench/README.md).
+See the [benchmark guide](../docs/benchmarks.md).
 
 ## Develop the frontend
 

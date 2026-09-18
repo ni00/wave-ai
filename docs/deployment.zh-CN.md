@@ -18,6 +18,23 @@ Compose 读取 `deploy/.env`，直接启动的进程读取环境变量。常用�
 
 备份 `deploy/.env`、数据库、文件存储和沙箱数据。保存 `WAVE_MASTER_KEY` 和存储凭据；更换主密钥会使已加密的凭据无法读取。
 
+## 选择文件存储
+
+Wave 支持两种文件存储后端：
+
+| 后端 | 存储位置 |
+| --- | --- |
+| `s3`（默认） | 任意兼容 S3 的服务；自带 compose 会启动 SeaweedFS |
+| `local` | Wave 所在宿主机上的目录，由 `WAVE_DATA_DIR` 指定 |
+
+S3 相关配置见[配置文件](../deploy/.env.example)。使用 `local` 时所有副本必须看到同一目录，因此只适合单机部署。
+
+在 Docker 中，`WAVE_DATA_DIR` 默认为容器内的 `/var/lib/wave`，它不是卷：重建容器会丢弃其中的文件。在 `deploy/.env` 中加入下面一行即可启用 `deploy/compose.local.yaml`，把该路径放到 `local_data` 卷上：
+
+```dotenv
+COMPOSE_FILE=deploy/compose.yaml:deploy/compose.local.yaml
+```
+
 ## 安装沙箱后端
 
 | 后端 | 依赖 | 隔离方式 |
@@ -124,6 +141,4 @@ wave bench sandbox -backend gvisor -verify -concurrency 1,2 \
   -memory-mib 512,1024 -iterations 3 -format json > gvisor.json
 ```
 
-压测使用临时 PostgreSQL，只清理自身创建的沙箱，不调用模型，容量预算独立于部署。容器后端的 `-verify` 检查执行、隔离、产物、去重、超时清理及磁盘保留。清理失败时，JSON 报告记录残留资源。
-
-用 `-command` 测试实际负载。默认文件校验负载和镜像已缓存时的耗时不能预测 Agent 吞吐或内存峰值。参见[性能压测](benchmarks.zh-CN.md)。
+用 `-command` 测试实际负载。默认文件校验负载和镜像已缓存时的耗时不能预测 Agent 吞吐或内存峰值。`-verify` 的检查项、完整参数和 `make bench-sandbox` 用法见[性能压测](benchmarks.zh-CN.md)。

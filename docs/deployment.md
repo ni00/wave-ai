@@ -26,6 +26,27 @@ Back up `deploy/.env`, the database, file storage, and sandbox data. Keep
 `WAVE_MASTER_KEY` and storage credentials; replacing the master key makes existing
 encrypted credentials unreadable.
 
+## Choose file storage
+
+Wave stores files, artifacts, and skills in one of two backends:
+
+| Backend | Storage |
+| --- | --- |
+| `s3` (default) | Any S3-compatible service; the bundled compose file runs SeaweedFS |
+| `local` | A directory on the host running Wave, set by `WAVE_DATA_DIR` |
+
+`deploy/.env.example` lists the S3 settings. With `local`, every replica must see
+the same directory, so use it for single-host deployments.
+
+In Docker, `WAVE_DATA_DIR` defaults to `/var/lib/wave` inside the container, which
+is not a volume: recreating the container discards the files. Opt into
+`deploy/compose.local.yaml`, which puts that path on the `local_data` volume, by
+adding this line to `deploy/.env`:
+
+```dotenv
+COMPOSE_FILE=deploy/compose.yaml:deploy/compose.local.yaml
+```
+
 ## Set up the sandbox backend
 
 | Backend | Requirements | Isolation |
@@ -173,11 +194,6 @@ wave bench sandbox -backend gvisor -verify -concurrency 1,2 \
   -memory-mib 512,1024 -iterations 3 -format json > gvisor.json
 ```
 
-The benchmark uses disposable PostgreSQL and cleans up its own sandboxes. It
-makes no model calls and has an independent capacity budget. The container
-`-verify` suite checks execution, isolation, artifacts, deduplication, timeout
-cleanup, and disk retention. Cleanup failures identify remaining resources in
-the JSON report.
-
 Use `-command` for your workload. Default file/checksum timings and cached-image
-runs do not predict agent throughput or peak memory. See [benchmarks](benchmarks.md).
+runs do not predict agent throughput or peak memory. See [benchmarks](benchmarks.md)
+for the `-verify` suite, the flag list, and the `make bench-sandbox` shortcut.

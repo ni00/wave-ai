@@ -79,6 +79,8 @@ make bench-sandbox BENCH_ARGS='-backend gvisor -verify -concurrency 1,2'
 
 测试 gVisor，使用已配置的 Docker runtime。测试不受现有部署的沙箱容量上限约束，应在专用测试主机上运行；不测量宿主机 RSS 或客体内存峰值。
 
+压测使用临时 PostgreSQL，只清理自身创建的沙箱，不调用模型。容器后端的 `-verify` 检查执行、隔离、产物、去重、超时清理及磁盘保留；清理失败时，JSON 报告记录残留资源。
+
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
 | `-backend` | `gvisor` | 被测沙箱后端：`gvisor` |

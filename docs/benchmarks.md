@@ -101,6 +101,11 @@ Tests gVisor using the configured Docker runtime.
 Capacity is independent of deployment limits, so use a dedicated test host.
 This mode does not measure host RSS or peak guest memory.
 
+It uses disposable PostgreSQL, cleans up its own sandboxes, and makes no model
+calls. The container `-verify` suite checks execution, isolation, artifacts,
+deduplication, timeout cleanup, and disk retention; cleanup failures identify
+remaining resources in the JSON report.
+
 | Flag | Default | Meaning |
 | --- | --- | --- |
 | `-backend` | `gvisor` | Sandbox backend under test: `gvisor` |
