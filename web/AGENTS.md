@@ -12,7 +12,7 @@ Build app UI in `src/`. The console is embedded in Wave and served at `/console/
 
 Keep interface text concise and functional. Do not add slogans, promotional copy, decorative subtitles, or explanations that repeat a page title or action. Use short labels and empty states; retain brief error, data-limit, and operational notices only where they affect the user's next action or interpretation of data.
 
-Use English consistently throughout the sidebar, including section headings, menu items, and footer actions.
+Use English consistently throughout the sidebar, including section headings, menu items, and footer actions. Interface copy outside the sidebar is Simplified Chinese; write new user-facing strings in Simplified Chinese.
 
 Use “Benchmarks” for the console navigation and page name. Keep the CLI command `wave bench`.
 
