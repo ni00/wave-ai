@@ -47,6 +47,9 @@ func followup(ctx context.Context, db *gorm.DB, p *auth.Principal, id, text, sou
 		if e := tx.Save(t).Error; e != nil {
 			return e
 		}
+		if e := notifyQueued(tx); e != nil {
+			return e
+		}
 		return emit(tx, s, id, "agent.resumed", map[string]any{"text": text})
 	})
 }

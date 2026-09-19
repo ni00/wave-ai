@@ -35,6 +35,11 @@ func TestBoundaries(t *testing.T) {
 		if _, ok := allowed[group]; !ok {
 			t.Errorf("%s: production code must belong to app, modules, adapters or platform", path)
 		}
+		// The signaling plane owns the one place allowed to speak PostgreSQL
+		// directly: LISTEN needs a dedicated connection outside the pooled
+		// ORM DB, and pg_notify publishers must run inside caller
+		// transactions. Scoped to that single file on purpose.
+		signaling := strings.HasSuffix(filepath.ToSlash(rel), "platform/database/notify.go")
 		fset := token.NewFileSet()
 		f, e := parser.ParseFile(fset, path, nil, 0)
 		if e != nil {
@@ -52,7 +57,7 @@ func TestBoundaries(t *testing.T) {
 					t.Errorf("%s: %s must not import %s", path, group, name)
 				}
 			}
-			if name == "database/sql" || strings.HasPrefix(name, "github.com/jackc/pgx") {
+			if !signaling && (name == "database/sql" || strings.HasPrefix(name, "github.com/jackc/pgx")) {
 				t.Errorf("%s imports a database driver directly", path)
 			}
 			if name == "github.com/gin-gonic/gin" && !strings.HasSuffix(path, "handler.go") && !strings.Contains(path, "/httpx/") && !strings.HasSuffix(path, "/app/app.go") {
@@ -80,7 +85,7 @@ func TestBoundaries(t *testing.T) {
 			case "Exec":
 				// Exec is also the sandbox process API. Only the adapter and its app
 				// integration may call it; persistence use cases cannot.
-				if !strings.Contains(path, "/adapters/sandbox/") && !strings.HasSuffix(path, "/app/tools.go") && !strings.HasSuffix(path, "/app/workspace.go") {
+				if !signaling && !strings.Contains(path, "/adapters/sandbox/") && !strings.HasSuffix(path, "/app/tools.go") && !strings.HasSuffix(path, "/app/workspace.go") {
 					t.Errorf("%s: unexpected Exec", fset.Position(call.Pos()))
 				}
 			}

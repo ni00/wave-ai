@@ -39,6 +39,10 @@ func Reconcile(ctx context.Context, db *gorm.DB, p *auth.Principal, id string, s
 		if e := tx.Save(t).Error; e != nil {
 			return e
 		}
+		// Reconciliation requeued an uncertain task; wake idle workers.
+		if e := notifyQueued(tx); e != nil {
+			return e
+		}
 		return emit(tx, s, id, "task.reconciled", map[string]any{"confirmed_stopped": true})
 	})
 }

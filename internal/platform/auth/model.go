@@ -29,8 +29,8 @@ type APIKey struct {
 	KeyPrefix    string `gorm:"not null"`
 	Label        string `gorm:"not null"`
 	Scope        string `gorm:"not null"`
-	RevokedAt *time.Time
-	CreatedAt time.Time
+	RevokedAt    *time.Time
+	CreatedAt    time.Time
 	Organization Organization `gorm:"foreignKey:OrgID" json:"-"`
 	Identity     Identity     `gorm:"foreignKey:PrincipalID" json:"-"`
 }

@@ -24,6 +24,9 @@ type Config struct {
 	ContextTokens          int
 	WorkerConcurrency      int
 	LeaseSeconds           int
+	DeltaFlushBytes        int
+	DeltaFlushMS           int
+	AuthCacheTTLSeconds    int
 	SandboxBackend         string
 	DockerHost             string
 	ContainerImage         string
@@ -105,6 +108,9 @@ func Load() (*Config, error) {
 		GVisorRuntime:          str("WAVE_GVISOR_RUNTIME", "wave-runsc"),
 		WorkerConcurrency:      integer("WAVE_WORKER_CONCURRENCY", 10),
 		LeaseSeconds:           integer("WAVE_LEASE_SECONDS", 30),
+		DeltaFlushBytes:        integer("WAVE_DELTA_FLUSH_BYTES", 4096),
+		DeltaFlushMS:           integer("WAVE_DELTA_FLUSH_MS", 500),
+		AuthCacheTTLSeconds:    integer("WAVE_AUTH_CACHE_TTL_SEC", 15),
 		ModelTimeoutSec:        integer("WAVE_MODEL_TIMEOUT_SEC", 300),
 		SandboxCPUs:            integer("WAVE_SANDBOX_CPUS", 1),
 		SandboxMemoryMiB:       integer("WAVE_SANDBOX_MEMORY_MIB", 1024),

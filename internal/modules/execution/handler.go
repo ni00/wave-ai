@@ -17,10 +17,16 @@ import (
 	"wave-ai.local/wave/internal/platform/xid"
 )
 
-type handler struct{ db *gorm.DB }
+type handler struct {
+	db     *gorm.DB
+	signal EventSignaler
+}
 
-func Register(r *gin.RouterGroup, db *gorm.DB) {
-	h := handler{db: db}
+// Register mounts the documented routes. A non-nil signal lets event streams
+// wake on committed events instead of waiting out their poll interval; nil
+// keeps streams in pure polling mode (tests, role splits without a listener).
+func Register(r *gin.RouterGroup, db *gorm.DB, signal EventSignaler) {
+	h := handler{db: db, signal: signal}
 	r.GET("/sessions/:id/messages", h.messages)
 	r.GET("/sessions/:id/required_actions", h.requiredActions)
 	r.GET("/tasks/:id/generations", h.generations)
@@ -382,9 +388,14 @@ func (h handler) streamEvents(c *gin.Context) {
 	c.Header("Cache-Control", "no-cache")
 	c.Header("X-Accel-Buffering", "no")
 	ctl := http.NewResponseController(c.Writer)
-	defer ctl.SetWriteDeadline(time.Time{})
-	tick := time.NewTicker(250 * time.Millisecond)
-	defer tick.Stop()
+	streamPoll := newStreamPoll()
+	defer streamPoll.stop()
+	var wake <-chan struct{}
+	if h.signal != nil {
+		// Session-scoped subscription: wake only for this session's
+		// committed events, canceled with the request.
+		wake = h.signal.Subscribe(c.Request.Context(), s.ID)
+	}
 	ping := time.NewTicker(15 * time.Second)
 	defer ping.Stop()
 	for {
@@ -409,10 +420,23 @@ func (h handler) streamEvents(c *gin.Context) {
 		if len(rows) == 200 {
 			continue
 		}
+		// Adaptive cadence: an active stream polls at the base rate; each
+		// empty poll doubles the interval up to the ceiling so an idle
+		// stream stops re-querying at full rate. A wake signal (or a
+		// notification-driven fetch) restores the active rate immediately.
+		if len(rows) > 0 {
+			streamPoll.active()
+		} else {
+			streamPoll.idle()
+		}
+		streamPoll.arm()
 		select {
 		case <-c.Request.Context().Done():
 			return
-		case <-tick.C:
+		case <-wake:
+			// Events were committed for this session; fetch them now rather
+			// than waiting out the (possibly idle-grown) interval.
+		case <-streamPoll.channel():
 		case <-ping.C:
 			_ = ctl.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if _, e = fmt.Fprint(c.Writer, ": ping\n\n"); e != nil {
@@ -421,6 +445,37 @@ func (h handler) streamEvents(c *gin.Context) {
 		}
 	}
 }
+
+// streamPoll sequences the SSE fallback polls: 250 ms while the session is
+// producing events, doubling per empty poll up to 1 s. The notification wake
+// path bypasses it entirely, so growth only ever affects quiet streams.
+type streamPoll struct {
+	base, ceiling time.Duration
+	level         time.Duration
+	timer         *time.Timer
+}
+
+func newStreamPoll() *streamPoll {
+	return &streamPoll{base: 250 * time.Millisecond, ceiling: time.Second, level: 250 * time.Millisecond, timer: time.NewTimer(time.Nanosecond)}
+}
+
+func (p *streamPoll) active() { p.level = p.base }
+func (p *streamPoll) idle()   { p.level = min(p.level*2, p.ceiling) }
+
+// arm restarts the timer for the current level, draining a pending fire so a
+// stale tick can never leak into the next wait.
+func (p *streamPoll) arm() {
+	if !p.timer.Stop() {
+		select {
+		case <-p.timer.C:
+		default:
+		}
+	}
+	p.timer.Reset(p.level)
+}
+
+func (p *streamPoll) channel() <-chan time.Time { return p.timer.C }
+func (p *streamPoll) stop()                     { p.timer.Stop() }
 
 func cursor(c *gin.Context) (int64, error) {
 	raw := c.Query("after")

@@ -42,14 +42,18 @@ import (
 )
 
 type App struct {
-	Logs    *telemetry.LogSink
-	MCP     mcpclient.Pool
-	Guard   *guardrails.Set
-	Config  *config.Config
-	DB      *gorm.DB
-	Blobs   *blobstore.Store
-	Box     *secrets.Box
-	Sandbox sandbox.Provider
+	Logs     *telemetry.LogSink
+	MCP      mcpclient.Pool
+	Guard    *guardrails.Set
+	Config   *config.Config
+	DB       *gorm.DB
+	Blobs    *blobstore.Store
+	Box      *secrets.Box
+	Sandbox  sandbox.Provider
+	Listener *database.Listener
+	// Auth caches api-key lookups for the hot /v1 path; revocation in other
+	// replicas converges within AuthCacheTTLSeconds.
+	Auth *auth.Cache
 }
 
 func Models() []any {
@@ -109,12 +113,21 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	if e != nil {
 		return nil, e
 	}
+	// The notify signaling plane shares the database URL but not the pool:
+	// LISTEN needs a dedicated connection that never returns to the pool.
+	// Created after Open so an unreachable database still reports from the
+	// pooled path first; nil-safe throughout (signalers degrade to polling).
+	listener, e := database.Listen(context.Background(), cfg.DatabaseURL)
 	ok = true
-	return &App{Logs: telemetry.NewLogSink(db), Guard: guard, Config: cfg, DB: db, Blobs: b, Box: box, Sandbox: provider}, nil
+	authCache := auth.NewCache(db, time.Duration(cfg.AuthCacheTTLSeconds)*time.Second)
+	return &App{Logs: telemetry.NewLogSink(db), Guard: guard, Config: cfg, DB: db, Blobs: b, Box: box, Sandbox: provider, Listener: listener, Auth: authCache}, nil
 }
 func (a *App) Close() {
 	if a.Logs != nil {
 		a.Logs.Close()
+	}
+	if a.Listener != nil {
+		a.Listener.Close()
 	}
 	a.MCP.Close()
 	if c, ok := a.Sandbox.(interface{ Close() error }); ok {
@@ -151,7 +164,7 @@ func (a *App) Handler() http.Handler {
 		httpx.Error(c, apierr.New(http.StatusMethodNotAllowed, apierr.InvalidRequest, "method not allowed"))
 	})
 	r.GET("/health", a.health)
-	v := r.Group("/v1", httpx.Authenticate(a.DB), httpx.ValidatePathParams())
+	v := r.Group("/v1", httpx.AuthenticateWith(a.Auth.Authenticate), httpx.ValidatePathParams())
 	v.Use(func(c *gin.Context) {
 		if a.Logs != nil {
 			p := c.MustGet("principal").(*auth.Principal)
@@ -167,7 +180,7 @@ func (a *App) Handler() http.Handler {
 	console.Register(v, a.DB, a.Blobs)
 	agents.Register(v, a.DB)
 	environments.Register(v, a.DB)
-	execution.Register(v, a.DB)
+	execution.Register(v, a.DB, execution.Signaler(a.Listener))
 	files.Register(v, a.DB, a.Blobs)
 	memory.Register(v, a.DB)
 	vault.Register(v, a.DB, a.Box)
@@ -204,17 +217,20 @@ func (a *App) Run(ctx context.Context) error {
 		for range a.Config.WorkerConcurrency {
 			group.Go(func() error {
 				worker := &execution.Worker{
-					WriteLog:      a.Logs.Write,
-					DB:            a.DB,
-					Guard:         a.Guard,
-					ContextTokens: a.Config.ContextTokens,
-					Model:         modelclient.New(a.Config.ModelBaseURL, a.Config.ModelAPIKey, time.Duration(a.Config.ModelTimeoutSec)*time.Second),
-					Lease:         time.Duration(a.Config.LeaseSeconds) * time.Second,
-					Execute:       a.execute,
-					Prepare:       a.prepare,
-					Finish:        a.finish,
-					Evaluate:      a.evaluate,
-					Admit:         a.admitSandbox,
+					WriteLog:        a.Logs.Write,
+					DB:              a.DB,
+					Guard:           a.Guard,
+					ContextTokens:   a.Config.ContextTokens,
+					Model:           modelclient.New(a.Config.ModelBaseURL, a.Config.ModelAPIKey, time.Duration(a.Config.ModelTimeoutSec)*time.Second),
+					Lease:           time.Duration(a.Config.LeaseSeconds) * time.Second,
+					Execute:         a.execute,
+					Prepare:         a.prepare,
+					Finish:          a.finish,
+					Evaluate:        a.evaluate,
+					Admit:           a.admitSandbox,
+					Wake:            execution.TaskQueueWake(ctx, a.Listener),
+					DeltaFlushBytes: a.Config.DeltaFlushBytes,
+					DeltaFlushMS:    a.Config.DeltaFlushMS,
 				}
 				worker.Run(ctx)
 				return nil

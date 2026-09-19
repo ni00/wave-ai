@@ -68,6 +68,9 @@ func Spawn(ctx context.Context, db *gorm.DB, p *auth.Principal, parentID, agentI
 		if e = tx.Save(parent).Error; e != nil {
 			return e
 		}
+		if e := notifyQueued(tx); e != nil {
+			return e
+		}
 		return emit(tx, s, parent.ID, "agent.created", map[string]any{"task_id": child.ID})
 	})
 	return child, err

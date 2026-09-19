@@ -41,8 +41,8 @@ import {
   IconArrowRight,
   IconKey,
   IconExternalLink,
+  IconLoader2,
 } from "@tabler/icons-react";
-import { Client } from "../../sdks/typescript/src/client.ts";
 import {
   APIContext,
   routeFilters,
@@ -62,6 +62,15 @@ import {
   Empty,
   ErrorBoundary,
 } from "./ui.jsx";
+// The SDK client bundles a 178KB operations registry: load it dynamically
+// only after the user submits an API key, so the login screen parses no SDK
+// code. A rejected import clears the cache so a retry re-downloads it.
+let sdk;
+const loadSDK = () =>
+  (sdk ??= import("../../sdks/typescript/src/client.ts").catch((error) => {
+    sdk = undefined;
+    throw error;
+  }));
 const Operations = lazy(() => import("./Operations.jsx"));
 const OperationCreate = lazy(() =>
   import("./Operations.jsx").then((m) => ({ default: m.CreateAction })),
@@ -94,10 +103,24 @@ const navigation = [
 ];
 export default function App() {
   const [apiKey, setAPIKey] = useState("");
+  const [sdk, setSDK] = useState(null);
   const queryClient = useQueryClient();
+  // Load the SDK module after login (validation has already warmed the
+  // cache, so this resolves immediately); the client instance is created
+  // only once the module is ready.
+  useEffect(() => {
+    if (!apiKey) return;
+    let alive = true;
+    loadSDK().then((module) => alive && setSDK(module));
+    return () => {
+      alive = false;
+    };
+  }, [apiKey]);
   const api = useMemo(
-    () => new Client({ baseURL: location.origin, apiKey, maxRetries: 1 }),
-    [apiKey],
+    () =>
+      sdk &&
+      new sdk.Client({ baseURL: location.origin, apiKey, maxRetries: 1 }),
+    [sdk, apiKey],
   );
   if (!apiKey)
     return (
@@ -107,6 +130,15 @@ export default function App() {
           setAPIKey(key);
         }}
       />
+    );
+  if (!api)
+    return (
+      <main className="login">
+        <div className="loading">
+          <IconLoader2 size={18} className="spin" />
+          正在加载…
+        </div>
+      </main>
     );
   return (
     <APIContext.Provider value={api}>
@@ -146,6 +178,7 @@ function Login({ connect }) {
             setBusy(true);
             setError("");
             try {
+              const { Client } = await loadSDK();
               const client = new Client({
                 baseURL: location.origin,
                 apiKey: key,

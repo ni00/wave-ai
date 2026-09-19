@@ -93,6 +93,9 @@ func CreateTask(ctx context.Context, db *gorm.DB, p *auth.Principal, sid, agentI
 		if e = addInput(tx, &s, &out, text, "user", ""); e != nil {
 			return e
 		}
+		if e := notifyQueued(tx); e != nil {
+			return e
+		}
 		return emit(tx, &s, out.ID, "task.created", map[string]any{"task_id": out.ID})
 	})
 	return out, err

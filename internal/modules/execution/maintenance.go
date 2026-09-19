@@ -132,6 +132,11 @@ func Expire(ctx context.Context, db *gorm.DB) error {
 				if e := tx.Save(&task).Error; e != nil {
 					return e
 				}
+				// Expiration requeues waiters so their cancellation runs;
+				// wake a worker to process it.
+				if e := notifyQueued(tx); e != nil {
+					return e
+				}
 			}
 			return emit(tx, s, root.ID, "budget.exhausted", map[string]any{"limit": "duration"})
 		}); e != nil {

@@ -130,3 +130,25 @@ func TestWorkspaceZeroDisablesQuota(t *testing.T) {
 		t.Fatal("negative value accepted")
 	}
 }
+
+func TestDeltaFlushConfiguration(t *testing.T) {
+	t.Setenv("WAVE_STORAGE_BACKEND", "local")
+	t.Setenv("WAVE_SANDBOX_BACKEND", "gvisor")
+	t.Setenv("WAVE_MASTER_KEY", "")
+	t.Setenv("WAVE_DELTA_FLUSH_BYTES", "")
+	t.Setenv("WAVE_DELTA_FLUSH_MS", "")
+	c, err := Load()
+	if err != nil || c.DeltaFlushBytes != 4096 || c.DeltaFlushMS != 500 {
+		t.Fatalf("delta flush defaults: %+v %v", c, err)
+	}
+	t.Setenv("WAVE_DELTA_FLUSH_BYTES", "8192")
+	t.Setenv("WAVE_DELTA_FLUSH_MS", "250")
+	c, err = Load()
+	if err != nil || c.DeltaFlushBytes != 8192 || c.DeltaFlushMS != 250 {
+		t.Fatalf("delta flush override: %+v %v", c, err)
+	}
+	t.Setenv("WAVE_DELTA_FLUSH_MS", "0")
+	if _, err = Load(); err == nil {
+		t.Fatal("non-positive flush interval accepted")
+	}
+}

@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -17,18 +16,7 @@ import (
 )
 
 func Authenticate(ctx context.Context, db *gorm.DB, bearer string) (*Principal, error) {
-	var key APIKey
-	err := db.WithContext(ctx).Where(clause.Eq{Column: "key_hash", Value: hashKey(bearer)}).Take(&key).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, apierr.Unauthorized("invalid api key")
-	}
-	if err != nil {
-		return nil, apierr.InternalErr(err, "authenticate failed")
-	}
-	if key.RevokedAt != nil {
-		return nil, apierr.Unauthorized("api key revoked")
-	}
-	return &Principal{OrgID: key.OrgID, PrincipalID: key.PrincipalID, APIKeyID: key.ID, Scope: key.Scope}, nil
+	return lookupKey(ctx, db, hashKey(bearer))
 }
 
 // Bootstrap creates the identity and key atomically; plaintext is returned only

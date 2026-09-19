@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"wave-ai.local/wave/internal/modules/webhooks"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"wave-ai.local/wave/internal/modules/webhooks"
 	"wave-ai.local/wave/internal/platform/auth"
+	"wave-ai.local/wave/internal/platform/database"
 )
 
 var ErrPending = errors.New("workspace preparation is pending")
@@ -29,6 +30,13 @@ func emit(tx *gorm.DB, s *Session, task, typ string, data map[string]any) error 
 		return err
 	}
 	if err := tx.Create(&Event{SessionID: s.ID, Seq: s.EventSeq, TaskID: task, Type: typ, Data: data}).Error; err != nil {
+		return err
+	}
+	// Wake SSE streams watching this session. The notification is emitted on
+	// the same transaction as the event row, so PostgreSQL delivers it only
+	// after commit: streams never chase events that rolled back. Payload is
+	// the session id so each stream filters for itself.
+	if err := database.NotifySessionEvent(tx, s.ID); err != nil {
 		return err
 	}
 	payload := map[string]any{"session_id": s.ID, "task_id": task}

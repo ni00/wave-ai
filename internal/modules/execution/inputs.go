@@ -32,6 +32,10 @@ func steer(ctx context.Context, db *gorm.DB, p *auth.Principal, id, text, source
 			if e := tx.Save(t).Error; e != nil {
 				return e
 			}
+			// The reply re-armed the task: wake idle workers now.
+			if e := notifyQueued(tx); e != nil {
+				return e
+			}
 		}
 		return emit(tx, s, id, "input.accepted", map[string]any{"text": text})
 	})

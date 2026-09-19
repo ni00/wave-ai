@@ -36,7 +36,15 @@ func (w *Worker) park(ctx context.Context, t *Task, state string) error {
 		current.State = state
 		current.Owner = ""
 		current.LeaseUntil = nil
-		return tx.Save(current).Error
+		if e := tx.Save(current).Error; e != nil {
+			return e
+		}
+		if state == "queued" {
+			// Covers both the explicit requeue (pending preparation) and the
+			// progressed-call requeue above: idle workers must see it now.
+			return notifyQueued(tx)
+		}
+		return nil
 	})
 }
 func (w *Worker) fail(ctx context.Context, t *Task, cause error) error {
@@ -85,6 +93,11 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 							child.State = "queued"
 						}
 						if e := tx.Save(&child).Error; e != nil {
+							return e
+						}
+						// Cancellation cascades requeue waiting children; wake
+						// a worker to process the cancel request.
+						if e := notifyQueued(tx); e != nil {
 							return e
 						}
 					}
@@ -137,6 +150,11 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 				return e
 			}
 			if e := tx.Model(&Task{}).Where(clause.And(eq("id", t.ParentID), eq("state", "waiting"))).Update("state", "queued").Error; e != nil {
+				return e
+			}
+			// The finished child re-armed its waiting coordinator; wake a
+			// worker to process the child's report immediately.
+			if e := notifyQueued(tx); e != nil {
 				return e
 			}
 		}

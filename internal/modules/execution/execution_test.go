@@ -55,6 +55,13 @@ func (fakeModel) Stream(ctx context.Context, r model.Request, delta func(model.D
 	return &model.Final{Content: []model.ContentBlock{{Type: "text", Text: "answer"}}, Usage: model.Usage{PromptTokens: &n, CompletionTokens: &n}, StopReason: "stop"}, nil
 }
 func setup(t *testing.T) (*gorm.DB, *auth.Principal, Session) {
+	db, p, s, _ := setupWithKey(t)
+	return db, p, s
+}
+
+// setupWithKey also returns the API key so HTTP-level tests can
+// authenticate against the same principal that owns the fixtures.
+func setupWithKey(t *testing.T) (*gorm.DB, *auth.Principal, Session, string) {
 	t.Helper()
 	dsn := os.Getenv("WAVE_TEST_DATABASE_URL")
 	if dsn == "" {
@@ -87,7 +94,7 @@ func setup(t *testing.T) (*gorm.DB, *auth.Principal, Session) {
 		db.Model(&Task{}).Where(eq("session_id", s.ID)).Updates(map[string]any{"state": "canceled", "owner": "", "lease_until": nil})
 		db.Model(&Session{}).Where(eq("id", s.ID)).Update("active_root", "")
 	})
-	return db, p, s
+	return db, p, s, key
 }
 func agent(t *testing.T, db *gorm.DB, p *auth.Principal, instruction string, tools []agents.Tool) agents.Agent {
 	t.Helper()

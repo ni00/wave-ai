@@ -2,6 +2,7 @@
 package httpx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -84,14 +85,26 @@ func Observe() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// Authenticator resolves a bearer key to its principal.
+type Authenticator func(ctx context.Context, bearer string) (*auth.Principal, error)
+
 func Authenticate(db *gorm.DB) gin.HandlerFunc {
+	return AuthenticateWith(func(ctx context.Context, bearer string) (*auth.Principal, error) {
+		return auth.Authenticate(ctx, db, bearer)
+	})
+}
+
+// AuthenticateWith builds the /v1 middleware around a swappable authenticator,
+// typically an auth.Cache.
+func AuthenticateWith(authz Authenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		hdr := c.GetHeader("Authorization")
 		if !strings.HasPrefix(hdr, "Bearer ") {
 			Error(c, apierr.Unauthorized("missing bearer key"))
 			return
 		}
-		p, err := auth.Authenticate(c.Request.Context(), db, strings.TrimPrefix(hdr, "Bearer "))
+		p, err := authz(c.Request.Context(), strings.TrimPrefix(hdr, "Bearer "))
 		if err != nil {
 			Error(c, err)
 			return

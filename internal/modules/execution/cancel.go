@@ -31,6 +31,13 @@ func Cancel(ctx context.Context, db *gorm.DB, p *auth.Principal, id string) erro
 			if e := tx.Save(a).Error; e != nil {
 				return e
 			}
+			// A waiting task requeued by cancellation is claimable again; an
+			// already queued one needs no signal, its earlier one still stands.
+			if a.State == "queued" {
+				if e := notifyQueued(tx); e != nil {
+					return e
+				}
+			}
 		}
 		return emit(tx, s, id, "cancel.requested", map[string]any{})
 	})

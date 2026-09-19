@@ -119,6 +119,100 @@ func TestReservationRollsBackWithClaim(t *testing.T) {
 	}
 }
 
+func advisoryLocks(tx *gorm.DB) int64 {
+	var n int64
+	tx.Raw("SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid()").Scan(&n)
+	return n
+}
+
+func TestReserveLiveRecordSkipsAdvisoryLock(t *testing.T) {
+	db, prefix := capacityDB(t)
+	box := capacityContainer(t, ContainerOptions{Backend: "gvisor", Store: db, Image: "test-image", MaxRunning: 2, MemoryBudgetMiB: 2048})
+	sid := prefix + "-live"
+	if err := db.Transaction(func(tx *gorm.DB) error { return box.Reserve(tx, sid, Resources{1, 512}) }); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&Record{}).Where("session_id = ?", sid).Update("state", "running").Error; err != nil {
+		t.Fatal(err)
+	}
+	// A live reservation re-admits without the DB-wide advisory lock: the
+	// count is observed inside the same transaction, before the xact lock
+	// would be released.
+	var locks int64
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := box.Reserve(tx, sid, Resources{1, 512}); err != nil {
+			return err
+		}
+		locks = advisoryLocks(tx)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if locks != 0 {
+		t.Fatalf("live reservation took %d advisory locks, want 0", locks)
+	}
+	// A stopped record still converts to reserved while holding the lock.
+	if err := db.Model(&Record{}).Where("session_id = ?", sid).Update("state", "stopped").Error; err != nil {
+		t.Fatal(err)
+	}
+	locks = 0
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err := box.Reserve(tx, sid, Resources{1, 512}); err != nil {
+			return err
+		}
+		locks = advisoryLocks(tx)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if locks != 1 {
+		t.Fatalf("stopped conversion took %d advisory locks, want 1", locks)
+	}
+	var r Record
+	if err := db.Where("session_id = ?", sid).Take(&r).Error; err != nil {
+		t.Fatal(err)
+	}
+	if r.State != "reserved" {
+		t.Fatalf("conversion left state %q, want reserved", r.State)
+	}
+}
+
+func TestStoppedConversionAdmissionIsSerialized(t *testing.T) {
+	db, prefix := capacityDB(t)
+	opts := ContainerOptions{Backend: "gvisor", Store: db, Image: "test-image", MaxRunning: 2, MemoryBudgetMiB: 4096}
+	box := capacityContainer(t, opts)
+	for _, sid := range []string{prefix + "-a", prefix + "-b"} {
+		if err := db.Transaction(func(tx *gorm.DB) error { return box.Reserve(tx, sid, Resources{1, 1024}) }); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.Model(&Record{}).Where("session_id = ?", sid).Update("state", "stopped").Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Concurrent wake-ups of stopped sandboxes race fresh admissions; the
+	// advisory lock must keep the shared budget exact regardless of order.
+	var wg sync.WaitGroup
+	for _, sid := range []string{prefix + "-a", prefix + "-b", prefix + "-c", prefix + "-d"} {
+		for range 8 {
+			wg.Go(func() {
+				err := db.Transaction(func(tx *gorm.DB) error { return box.Reserve(tx, sid, Resources{1, 1024}) })
+				if err != nil && !errors.Is(err, ErrCapacity) {
+					t.Error(err)
+				}
+			})
+		}
+	}
+	wg.Wait()
+	var live int64
+	if err := db.Model(&Record{}).Where("session_id LIKE ? AND state <> 'stopped'", prefix+"-%").Count(&live).Error; err != nil {
+		t.Fatal(err)
+	}
+	if live != int64(opts.MaxRunning) {
+		t.Fatalf("admitted %d live sessions, want exactly the budget of %d", live, opts.MaxRunning)
+	}
+}
+
 func capacityContainer(t *testing.T, opts ContainerOptions) *Container {
 	t.Helper()
 	c, err := NewContainer(opts)

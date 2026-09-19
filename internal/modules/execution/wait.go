@@ -125,7 +125,11 @@ func WakeWaiters(ctx context.Context, db *gorm.DB) error {
 			if current.Status != "waiting_children" || current.WaitUntil == nil || current.WaitUntil.After(time.Now()) {
 				return nil
 			}
-			return tx.Model(t).Update("state", "queued").Error
+			if e := tx.Model(t).Update("state", "queued").Error; e != nil {
+				return e
+			}
+			// A wait deadline re-armed the coordinator; wake a worker for it.
+			return notifyQueued(tx)
 		}); e != nil {
 			return e
 		}

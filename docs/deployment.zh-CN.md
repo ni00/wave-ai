@@ -12,6 +12,9 @@ Compose 读取 `deploy/.env`，直接启动的进程读取环境变量。常用�
 | --- | --- | --- |
 | `WAVE_WORKER_CONCURRENCY` | `10` | 每个进程并发的任务 worker 数 |
 | `WAVE_CONTEXT_TOKENS` | `32000` | 上下文 token 预算，需保持在模型限制内 |
+| `WAVE_DELTA_FLUSH_BYTES` | `4096` | 触发 `message.delta` 刷写的缓冲文本大小 |
+| `WAVE_DELTA_FLUSH_MS` | `500` | 缓冲文本的最大停留时长，超过即刷写 |
+| `WAVE_AUTH_CACHE_TTL_SEC` | `15` | `/v1` 热路径的 API 密钥正向缓存；密钥撤销跨副本在此窗口内收敛。`0` 表示禁用 |
 | `WAVE_MODEL_TIMEOUT_SEC` | `300` | 模型请求超时（秒） |
 
 按供应商限流和排队延迟调整并发。使用[性能压测](benchmarks.zh-CN.md)测量主机容量。对外访问使用 HTTPS，数据库和存储保持在私有网络。Wave 自身不限制请求速率；公开部署时应在前端放置具备限流能力的反向代理。

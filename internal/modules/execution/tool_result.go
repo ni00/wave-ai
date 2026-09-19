@@ -82,6 +82,10 @@ func Resolve(ctx context.Context, db *gorm.DB, p *auth.Principal, taskID, callID
 			if e := tx.Save(t).Error; e != nil {
 				return e
 			}
+			// A resolved tool makes the task claimable again.
+			if e := notifyQueued(tx); e != nil {
+				return e
+			}
 		}
 		return emit(tx, s, t.ID, "tool.resolved", map[string]any{"call_id": call.ID, "status": call.Status, "outcome": call.Outcome(), "result": call.Result, "is_error": call.IsError, "error_code": call.ErrorCode})
 	})

@@ -123,6 +123,34 @@ func (c *Container) Exec(ctx context.Context, sid string, req ExecRequest) (*Exe
 	return result, nil
 }
 
+// execCapture runs argv to completion and captures its output without
+// persisting a Process intent: it is reserved for backend-internal probes
+// (never user commands) whose failure carries no ambiguous replay state.
+// Arguments are passed directly to exec, so no shell quoting applies.
+func (c *Container) execCapture(ctx context.Context, id string, argv []string) (string, string, int, error) {
+	created, err := c.api.ExecCreate(ctx, id, client.ExecCreateOptions{User: "0:0", AttachStdout: true, AttachStderr: true, Cmd: argv})
+	if err != nil {
+		return "", "", 0, err
+	}
+	attached, err := c.api.ExecAttach(ctx, created.ID, client.ExecAttachOptions{})
+	if err != nil {
+		return "", "", 0, err
+	}
+	defer attached.Close()
+	stdout, stderr := &limitedBuffer{max: maxCaptureBytes}, &limitedBuffer{max: maxCaptureBytes}
+	if _, err = stdcopy.StdCopy(stdout, stderr, attached.Reader); err != nil {
+		return "", "", 0, err
+	}
+	inspected, err := c.api.ExecInspect(ctx, created.ID, client.ExecInspectOptions{})
+	if err != nil {
+		return "", "", 0, err
+	}
+	if inspected.Running {
+		return "", "", 0, errors.New("sandbox exec detached unexpectedly")
+	}
+	return stdout.String(), stderr.String(), inspected.ExitCode, nil
+}
+
 func (c *Container) killAndConfirm(r Record) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()

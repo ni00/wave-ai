@@ -208,6 +208,39 @@ func walkArchive(reader io.Reader, root string, maxFileBytes int64, visit func(s
 		}
 	}
 }
+
+// parseFindListing decodes the NUL-separated `find -printf '%y\0%P\0'`
+// stream: the first pair is the listing root itself (type "d", empty %P) and
+// every later pair is one direct child. NUL cannot occur inside a filename,
+// so names containing spaces or newlines parse unambiguously. Like the former
+// tar-based listing, directories keep a trailing slash and other entry types
+// (symlinks, devices, ...) are omitted.
+func parseFindListing(out string) ([]string, error) {
+	fields := strings.Split(out, "\x00")
+	if len(fields) < 2 || fields[len(fields)-1] != "" {
+		return nil, errors.New("sandbox listing stream truncated")
+	}
+	entries := fields[:len(fields)-1]
+	if len(entries)%2 != 0 || entries[0] != "d" || entries[1] != "" {
+		return nil, errors.New("sandbox path is not a directory")
+	}
+	names := []string{}
+	for i := 2; i < len(entries); i += 2 {
+		typ, name := entries[i], entries[i+1]
+		if len(typ) != 1 || name == "" {
+			return nil, errors.New("sandbox listing stream corrupted")
+		}
+		switch typ {
+		case "d":
+			names = append(names, name+"/")
+		case "f":
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
 func (c *Container) ListDir(ctx context.Context, sid, p string) ([]string, error) {
 	if err := absolutePath(p); err != nil {
 		return nil, err
@@ -217,26 +250,20 @@ func (c *Container) ListDir(ctx context.Context, sid, p string) ([]string, error
 	if err != nil {
 		return nil, err
 	}
-	result, err := c.api.CopyFromContainer(ctx, r.BackendID, client.CopyFromContainerOptions{SourcePath: p})
+	// CopyFromContainer would tar the entire subtree only to discard all but
+	// the first level; a one-level find streams exactly the top-level names.
+	// The path is a clean absolute path and argv is exec'd directly, so no
+	// shell quoting applies. The format string holds escaped (\0), not
+	// literal, NULs: argv cannot contain NUL bytes, and find's printf engine
+	// emits the real separators into the output stream.
+	stdout, stderr, code, err := c.execCapture(ctx, r.BackendID, []string{"find", p, "-maxdepth", "1", "-printf", `%y\0%P\0`})
 	if err != nil {
 		return nil, err
 	}
-	defer result.Content.Close()
-	if !result.Stat.Mode.IsDir() {
-		return nil, errors.New("sandbox path is not a directory")
+	if code != 0 {
+		return nil, fmt.Errorf("sandbox listdir failed (exit %d): %s", code, strings.TrimSpace(stderr))
 	}
-	out := []string{}
-	err = walkArchive(result.Content, path.Base(p), 128<<20, func(rel string, h *tar.Header, _ io.Reader) error {
-		if rel != "" && !strings.Contains(rel, "/") {
-			if h.Typeflag == tar.TypeDir {
-				rel += "/"
-			}
-			out = append(out, rel)
-		}
-		return nil
-	})
-	sort.Strings(out)
-	return out, err
+	return parseFindListing(stdout)
 }
 func (c *Container) VisitOutputs(ctx context.Context, sid string, maxFileBytes int64, visit func(string, []byte) error) error {
 	defer c.lock(sid)()

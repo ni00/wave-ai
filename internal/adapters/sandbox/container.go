@@ -174,9 +174,13 @@ func (c *Container) ensure(ctx context.Context, sid string) (Record, error) {
 	if err = c.verify(inspected.Container, r, false); err != nil {
 		return r, err
 	}
-	r.BackendID = inspected.Container.ID
-	if err = c.opts.Store.WithContext(ctx).Model(&r).Update("backend_id", r.BackendID).Error; err != nil {
-		return r, err
+	// Persist the backend identity only when it changed: repeated Ensure on a
+	// healthy sandbox must not churn the write-ahead log.
+	if r.BackendID != inspected.Container.ID {
+		r.BackendID = inspected.Container.ID
+		if err = c.opts.Store.WithContext(ctx).Model(&r).Update("backend_id", r.BackendID).Error; err != nil {
+			return r, err
+		}
 	}
 	if inspected.Container.State == nil {
 		return r, errors.New("container has no state")
@@ -199,8 +203,12 @@ func (c *Container) ensure(ctx context.Context, sid string) (Record, error) {
 			return r, errors.New("container failed to reach running state")
 		}
 	}
-	err = c.state(ctx, sid, "running")
-	return r, err
+	// Same write-skipping rule for the terminal state: a sandbox already
+	// recorded as running stays untouched.
+	if r.State == "running" {
+		return r, nil
+	}
+	return r, c.state(ctx, sid, "running")
 }
 
 func (c *Container) Ensure(ctx context.Context, sid string) error {

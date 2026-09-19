@@ -185,20 +185,7 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		return err
 	}
 	defs := definitions(t)
-	var delta strings.Builder
-	last := time.Now()
-	var deltaErr error
-	flush := func() {
-		if delta.Len() == 0 || deltaErr != nil {
-			return
-		}
-		text := delta.String()
-		delta.Reset()
-		deltaErr = fencedSlim(ctx, w.DB, claim, []string{"attempts"}, func(tx *gorm.DB, s *Session, t *Task) error {
-			return emit(tx, s, t.ID, "message.delta", map[string]any{"text": text, "attempt": t.Attempts, "message_id": messageID, "generation_id": generation.ID})
-		})
-		last = time.Now()
-	}
+	deltas := w.newDeltaFlusher(ctx, claim, messageID, generation)
 	final, e := w.Model.Stream(ctx, model.Request{Model: t.Snapshot.Model, Effort: t.Snapshot.Effort, Messages: t.Messages, Tools: defs, MaxOutputTokens: int(outputCap)}, func(d model.Delta) {
 		if generation.FirstDeltaMS == nil {
 			ms := time.Since(generation.StartedAt).Milliseconds()
@@ -207,15 +194,12 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		if w.Guard != nil && !w.Guard.Empty() {
 			return
 		}
-		delta.WriteString(d.Text)
-		if delta.Len() >= 1024 || time.Since(last) >= 200*time.Millisecond {
-			flush()
-		}
+		deltas.add(d.Text)
 	})
 	generation.complete(final, e)
-	flush()
-	if deltaErr != nil {
-		return deltaErr
+	deltas.flush()
+	if deltas.err != nil {
+		return deltas.err
 	}
 	if e != nil {
 		if ctx.Err() != nil {
@@ -242,6 +226,12 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 			}
 			if err := tx.Save(current).Error; err != nil {
 				return err
+			}
+			// A requeued retry is claimable again; wake the idle workers.
+			if current.State == "queued" {
+				if err := notifyQueued(tx); err != nil {
+					return err
+				}
 			}
 			return emit(tx, s, current.ID, "generation.failed", map[string]any{"attempt": current.Attempts, "error": e.Error(), "generation_id": generation.ID, "message_id": messageID})
 		})
@@ -331,4 +321,84 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		}
 		return emit(tx, s, t.ID, "message.completed", map[string]any{"text": text, "attempt": current.Attempts, "message_id": messageID, "generation_id": generation.ID})
 	})
+}
+
+const (
+	// defaultDeltaFlushBytes and defaultDeltaFlushMS back the delta buffer
+	// when the worker was constructed without explicit thresholds; see
+	// WAVE_DELTA_FLUSH_BYTES / WAVE_DELTA_FLUSH_MS for the operators' knobs.
+	defaultDeltaFlushBytes = 4096
+	defaultDeltaFlushMS    = 500
+)
+
+// deltaFlusher batches streamed model text into durable message.delta
+// events, flushing when the buffer reaches flushBytes or the newest delta
+// arrives flushEvery after the last flush.
+//
+// Design note (delta batching): text deltas accumulated inside one flush
+// window are concatenated and persisted as a single message.delta event. The
+// event's other fields (attempt, message_id, generation_id) are constant for
+// the whole generation and the stream carries no per-token usage, so the
+// merge loses nothing; consumers append message.delta text keyed by
+// message_id in seq order, which concatenation preserves exactly (the SSE
+// cursor semantics are unchanged). This is the conservative batching plan:
+// had delta events carried unmergeable per-token fields, the fallback would
+// be one fenced transaction inserting several events per flush, which keeps
+// the write count bounded without per-token transactions; if such a field
+// ever appears, switch flush to that shape. Each flush remains a fenced
+// transaction (ownership re-checked under the session->task locks), so a
+// stolen claim interrupts the stream instead of corrupting the new owner's
+// event sequence.
+type deltaFlusher struct {
+	w          *Worker
+	ctx        context.Context
+	claim      *Task
+	messageID  string
+	generation Generation
+	flushBytes int
+	flushEvery time.Duration
+	buf        strings.Builder
+	last       time.Time
+	err        error
+}
+
+func (w *Worker) newDeltaFlusher(ctx context.Context, claim *Task, messageID string, generation Generation) *deltaFlusher {
+	flushBytes := w.DeltaFlushBytes
+	if flushBytes <= 0 {
+		flushBytes = defaultDeltaFlushBytes
+	}
+	flushMS := w.DeltaFlushMS
+	if flushMS <= 0 {
+		flushMS = defaultDeltaFlushMS
+	}
+	return &deltaFlusher{
+		w: w, ctx: ctx, claim: claim, messageID: messageID, generation: generation,
+		flushBytes: flushBytes, flushEvery: time.Duration(flushMS) * time.Millisecond,
+		last: time.Now(),
+	}
+}
+
+// add buffers one delta and flushes when a threshold has passed. Age is
+// measured between arrivals: the provider callback cannot run a timer, so a
+// stalled stream persists when the next token (or the final flush) arrives.
+func (f *deltaFlusher) add(text string) {
+	f.buf.WriteString(text)
+	if f.buf.Len() >= f.flushBytes || time.Since(f.last) >= f.flushEvery {
+		f.flush()
+	}
+}
+
+// flush persists the buffered text as one merged event. A failed flush is
+// sticky: later attempts are skipped so the step can surface the error
+// instead of interleaving partial writes after a broken transaction.
+func (f *deltaFlusher) flush() {
+	if f.buf.Len() == 0 || f.err != nil {
+		return
+	}
+	text := f.buf.String()
+	f.buf.Reset()
+	f.err = fencedSlim(f.ctx, f.w.DB, f.claim, []string{"attempts"}, func(tx *gorm.DB, s *Session, t *Task) error {
+		return emit(tx, s, t.ID, "message.delta", map[string]any{"text": text, "attempt": t.Attempts, "message_id": f.messageID, "generation_id": f.generation.ID})
+	})
+	f.last = time.Now()
 }
