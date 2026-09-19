@@ -17,13 +17,18 @@ export const short = (value) =>
       ? value.slice(0, 13) + "…" + value.slice(-7)
       : value
     : "—";
+const numberFormat = new Intl.NumberFormat("en", {
+  notation: "standard",
+  maximumFractionDigits: 1,
+});
+const compactNumberFormat = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
 export const number = (v) =>
   v == null
     ? "—"
-    : new Intl.NumberFormat("en", {
-        notation: Math.abs(v) >= 10000 ? "compact" : "standard",
-        maximumFractionDigits: 1,
-      }).format(v);
+    : (Math.abs(v) >= 10000 ? compactNumberFormat : numberFormat).format(v);
 export const duration = (v) =>
   v == null
     ? "—"

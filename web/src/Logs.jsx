@@ -81,7 +81,7 @@ export default function Logs({ location, live, title, icon }) {
     }, 5000);
     return () => clearInterval(t);
   }, [live]);
-  const filters = {
+  const params = {
     q: term || undefined,
     state: level || undefined,
     module: module || undefined,
@@ -89,20 +89,32 @@ export default function Logs({ location, live, title, icon }) {
     session_id: location.session || undefined,
     trace_id: location.trace || undefined,
     span_id: location.span || undefined,
+    after: location.after || undefined,
+    before: location.before || undefined,
+  };
+  const filters = {
+    ...params,
+    // `after` slides with `now` every tick in live mode; it must stay out of
+    // the query key below or each tick creates a fresh cache entry.
     after:
-      location.after ||
+      params.after ||
       (hours
         ? new Date(now - Number(hours) * 3600000).toISOString()
         : undefined),
-    before: location.before || undefined,
   };
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
   const q = useQuery({
-    queryKey: ["logs", filters, cursor],
+    queryKey: ["logs", params, hours, cursor],
     queryFn: ({ signal }) =>
       api
         .call("consoleBrowse", {
           path: { kind: "logs" },
-          query: { ...filters, cursor: cursor || undefined, limit: 100 },
+          query: {
+            ...filtersRef.current,
+            cursor: cursor || undefined,
+            limit: 100,
+          },
           signal,
         })
         .then((r) => r.data),

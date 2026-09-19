@@ -156,8 +156,10 @@ The client retries network errors and HTTP 429, 502, 503, and 504 up to twice.
 Retries apply only to `GET` and contract-marked idempotent writes with an
 `Idempotency-Key`.
 
-Set request, retry, and wait deadlines with `context`; there is no default overall
-timeout. A client timeout does not cancel the remote task.
+Set request, retry, and wait deadlines with `context`. `Call` applies a 30-second
+default deadline (covering all retries) when the context has none; streaming
+methods (`Events`, `Download`, `Upload`) never add one. A client timeout does not
+cancel the remote task.
 
 ## Related documentation
 

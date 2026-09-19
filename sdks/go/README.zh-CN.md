@@ -136,7 +136,7 @@ HTTP API 错误返回 `*wave.APIError`，包含 `StatusCode`、`Code`、`Message
 
 网络错误和 HTTP 429、502、503、504 默认最多重试两次，仅限 `GET` 和契约标记为幂等、带 `Idempotency-Key` 的写请求。
 
-通过 `context` 设置请求、重试和等待的截止时间，默认没有总超时。客户端超时不会取消远端任务。
+通过 `context` 设置请求、重试和等待的截止时间。`Call` 在 context 无截止时间时默认加上 30 秒总期限（覆盖全部重试）；流式方法（`Events`、`Download`、`Upload`）不添加默认期限。客户端超时不会取消远端任务。
 
 ## 相关文档
 

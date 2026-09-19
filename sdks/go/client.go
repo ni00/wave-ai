@@ -239,6 +239,14 @@ func (c *Client) Call(ctx context.Context, id string, o Options) (*Response, err
 			return nil, e
 		}
 	}
+	// JSON calls get a default deadline so a dead server cannot hang callers
+	// that pass context.Background(); the budget covers all retry attempts.
+	// Streaming methods keep the caller's full control of the deadline.
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+	}
 	var data []byte
 	var e error
 	contentType := ""

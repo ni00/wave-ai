@@ -38,6 +38,41 @@ function useDetail(kind, id) {
         .then((r) => r.data),
   });
 }
+// Mutations refresh the owner-scoped lists plus the mutated resource's own
+// detail queries; the previous blanket invalidateQueries() also dropped
+// metrics/logs windows and multi-MiB file contents nothing touched.
+const detailKeys = {
+  agents: ["agentsGet", "agentsVersions"],
+  deployments: [
+    "deploymentsGet",
+    "deploymentsRuns",
+    "deploymentsSchedule",
+    "deploymentsVersions",
+  ],
+  vaults: ["vaultsGet", "vaultList"],
+  webhooks: ["webhooksGet", "webhooksDeliveries"],
+  tasks: [
+    "executionGetTask",
+    "executionGetSession",
+    "executionListTools",
+    "executionMessages",
+    "executionTrace",
+    "events",
+    "event",
+  ],
+};
+const kindOf = (op) =>
+  op.startsWith("agents")
+    ? "agents"
+    : op.startsWith("deployments")
+      ? "deployments"
+      : op.startsWith("vault")
+        ? "vaults"
+        : op.startsWith("webhooks")
+          ? "webhooks"
+          : op.startsWith("execution")
+            ? "tasks"
+            : null;
 export function useChange() {
   const api = useAPI(),
     qc = useQueryClient();
@@ -48,7 +83,13 @@ export function useChange() {
     setError("");
     try {
       const result = await api.call(op, options);
-      await qc.invalidateQueries();
+      const kind = kindOf(op);
+      await qc.invalidateQueries({ queryKey: ["browse"] });
+      if (kind) {
+        await qc.invalidateQueries({ queryKey: ["consoleResource", kind] });
+        for (const detail of detailKeys[kind])
+          await qc.invalidateQueries({ queryKey: [detail] });
+      }
       done?.(result.data);
     } catch (e) {
       setError(e.message);

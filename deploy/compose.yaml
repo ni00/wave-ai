@@ -24,6 +24,11 @@ services:
       timeout: 4s
       retries: 20
       start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
   postgres:
     image: postgres:16-alpine
     environment:
@@ -37,6 +42,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
   init-db:
     build:
       context: ..
@@ -98,6 +108,17 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     # Only the trusted Wave service receives this socket, never agent sandboxes.
     volumes:
       - type: bind

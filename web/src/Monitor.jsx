@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { IconArrowUpRight, IconChartLine } from "@tabler/icons-react";
 import { useAPI, route, date, duration, number } from "./data.js";
@@ -34,18 +34,18 @@ export default function Monitor({ overview, live, title, icon }) {
     [start, setStart] = useState(localTime(Date.now() - 3600000)),
     [end, setEnd] = useState(localTime(Date.now())),
     [error, setError] = useState("");
-  useEffect(() => {
-    if (!live || hours === "custom") return;
-    const t = setInterval(() => {
-      if (document.visibilityState === "visible")
-        setRange(relativeRange(hours));
-    }, 5000);
-    return () => clearInterval(t);
-  }, [live, hours]);
   const q = useQuery({
-    queryKey: ["metrics", range],
+    // Keep the key free of the sliding window: in live mode the endpoints
+    // are computed inside queryFn so refetchInterval refreshes this entry
+    // in place instead of piling up one cache entry per tick.
+    queryKey: ["metrics", hours, hours === "custom" ? range : undefined],
     queryFn: ({ signal }) =>
-      api.call("consoleMetrics", { query: range, signal }).then((r) => r.data),
+      api
+        .call("consoleMetrics", {
+          query: hours === "custom" ? range : relativeRange(hours),
+          signal,
+        })
+        .then((r) => r.data),
     refetchInterval: live ? 5000 : false,
     refetchIntervalInBackground: false,
   });
@@ -111,7 +111,7 @@ export default function Monitor({ overview, live, title, icon }) {
       <Load query={q}>
         {(data) => (
           <Dashboard
-            key={`${data.from}/${data.step_seconds}`}
+            key={`${hours}/${data.step_seconds}`}
             data={data}
             overview={overview}
           />
@@ -124,7 +124,19 @@ function Dashboard({ data, overview }) {
   const totals = data.totals,
     points = data.points;
   const latest = points.findLastIndex((p) => Object.keys(p.values).length > 0);
-  const [selected, setSelected] = useState(Math.max(0, latest));
+  const [selectedAt, setSelectedAt] = useState(null);
+  // Anchor the selection to the point's timestamp: a sliding live window
+  // keeps the chosen instant, clamping into the window once it passes it.
+  const selected = useMemo(() => {
+    if (selectedAt == null) return Math.max(0, latest);
+    const index = points.findIndex((p) => p.at === selectedAt);
+    return index >= 0
+      ? index
+      : selectedAt < points[0]?.at
+        ? 0
+        : Math.max(0, latest);
+  }, [selectedAt, points, latest]);
+  const setSelected = (index) => setSelectedAt(points[index]?.at ?? null);
   const active = points[Math.min(selected, points.length - 1)],
     step = data.step_seconds;
   const from = active?.at || data.from,

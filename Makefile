@@ -46,9 +46,17 @@ down:
 include tools/clients/Makefile
 
 .PHONY: web-build web-test web-dev
-web-build:
+# Rebuild the console only when its inputs change; the stamp lives under
+# web/dist so deleting the build output also drops the stamp.
+WEB_STAMP := web/dist/.build-stamp
+WEB_INPUTS := $(shell find web/src web/scripts sdks/typescript/src -type f 2>/dev/null) \
+	web/index.html web/package.json web/package-lock.json web/vite.config.mjs web/.npmrc
+
+$(WEB_STAMP): $(WEB_INPUTS)
 	npm ci --ignore-scripts --prefix web >&2
 	npm run build --prefix web >&2
+	touch $@
+web-build: $(WEB_STAMP)
 web-test:
 	npm test --prefix web
 web-dev:

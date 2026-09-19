@@ -5,17 +5,68 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"wave-ai.local/wave/web"
 )
+
+// asset holds both encodings of a console file together with their ETags so a
+// request never repeats decompression or hashing work. Assets are immutable
+// (embedded at build time), so entries are computed once on first use.
+type asset struct {
+	gzip      []byte
+	plain     []byte
+	etagGzip  string
+	etagPlain string
+}
+
+var errInvalidAsset = errors.New("invalid embedded asset")
+
+var (
+	assetMu    sync.RWMutex
+	assetCache = map[string]*asset{}
+)
+
+func loadAsset(name string) (*asset, error) {
+	assetMu.RLock()
+	a := assetCache[name]
+	assetMu.RUnlock()
+	if a != nil {
+		return a, nil
+	}
+	gz, err := web.ReadAsset(name + ".gz")
+	if err != nil {
+		return nil, err
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(gz))
+	if err != nil {
+		return nil, errInvalidAsset
+	}
+	plain, err := io.ReadAll(reader)
+	_ = reader.Close()
+	if err != nil {
+		return nil, errInvalidAsset
+	}
+	a = &asset{
+		gzip:      gz,
+		plain:     plain,
+		etagGzip:  fmt.Sprintf(`"%x"`, sha256.Sum256(gz)),
+		etagPlain: fmt.Sprintf(`"%x"`, sha256.Sum256(plain)),
+	}
+	assetMu.Lock()
+	assetCache[name] = a
+	assetMu.Unlock()
+	return a, nil
+}
 
 func Register(r *gin.Engine) {
 	h := http.HandlerFunc(serve)
@@ -31,8 +82,12 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	data, err := web.ReadAsset(name + ".gz")
+	a, err := loadAsset(name)
 	if err != nil {
+		if errors.Is(err, errInvalidAsset) {
+			http.Error(w, "invalid embedded asset", 500)
+			return
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -46,27 +101,13 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Header().Set("Cache-Control", "no-cache")
 	}
-	compressed := false
+	data, etag := a.plain, a.etagPlain
 	for _, part := range strings.Split(r.Header.Get("Accept-Encoding"), ",") {
 		if strings.TrimSpace(part) == "gzip" {
-			compressed = true
+			data, etag = a.gzip, a.etagGzip
+			w.Header().Set("Content-Encoding", "gzip")
 		}
 	}
-	if compressed {
-		w.Header().Set("Content-Encoding", "gzip")
-	} else {
-		reader, e := gzip.NewReader(bytes.NewReader(data))
-		if e != nil {
-			http.Error(w, "invalid embedded asset", 500)
-			return
-		}
-		data, err = io.ReadAll(reader)
-		_ = reader.Close()
-		if err != nil {
-			http.Error(w, "invalid embedded asset", 500)
-			return
-		}
-	}
-	w.Header().Set("ETag", fmt.Sprintf(`"%x"`, sha256.Sum256(data)))
+	w.Header().Set("ETag", etag)
 	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(data))
 }

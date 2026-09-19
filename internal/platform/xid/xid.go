@@ -89,21 +89,13 @@ func uuidV7(t time.Time) string {
 	b[3] = byte(ms >> 16)
 	b[4] = byte(ms >> 8)
 	b[5] = byte(ms)
-	b[6] = 0x70 | byte(randByte()&0x0f) // version 7
-	b[7] = randByte()
-	b[8] = 0x80 | byte(randByte()&0x3f) // RFC 4122 variant
-	b[9] = randByte()
-	rand.Read(b[10:16])
+	rand.Read(b[6:16])      // one syscall for the whole random part
+	b[6] = 0x70 | b[6]&0x0f // version 7
+	b[8] = 0x80 | b[8]&0x3f // RFC 4122 variant
 	return fmt.Sprintf("%s-%s-%s-%s-%s",
 		hex.EncodeToString(b[0:4]), hex.EncodeToString(b[4:6]),
 		hex.EncodeToString(b[6:8]), hex.EncodeToString(b[8:10]),
 		hex.EncodeToString(b[10:16]))
-}
-
-func randByte() byte {
-	var b [1]byte
-	rand.Read(b[:])
-	return b[0]
 }
 
 // New returns a prefixed public identifier such as "sess_01J...".

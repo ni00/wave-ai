@@ -1,9 +1,11 @@
 import React, {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   lazy,
+  memo,
   Suspense,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -58,7 +60,7 @@ import {
   Copy,
   Load,
   Empty,
-  DetailBoundary,
+  ErrorBoundary,
 } from "./ui.jsx";
 const Operations = lazy(() => import("./Operations.jsx"));
 const OperationCreate = lazy(() =>
@@ -108,14 +110,19 @@ export default function App() {
     );
   return (
     <APIContext.Provider value={api}>
-      <Console
-        api={api}
-        logout={() => {
-          queryClient.cancelQueries();
-          queryClient.clear();
-          setAPIKey("");
-        }}
-      />
+      <ErrorBoundary
+        message="页面渲染出错，请重试。"
+        onReset={() => queryClient.resetQueries()}
+      >
+        <Console
+          api={api}
+          logout={() => {
+            queryClient.cancelQueries();
+            queryClient.clear();
+            setAPIKey("");
+          }}
+        />
+      </ErrorBoundary>
     </APIContext.Provider>
   );
 }
@@ -282,18 +289,22 @@ function Console({ api, logout }) {
     refetchIntervalInBackground: false,
   });
   const rows = list.data?.data || [],
-    selected = location.id || rows[0]?.id,
-    record = rows.find((r) => r.id === selected) || {
-      id: selected,
-      name: selected,
-      meta: {},
-    };
+    selected = location.id || rows[0]?.id;
+  const record = useMemo(
+    () =>
+      list.data?.data?.find((r) => r.id === selected) ||
+      { id: selected, name: selected, meta: {} },
+    [list.data, selected],
+  );
   const index = rows.findIndex((r) => r.id === selected);
-  function select(id) {
-    const extra = routeFilters(location);
-    delete extra.span;
-    route(kind, id, extra);
-  }
+  const select = useCallback(
+    (id) => {
+      const extra = routeFilters(location);
+      delete extra.span;
+      route(kind, id, extra);
+    },
+    [location, kind],
+  );
   useEffect(() => {
     const key = (e) => {
       if (
@@ -427,24 +438,30 @@ function Console({ api, logout }) {
           </span>
         </header>
         {monitoring ? (
-          <Suspense fallback={<div className="loading">正在加载…</div>}>
-            {kind === "logs" ? (
-              <Logs
-                location={location}
-                live={live}
-                title={nav[1]}
-                icon={NavIcon}
-              />
-            ) : (
-              <Monitor
-                key={kind}
-                overview={kind === "overview"}
-                live={live}
-                title={nav[1]}
-                icon={NavIcon}
-              />
-            )}
-          </Suspense>
+          <ErrorBoundary
+            key={kind}
+            message="监控页渲染出错，请重试。"
+            onReset={() => qc.resetQueries()}
+          >
+            <Suspense fallback={<div className="loading">正在加载…</div>}>
+              {kind === "logs" ? (
+                <Logs
+                  location={location}
+                  live={live}
+                  title={nav[1]}
+                  icon={NavIcon}
+                />
+              ) : (
+                <Monitor
+                  key={kind}
+                  overview={kind === "overview"}
+                  live={live}
+                  title={nav[1]}
+                  icon={NavIcon}
+                />
+              )}
+            </Suspense>
+          </ErrorBoundary>
         ) : (
           <div className={"workbody " + (location.id ? "has-selection" : "")}>
             <section className="collection" aria-label={nav[1] + " 列表"}>
@@ -693,76 +710,22 @@ function Console({ api, logout }) {
               </footer>
             </section>
             <section className="detail" aria-label="资源详情">
-              {selected ? (
-                <>
-                  <header className="detail-header">
-                    <NavIcon size={17} />
-                    <strong>{kind === "traces" ? "Trace" : nav[1]}</strong>
-                    <span className="mono truncate" title={selected}>
-                      {selected}
-                    </span>
-                    <Copy text={selected} />
-                    <span className="header-spacer" />
-                    <IconButton
-                      title="上一条"
-                      disabled={index <= 0}
-                      onClick={() => select(rows[index - 1].id)}
-                    >
-                      <IconArrowUp size={16} />
-                    </IconButton>
-                    <IconButton
-                      title="下一条"
-                      disabled={index < 0 || index >= rows.length - 1}
-                      onClick={() => select(rows[index + 1].id)}
-                    >
-                      <IconArrowDown size={16} />
-                    </IconButton>
-                    <IconButton title="返回列表" onClick={() => route(kind)}>
-                      <IconX size={16} />
-                    </IconButton>
-                  </header>
-                  <DetailBoundary key={kind + selected}>
-                    <Suspense
-                      fallback={<div className="loading">正在加载详情…</div>}
-                    >
-                      {kind === "traces" ? (
-                        <Trace
-                          key={selected + location.span}
-                          id={selected}
-                          live={live}
-                          initialSpan={location.span}
-                        />
-                      ) : ["vaults", "webhooks"].includes(kind) ? (
-                        <Operations
-                          kind={kind}
-                          id={selected}
-                          key={kind + selected}
-                        />
-                      ) : [
-                          "agents",
-                          "skills",
-                          "deployments",
-                          "sandboxes",
-                        ].includes(kind) ? (
-                        <Management
-                          key={kind + selected}
-                          kind={kind}
-                          id={selected}
-                        />
-                      ) : (
-                        <Resource
-                          key={kind + selected}
-                          kind={kind}
-                          record={record}
-                          id={selected}
-                        />
-                      )}
-                    </Suspense>
-                  </DetailBoundary>
-                </>
-              ) : (
-                <Empty title="选择一条记录" />
-              )}
+              <DetailPane
+                kind={kind}
+                label={nav[1]}
+                icon={NavIcon}
+                selected={selected}
+                live={live}
+                span={location.span}
+                record={record}
+                prevId={index > 0 ? rows[index - 1].id : null}
+                nextId={
+                  index >= 0 && index < rows.length - 1
+                    ? rows[index + 1].id
+                    : null
+                }
+                onSelect={select}
+              />
             </section>
           </div>
         )}
@@ -770,3 +733,82 @@ function Console({ api, logout }) {
     </div>
   );
 }
+
+// Memoized so keystrokes in the collection search box (top-level state in
+// Console) don't re-render the heavy detail area: every prop is a primitive
+// or a stable reference (record/select are memoized in Console).
+const DetailPane = memo(function DetailPane({
+  kind,
+  label,
+  icon: Icon,
+  selected,
+  live,
+  span,
+  record,
+  prevId,
+  nextId,
+  onSelect,
+}) {
+  if (!selected) return <Empty title="选择一条记录" />;
+  return (
+    <>
+      <header className="detail-header">
+        <Icon size={17} />
+        <strong>{kind === "traces" ? "Trace" : label}</strong>
+        <span className="mono truncate" title={selected}>
+          {selected}
+        </span>
+        <Copy text={selected} />
+        <span className="header-spacer" />
+        <IconButton
+          title="上一条"
+          disabled={!prevId}
+          onClick={() => onSelect(prevId)}
+        >
+          <IconArrowUp size={16} />
+        </IconButton>
+        <IconButton
+          title="下一条"
+          disabled={!nextId}
+          onClick={() => onSelect(nextId)}
+        >
+          <IconArrowDown size={16} />
+        </IconButton>
+        <IconButton title="返回列表" onClick={() => route(kind)}>
+          <IconX size={16} />
+        </IconButton>
+      </header>
+      <ErrorBoundary
+        key={kind + selected}
+        message="此记录的数据格式无法显示。请选择另一条记录，或下载原始数据检查。"
+      >
+        <Suspense fallback={<div className="loading">正在加载详情…</div>}>
+          {kind === "traces" ? (
+            <Trace
+              key={selected + span}
+              id={selected}
+              live={live}
+              initialSpan={span}
+            />
+          ) : ["vaults", "webhooks"].includes(kind) ? (
+            <Operations kind={kind} id={selected} key={kind + selected} />
+          ) : [
+              "agents",
+              "skills",
+              "deployments",
+              "sandboxes",
+            ].includes(kind) ? (
+            <Management key={kind + selected} kind={kind} id={selected} />
+          ) : (
+            <Resource
+              key={kind + selected}
+              kind={kind}
+              record={record}
+              id={selected}
+            />
+          )}
+        </Suspense>
+      </ErrorBoundary>
+    </>
+  );
+});

@@ -153,15 +153,24 @@ export function Tabs({ items, value, onChange }) {
   );
 }
 
-export class DetailBoundary extends React.Component {
+export class ErrorBoundary extends React.Component {
   state = { error: null };
   static getDerivedStateFromError(error) {
     return { error };
   }
+  reset = () => {
+    // Clear the query cache first (crashes usually come from bad cached
+    // data, which would otherwise rethrow on the remount below).
+    this.props.onReset?.();
+    this.setState({ error: null });
+  };
   render() {
     return this.state.error ? (
       <div className="error" role="alert">
-        此记录的数据格式无法显示。请选择另一条记录，或下载原始数据检查。
+        {this.props.message || "渲染出错。"}
+        <button type="button" onClick={this.reset}>
+          重试
+        </button>
       </div>
     ) : (
       this.props.children

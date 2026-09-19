@@ -14,7 +14,7 @@ import (
 
 // Box seals and opens secret bundles with AES-256-GCM.
 type Box struct {
-	key []byte
+	aead cipher.AEAD
 }
 
 // NewBox builds a Box from a 32-byte key. When key is nil the key is loaded
@@ -39,7 +39,15 @@ func NewBox(key []byte, keyFile string) (*Box, error) {
 	if len(key) != 32 {
 		return nil, fmt.Errorf("secrets: key must be 32 bytes")
 	}
-	return &Box{key: key}, nil
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	return &Box{aead: aead}, nil
 }
 
 func loadOrCreateKey(keyFile string) ([]byte, error) {
@@ -83,33 +91,17 @@ func loadOrCreateKey(keyFile string) ([]byte, error) {
 
 // Seal encrypts plaintext; returns ciphertext and nonce.
 func (b *Box) Seal(plaintext []byte) (ciphertext, nonce []byte, err error) {
-	gcm, err := b.gcm()
-	if err != nil {
-		return nil, nil, err
-	}
-	nonce = make([]byte, gcm.NonceSize())
+	nonce = make([]byte, b.aead.NonceSize())
 	if _, err := rand.Read(nonce); err != nil {
 		return nil, nil, err
 	}
-	return gcm.Seal(nil, nonce, plaintext, nil), nonce, nil
+	return b.aead.Seal(nil, nonce, plaintext, nil), nonce, nil
 }
 
 // Open decrypts a sealed pair.
 func (b *Box) Open(ciphertext, nonce []byte) ([]byte, error) {
-	gcm, err := b.gcm()
-	if err != nil {
-		return nil, err
-	}
-	if len(nonce) != gcm.NonceSize() {
+	if len(nonce) != b.aead.NonceSize() {
 		return nil, fmt.Errorf("secrets: bad nonce length")
 	}
-	return gcm.Open(nil, nonce, ciphertext, nil)
-}
-
-func (b *Box) gcm() (cipher.AEAD, error) {
-	block, err := aes.NewCipher(b.key)
-	if err != nil {
-		return nil, err
-	}
-	return cipher.NewGCM(block)
+	return b.aead.Open(nil, nonce, ciphertext, nil)
 }

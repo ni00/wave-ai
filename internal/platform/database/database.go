@@ -29,6 +29,9 @@ func Open(ctx context.Context, dsn string) (*gorm.DB, error) {
 	pool.SetMaxOpenConns(32)
 	pool.SetMaxIdleConns(32)
 	pool.SetConnMaxIdleTime(5 * time.Minute)
+	// Rotate long-lived connections so failovers and DNS changes cannot
+	// strand traffic on a dead peer until the idle timeout fires.
+	pool.SetConnMaxLifetime(30 * time.Minute)
 	if err = pool.PingContext(ctx); err != nil {
 		pool.Close()
 		return nil, err

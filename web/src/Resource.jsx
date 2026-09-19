@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   IconArrowUpRight,
@@ -709,23 +709,29 @@ function Bench({ id }) {
   return (
     <div className="resource-scroll">
       <Load query={content}>
-        {(bytes) => {
-          let report;
-          try {
-            report = JSON.parse(new TextDecoder().decode(bytes));
-          } catch {
-            return (
-              <Empty title="报告解析失败">
-                请重新导入有效的 Wave bench v2 JSON。
-              </Empty>
-            );
-          }
-          return <BenchReport report={report} id={id} />;
-        }}
+        {(bytes) => <BenchView bytes={bytes} id={id} />}
       </Load>
     </div>
   );
 }
+const BenchView = memo(function BenchView({ bytes, id }) {
+  // Decoding + parsing up to 16 MiB of JSON on every render is the single
+  // most expensive render in the console; memoize on the raw bytes.
+  const report = useMemo(() => {
+    try {
+      return JSON.parse(new TextDecoder().decode(bytes));
+    } catch {
+      return null;
+    }
+  }, [bytes]);
+  if (!report)
+    return (
+      <Empty title="报告解析失败">
+        请重新导入有效的 Wave bench v2 JSON。
+      </Empty>
+    );
+  return <BenchReport report={report} id={id} />;
+});
 function BenchReport({ report: r, id }) {
   const api = useAPI(),
     [baseline, setBaseline] = useState("");
@@ -741,11 +747,15 @@ function BenchReport({ report: r, id }) {
         .then((r) => r.data),
   });
   const content = useFileContent(baseline, 16 * 1048576, !!baseline);
-  let previous;
-  try {
-    if (content.data)
-      previous = JSON.parse(new TextDecoder().decode(content.data));
-  } catch {}
+  const previous = useMemo(() => {
+    try {
+      return content.data
+        ? JSON.parse(new TextDecoder().decode(content.data))
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [content.data]);
   const valid = comparable(r, previous),
     phases = r.phases || [],
     total = phases.reduce((s, p) => s + p.succeeded, 0),

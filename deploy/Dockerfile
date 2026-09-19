@@ -1,7 +1,8 @@
+# syntax=docker/dockerfile:1
 FROM node:22-alpine AS web
 WORKDIR /src/web
 COPY web/package*.json ./
-RUN npm ci --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
 COPY web .
 COPY sdks/typescript/src /src/sdks/typescript/src
 RUN npm run build
@@ -9,10 +10,12 @@ RUN npm run build
 FROM golang:1.27.1-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 COPY --from=web /src/web/dist/compressed ./web/dist/compressed
-RUN CGO_ENABLED=0 go build -trimpath -tags=nomsgpack -o /out/wave ./cmd/wave
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -tags=nomsgpack -o /out/wave ./cmd/wave
 
 FROM alpine:3.24.1
 RUN apk add --no-cache ca-certificates bash
