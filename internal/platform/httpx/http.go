@@ -73,9 +73,13 @@ func Observe() gin.HandlerFunc {
 				level = slog.LevelWarn
 			}
 			logctx := c.Request.Context()
-			// Successful monitor reads must not produce an ever-growing log stream
-			// merely because the user has opened the live Logs page.
-			if strings.HasPrefix(c.FullPath(), "/v1/console/") && c.Request.Method == "GET" && c.Writer.Status() < 400 {
+			// Successful read-only requests (status polling, listing, console
+			// refresh) must not generate an ever-growing log stream and one
+			// log-row write per poll: they log at DEBUG and skip persistence,
+			// invisible at the default INFO level. Mutations, errors, and
+			// DEBUG-level deployments keep full visibility.
+			if (c.Request.Method == "GET" || c.Request.Method == "HEAD") && c.Writer.Status() < 400 {
+				level = slog.LevelDebug
 				scope := observe.From(logctx)
 				scope.WriteLog = nil
 				logctx = observe.With(logctx, scope)

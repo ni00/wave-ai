@@ -16,35 +16,42 @@ type distribution struct {
 }
 
 type phaseReport struct {
-	Evaluated        int            `json:"evaluated"`
-	AcceptancePassed int            `json:"acceptance_passed"`
-	AcceptanceRate   *float64       `json:"acceptance_rate,omitempty"`
-	Tasks            []taskSample   `json:"tasks"`
-	Model            distribution   `json:"model"`
-	Tool             distribution   `json:"tool"`
-	TraceFailures    int            `json:"trace_failures"`
-	IncompleteTraces int            `json:"incomplete_traces"`
-	ModelCalls       int            `json:"model_calls"`
-	InputTokens      int64          `json:"input_tokens"`
-	OutputTokens     int64          `json:"output_tokens"`
-	UsageKnown       bool           `json:"usage_known"`
-	PhaseError       string         `json:"phase_error,omitempty"`
-	Workers          int            `json:"workers"`
-	Requested        int            `json:"requested"`
-	Attempted        int            `json:"attempted"`
-	Succeeded        int            `json:"succeeded"`
-	Failed           int            `json:"failed"`
-	ErrorRate        float64        `json:"error_rate"`
-	ElapsedSeconds   float64        `json:"elapsed_seconds"`
-	TasksPerSecond   float64        `json:"successful_tasks_per_second"`
-	EndToEnd         distribution   `json:"end_to_end"`
-	Queue            distribution   `json:"queue"`
-	Execution        distribution   `json:"execution"`
-	PeakHeapMiB      float64        `json:"process_peak_sampled_go_heap_mib"`
-	DBWaitCount      int64          `json:"db_pool_wait_count"`
-	DBWaitMS         float64        `json:"db_pool_wait_ms"`
-	States           map[string]int `json:"states"`
-	Errors           []string       `json:"error_examples,omitempty"`
+	Evaluated        int          `json:"evaluated"`
+	AcceptancePassed int          `json:"acceptance_passed"`
+	AcceptanceRate   *float64     `json:"acceptance_rate,omitempty"`
+	Tasks            []taskSample `json:"tasks"`
+	Model            distribution `json:"model"`
+	Tool             distribution `json:"tool"`
+	TraceFailures    int          `json:"trace_failures"`
+	IncompleteTraces int          `json:"incomplete_traces"`
+	ModelCalls       int          `json:"model_calls"`
+	InputTokens      int64        `json:"input_tokens"`
+	OutputTokens     int64        `json:"output_tokens"`
+	UsageKnown       bool         `json:"usage_known"`
+	PhaseError       string       `json:"phase_error,omitempty"`
+	Workers          int          `json:"workers"`
+	Requested        int          `json:"requested"`
+	Attempted        int          `json:"attempted"`
+	Succeeded        int          `json:"succeeded"`
+	Failed           int          `json:"failed"`
+	ErrorRate        float64      `json:"error_rate"`
+	ElapsedSeconds   float64      `json:"elapsed_seconds"`
+	TasksPerSecond   float64      `json:"successful_tasks_per_second"`
+	EndToEnd         distribution `json:"end_to_end"`
+	Queue            distribution `json:"queue"`
+	Execution        distribution `json:"execution"`
+	PeakHeapMiB      float64      `json:"process_peak_sampled_go_heap_mib"`
+	DBWaitCount      int64        `json:"db_pool_wait_count"`
+	DBWaitMS         float64      `json:"db_pool_wait_ms"`
+	// Actual HTTP request rate observed by the load generator, split by stage
+	// (warmup vs measured) and by route (task status polls vs everything else).
+	WarmupRequests    int64          `json:"warmup_requests_total"`
+	WarmupTaskGets    int64          `json:"warmup_task_gets"`
+	Requests          int64          `json:"requests_total"`
+	TaskGets          int64          `json:"task_gets"`
+	RequestsPerSecond float64        `json:"requests_per_second"`
+	States            map[string]int `json:"states"`
+	Errors            []string       `json:"error_examples,omitempty"`
 }
 
 func (p *phaseReport) summarize(samples []sample, elapsed time.Duration) {

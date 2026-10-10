@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,6 +25,20 @@ import (
 type apiClient struct {
 	base, key string
 	http      *http.Client
+	// stats is a pointer so value-receiver copies share one counter set.
+	stats *clientStats
+}
+
+// clientStats counts HTTP requests issued by the load generator, split into
+// task status polls (GET /v1/tasks/{id}) and every other call. Deltas between
+// warmup and the measured phase give the actual request rate per stage.
+type clientStats struct {
+	requests atomic.Int64
+	taskGets atomic.Int64
+}
+
+func (s *clientStats) snapshot() (requests, taskGets int64) {
+	return s.requests.Load(), s.taskGets.Load()
 }
 
 func (c apiClient) call(ctx context.Context, method, path string, in, out any) error {
@@ -41,6 +56,12 @@ func (c apiClient) call(ctx context.Context, method, path string, in, out any) e
 	}
 	req.Header.Set("Authorization", "Bearer "+c.key)
 	req.Header.Set("Content-Type", "application/json")
+	if c.stats != nil {
+		c.stats.requests.Add(1)
+		if method == http.MethodGet && strings.HasPrefix(path, "/v1/tasks/") && !strings.HasSuffix(path, "/trace") {
+			c.stats.taskGets.Add(1)
+		}
+	}
 	res, err := c.http.Do(req)
 	if err != nil {
 		return err
@@ -67,9 +88,12 @@ func runPhase(ctx context.Context, dsn, dir string, workers int, o options) (pha
 	defer model.Close()
 	cfg := &config.Config{
 		Role: "worker", DatabaseURL: dsn, DataDir: dir,
-		StorageBackend: "local", SandboxBackend: "gvisor",
 		WorkerConcurrency: workers, LeaseSeconds: 30, ContextTokens: 32000,
-		ModelBaseURL: model.URL, ModelTimeoutSec: max(1, int(o.Timeout.Seconds())+1),
+		// Match the production default (WAVE_AUTH_CACHE_TTL_SEC=15): without it
+		// the synthetic bench runs with auth caching disabled and every poll
+		// hits the database twice as often as production traffic.
+		AuthCacheTTLSeconds: 15,
+		ModelBaseURL:        model.URL, ModelTimeoutSec: max(1, int(o.Timeout.Seconds())+1),
 	}
 	a, err := app.New(setup, cfg)
 	if err != nil {
@@ -86,7 +110,7 @@ func runPhase(ctx context.Context, dsn, dir string, workers int, o options) (pha
 	transport.MaxIdleConnsPerHost = o.Clients
 	transport.MaxIdleConns = o.Clients * 2
 	defer transport.CloseIdleConnections()
-	c := apiClient{base: server.URL, key: key, http: &http.Client{Transport: transport, Timeout: min(o.Timeout, 30*time.Second)}}
+	c := apiClient{base: server.URL, key: key, http: &http.Client{Transport: transport, Timeout: min(o.Timeout, 30*time.Second)}, stats: &clientStats{}}
 	var agent agents.Agent
 	if err := c.call(setup, "POST", "/v1/agents", agents.Config{Name: "benchmark", Model: "synthetic", Instructions: "Return the synthetic response."}, &agent); err != nil {
 		return p, err
@@ -95,6 +119,7 @@ func runPhase(ctx context.Context, dsn, dir string, workers int, o options) (pha
 	done := make(chan error, 1)
 	go func() { done <- a.Run(runCtx) }()
 	defer func() { stop(); <-done }()
+	var warmRequests, warmTaskGets int64
 	if o.Warmup > 0 {
 		warm, _ := load(runCtx, c, agent.ID, o.Warmup, o)
 		for _, s := range warm {
@@ -105,6 +130,7 @@ func runPhase(ctx context.Context, dsn, dir string, workers int, o options) (pha
 		if len(warm) != o.Warmup {
 			return p, errors.New("bench: warmup incomplete")
 		}
+		warmRequests, warmTaskGets = c.stats.snapshot()
 	}
 	// Pool waits exclude initialization and warmup. Heap includes the entire Go process.
 	pool, _ := a.DB.DB()
@@ -112,6 +138,12 @@ func runPhase(ctx context.Context, dsn, dir string, workers int, o options) (pha
 	runtime.GC()
 	stopSampling := sampleHeap()
 	samples, elapsed := load(runCtx, c, agent.ID, o.Tasks, o)
+	totalRequests, totalTaskGets := c.stats.snapshot()
+	p.WarmupRequests, p.WarmupTaskGets = warmRequests, warmTaskGets
+	p.Requests, p.TaskGets = totalRequests-warmRequests, totalTaskGets-warmTaskGets
+	if elapsed > 0 {
+		p.RequestsPerSecond = float64(p.Requests) / elapsed.Seconds()
+	}
 	p.PeakHeapMiB = float64(stopSampling()) / (1 << 20)
 	after := pool.Stats()
 	p.DBWaitCount = after.WaitCount - before.WaitCount

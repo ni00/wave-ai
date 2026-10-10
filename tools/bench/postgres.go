@@ -34,23 +34,21 @@ func startPostgres(ctx context.Context, diagnostics io.Writer) (*postgres, func(
 	fmt.Fprintf(diagnostics, "bench: starting disposable PostgreSQL container %s\n", p.name)
 	startup, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
-	_, err := docker(startup, "run", "--name", p.name, "-e", "POSTGRES_USER=wave", "-e", "POSTGRES_PASSWORD=wave-bench", "-p", "127.0.0.1::5432", "-d", "postgres:16-alpine")
+	// No published port: the temp database is reachable through the container
+	// bridge IP only. Publishing to 127.0.0.1 routes every query through
+	// docker's userspace proxy, which serializes the whole bench at high
+	// request rates and measures the proxy instead of the engine.
+	_, err := docker(startup, "run", "--name", p.name, "-e", "POSTGRES_USER=wave", "-e", "POSTGRES_PASSWORD=wave-bench", "-d", "postgres:16-alpine")
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	address, err := docker(startup, "port", p.name, "5432/tcp")
-	if err != nil {
+	ip, err := docker(startup, "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", p.name)
+	if err != nil || ip == "" {
 		cleanup()
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("bench: no bridge IP for %s (err %v); a Docker network with addressable containers is required", p.name, err)
 	}
-	address = strings.TrimSpace(strings.Split(address, "\n")[0])
-	host, _, err := net.SplitHostPort(address)
-	if err != nil || host != "127.0.0.1" {
-		cleanup()
-		return nil, nil, fmt.Errorf("bench: unexpected PostgreSQL address %q", address)
-	}
-	p.address = address
+	p.address = net.JoinHostPort(ip, "5432")
 	for {
 		// TCP avoids the temporary Unix-only server used during image initialization.
 		if _, err = docker(startup, "exec", p.name, "pg_isready", "-h", "127.0.0.1", "-U", "wave"); err == nil {

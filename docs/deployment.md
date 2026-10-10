@@ -17,6 +17,7 @@ variables. Common settings are listed below; see the [full configuration example
 | `WAVE_DELTA_FLUSH_BYTES` | `4096` | Streamed-text buffer size that triggers a `message.delta` flush |
 | `WAVE_DELTA_FLUSH_MS` | `500` | Maximum age of buffered streamed text before a flush |
 | `WAVE_AUTH_CACHE_TTL_SEC` | `15` | Positive-only API-key cache on the `/v1` hot path; key revocation converges across replicas within this window. `0` disables the cache |
+| `WAVE_DB_MAX_OPEN_CONNS` | `32` | Database pool ceiling; raise for read-heavy deployments where API clients queue on the pool |
 | `WAVE_MODEL_TIMEOUT_SEC` | `300` | Model request timeout in seconds |
 
 Adjust concurrency for provider limits and queue latency. Use the

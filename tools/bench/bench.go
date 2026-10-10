@@ -164,6 +164,7 @@ func writeReport(out io.Writer, r report) error {
 	fmt.Fprintln(&b, "workers  ok/attempted  errors  tasks/s  e2e-p50  e2e-p95  e2e-p99  queue-p95  exec-p95  heap-MiB")
 	for _, p := range r.Phases {
 		fmt.Fprintf(&b, "%7d  %4d/%-8d %6d  %7.2f  %7.1f  %7.1f  %7.1f  %9.1f  %8.1f  %8.1f\n", p.Workers, p.Succeeded, p.Attempted, p.Failed, p.TasksPerSecond, p.EndToEnd.P50, p.EndToEnd.P95, p.EndToEnd.P99, p.Queue.P95, p.Execution.P95, p.PeakHeapMiB)
+		fmt.Fprintf(&b, "         measured req/s=%.2f requests=%d task-gets=%d (warmup=%d) db-pool-wait=%d/%.1fms\n", p.RequestsPerSecond, p.Requests, p.TaskGets, p.WarmupRequests, p.DBWaitCount, p.DBWaitMS)
 		for _, e := range p.Errors {
 			fmt.Fprintf(&b, "  %s\n", e)
 		}

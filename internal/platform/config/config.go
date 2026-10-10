@@ -27,6 +27,7 @@ type Config struct {
 	DeltaFlushBytes        int
 	DeltaFlushMS           int
 	AuthCacheTTLSeconds    int
+	DBMaxOpenConns         int
 	SandboxBackend         string
 	DockerHost             string
 	ContainerImage         string
@@ -111,6 +112,7 @@ func Load() (*Config, error) {
 		DeltaFlushBytes:        integer("WAVE_DELTA_FLUSH_BYTES", 4096),
 		DeltaFlushMS:           integer("WAVE_DELTA_FLUSH_MS", 500),
 		AuthCacheTTLSeconds:    integer("WAVE_AUTH_CACHE_TTL_SEC", 15),
+		DBMaxOpenConns:         integer("WAVE_DB_MAX_OPEN_CONNS", 32),
 		ModelTimeoutSec:        integer("WAVE_MODEL_TIMEOUT_SEC", 300),
 		SandboxCPUs:            integer("WAVE_SANDBOX_CPUS", 1),
 		SandboxMemoryMiB:       integer("WAVE_SANDBOX_MEMORY_MIB", 1024),

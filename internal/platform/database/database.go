@@ -11,7 +11,16 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// Open connects with the default pool limits; see OpenPool.
 func Open(ctx context.Context, dsn string) (*gorm.DB, error) {
+	return OpenPool(ctx, dsn, 32)
+}
+
+// OpenPool connects with a caller-set maximum open connection count. The
+// historical default of 32 measured fastest on write-saturated worker hosts;
+// read-heavy deployments (for example many polling clients) raise it via
+// WAVE_DB_MAX_OPEN_CONNS instead of editing code.
+func OpenPool(ctx context.Context, dsn string, maxOpen int) (*gorm.DB, error) {
 	// Keep PrepareStmt disabled: it regressed throughput in the measured
 	// concurrent workload. Re-benchmark before enabling it; the cause is unverified.
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent), TranslateError: true})
@@ -23,11 +32,13 @@ func Open(ctx context.Context, dsn string) (*gorm.DB, error) {
 		return nil, err
 	}
 	// Idle capacity matches the ceiling: under load, a smaller idle pool
-	// closes and reopens connections faster than they can be reused. Raising
-	// the ceiling past 32 measured slower on saturated worker hosts: the extra
-	// connections add PostgreSQL scheduling cost without adding CPU.
-	pool.SetMaxOpenConns(32)
-	pool.SetMaxIdleConns(32)
+	// closes and reopens connections faster than they can be reused. The
+	// ceiling trades PostgreSQL scheduling cost against concurrent demand.
+	if maxOpen <= 0 {
+		maxOpen = 32
+	}
+	pool.SetMaxOpenConns(maxOpen)
+	pool.SetMaxIdleConns(maxOpen)
 	pool.SetConnMaxIdleTime(5 * time.Minute)
 	// Rotate long-lived connections so failovers and DNS changes cannot
 	// strand traffic on a dead peer until the idle timeout fires.

@@ -70,7 +70,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	if cfg.StorageBackend == "s3" && len(cfg.MasterKey) != 32 {
 		return nil, fmt.Errorf("S3 storage requires WAVE_MASTER_KEY (32-byte hex); keep the same key across restarts and replicas")
 	}
-	db, e := database.Open(ctx, cfg.DatabaseURL)
+	db, e := database.OpenPool(ctx, cfg.DatabaseURL, cfg.DBMaxOpenConns)
 	if e != nil {
 		return nil, e
 	}
