@@ -55,6 +55,103 @@ test('typed methods convert snake_case wire format',async()=>{
  assert.ok(session.createdAt instanceof Date);
 });
 
+// wait(): SSE-first with backoff polling fallback, exercised against a scripted fake server.
+import {createServer} from 'node:http';
+
+function scripted({states, actions = [], events = [], hold = true}) {
+  const counts = {task: 0, actions: 0, stream: 0};
+  const handler = (req, res) => {
+    const {pathname} = new URL(req.url, 'http://localhost');
+    if (pathname === '/v1/tasks/task1') {
+      const state = states[Math.min(counts.task, states.length - 1)]; counts.task++;
+      res.writeHead(200, {'content-type': 'application/json'});
+      res.end(JSON.stringify({id: 'task1', session_id: 'sess1', state}));
+    } else if (pathname === '/v1/sessions/sess1/required_actions') {
+      counts.actions++;
+      res.writeHead(200, {'content-type': 'application/json'});
+      res.end(JSON.stringify({data: actions}));
+    } else if (pathname === '/v1/sessions/sess1/events/stream') {
+      counts.stream++;
+      res.writeHead(200, {'content-type': 'text/event-stream'});
+      res.write(events.map(e => `id: ${e.id}\nevent: ${e.type}\ndata: ${JSON.stringify(e.data)}\n\n`).join(''));
+      if (!hold) res.end();
+    } else {
+      res.writeHead(404, {'content-type': 'application/json'});
+      res.end('{}');
+    }
+  };
+  return {counts, handler};
+}
+
+async function withServer(handler, run) {
+  const server = createServer(handler);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try { return await run(`http://127.0.0.1:${server.address().port}`); }
+  finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+}
+
+test('wait returns on a terminal stream event without polling', async () => {
+  const s = scripted({states: ['running', 'succeeded'], events: [{id: '1', type: 'task.succeeded', data: {task_id: 'task1'}}]});
+  await withServer(s.handler, async base => {
+    const result = await new Client({baseURL: base}).wait('task1', {interval: 5000});
+    assert.equal(result.reason, 'terminal');
+    assert.equal(result.task.state, 'succeeded');
+    assert.deepEqual(s.counts, {task: 2, actions: 0, stream: 1});
+  });
+});
+
+test('wait requery timer covers the subscription race', async () => {
+  const s = scripted({states: ['running', 'succeeded'], events: []}); // stream stays silent
+  await withServer(s.handler, async base => {
+    assert.equal((await new Client({baseURL: base}).wait('task1', {interval: 50})).reason, 'terminal');
+    assert.deepEqual(s.counts, {task: 2, actions: 0, stream: 1});
+  });
+});
+
+test('wait falls back to backoff polling when the stream dies', async () => {
+  const s = scripted({states: ['running', 'running', 'succeeded'], hold: false});
+  await withServer(s.handler, async base => {
+    assert.equal((await new Client({baseURL: base}).wait('task1', {interval: 30})).reason, 'terminal');
+    assert.equal(s.counts.task, 3);
+    assert.ok(s.counts.stream >= 2, `stream attempts ${s.counts.stream}`);
+  });
+});
+
+test('wait aborts via signal', async () => {
+  const s = scripted({states: ['running'], events: []});
+  await withServer(s.handler, async base => {
+    const controller = new AbortController();
+    const pending = new Client({baseURL: base}).wait('task1', {interval: 60000, signal: controller.signal, timeout: 60000});
+    setTimeout(() => controller.abort('stop-it'), 20);
+    await assert.rejects(pending, error => error === 'stop-it');
+  });
+});
+
+test('wait tool event triggers an action return', async () => {
+  const s = scripted({
+    states: ['running', 'waiting'],
+    actions: [{task_id: 'task1', id: 'act1'}],
+    events: [{id: '1', type: 'tool.call', data: {task_id: 'task1'}}],
+  });
+  await withServer(s.handler, async base => {
+    const result = await new Client({baseURL: base}).wait('task1', {interval: 5000});
+    assert.equal(result.reason, 'action');
+    assert.equal(result.required_actions.length, 1);
+    assert.deepEqual(s.counts, {task: 2, actions: 1, stream: 1});
+  });
+});
+
+test('wait ignores delta events until the requery timer fires', async () => {
+  const s = scripted({
+    states: ['running', 'succeeded'],
+    events: [1, 2, 3].map(n => ({id: String(n), type: 'message.delta', data: {task_id: 'task1'}})),
+  });
+  await withServer(s.handler, async base => {
+    assert.equal((await new Client({baseURL: base}).wait('task1', {interval: 60})).reason, 'terminal');
+    assert.deepEqual(s.counts, {task: 2, actions: 0, stream: 1});
+  });
+});
+
 test('browser fetch receiver and explicit JSON transport',async()=>{
  const browserFetch=async function(url){assert.equal(this,undefined);assert.match(url,/\/v1\/tasks\/task-test\/trace$/);return new Response(JSON.stringify({version:1,spans:[]}));};
  const sdk=new Client({baseURL:'http://localhost:8080',fetch:browserFetch});

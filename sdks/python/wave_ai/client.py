@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from importlib.resources import files
 import json
+import random
 import time
 from typing import Any, AsyncIterator, BinaryIO, Iterator
 from urllib.parse import quote, urlsplit
@@ -13,7 +14,9 @@ import httpx
 OPERATIONS = json.loads(files(__package__).joinpath('operations.json').read_text())
 RETRY_STATUS = {429, 502, 503, 504}
 TERMINAL = {'succeeded', 'partial', 'failed', 'canceled'}
-
+WAIT_EVENTS = frozenset({'agent.wait', 'generation.failed', 'generation.interrupted', 'cancel.requested',
+                         'budget.exhausted', 'input.accepted', 'input.consumed'})
+SSE_RECONNECTS = 2
 
 class APIError(Exception):
     def __init__(self, status: int, code: str, message: str, request_id: str = ''):
@@ -67,6 +70,22 @@ def _tool(body: Any) -> None:
         raise ValueError('error_code requires is_error=true')
     if approve is not None and (body.get('is_error') or body.get('error_code')):
         raise ValueError('approval cannot include error details')
+
+
+def _wait_wake(event: Event, task_id: str) -> bool:
+    """True when a stream event requires re-reading the task. Session-wide
+    events without a task_id wake the caller as well."""
+    if event.type not in WAIT_EVENTS and not event.type.startswith(('task.', 'tool.')):
+        return False
+    try:
+        return json.loads(event.data).get('task_id', task_id) == task_id
+    except ValueError:
+        return False
+
+
+def _wait_poll_delay(attempt: int, interval: float) -> float:
+    """Exponential backoff with jitter, capped at the poll interval."""
+    return min(interval, 0.2 * 2 ** min(attempt, 5)) * (0.5 + random.random())
 
 
 class _SSE:
@@ -251,20 +270,89 @@ class Client(_Base):
             if attempt < max_reconnects:
                 time.sleep(_delay(None, attempt))
 
+    def _wait_probe(self, task_id: str, task: dict[str, Any], deadline: float, trigger: str) -> WaitResult | None:
+        """Check authoritative task state after a read. Required actions are
+        fetched when the state is waiting/unknown, or unconditionally when a
+        tool.* or agent.wait event triggered the re-read."""
+        if task['state'] in TERMINAL:
+            return WaitResult(task, [], 'terminal')
+        if not (task['state'] in ('waiting', 'unknown') or trigger.startswith('tool.') or trigger == 'agent.wait'):
+            return None
+        actions = self.call('executionRequiredActions', path={'id': task['session_id']},
+                            timeout=max(0.001, deadline - time.monotonic())).data['data']
+        actions = [a for a in actions if a['task_id'] == task_id]
+        if actions or task['state'] == 'unknown':
+            return WaitResult(task, actions, 'action')
+        return None
+
+    def _wait_subscribe(self, session: str, task_id: str, deadline: float, interval: float) -> str:
+        """Watch the session stream for a relevant event, racing a re-check
+        timer. Returns the waking event type (or 'timer' when the window
+        elapsed), or 'broken' when the stream is unusable and polling must
+        take over."""
+        cursor, attempt = None, 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return 'timer'
+            headers = {'Accept': 'text/event-stream'}
+            if cursor is not None:
+                headers['Last-Event-ID'] = str(cursor)
+            _, request = self._request('executionStreamEvents', {'id': session}, None, headers)
+            window = max(0.001, min(interval, remaining))
+            try:
+                with self.http.stream(**request,
+                                      timeout=httpx.Timeout(window, connect=max(0.001, min(10, remaining)))) as response:
+                    if response.status_code != 200:
+                        raise _error(response, response.read()[:1024*1024])
+                    if response.headers.get('content-type', '').split(';')[0].strip() != 'text/event-stream':
+                        raise ValueError('expected text/event-stream')
+                    parser, wake_at = _SSE(), time.monotonic() + window
+                    for line in response.iter_lines():
+                        event = parser.feed(line)
+                        if event:
+                            cursor = event.id
+                            if _wait_wake(event, task_id):
+                                return event.type
+                        if time.monotonic() >= wake_at:
+                            return 'timer'
+            except httpx.ReadTimeout:
+                return 'timer'
+            except httpx.TransportError:
+                pass
+            except APIError as error:
+                if error.status not in RETRY_STATUS:
+                    raise
+            if attempt >= SSE_RECONNECTS:
+                return 'broken'
+            attempt += 1
+            time.sleep(min(0.2 * 2 ** min(attempt, 5), max(0, deadline - time.monotonic())))
+
     def wait(self, task_id: str, *, timeout=300.0, interval=1.0) -> WaitResult:
         deadline = time.monotonic() + timeout
+        trigger = ''
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError('task wait timed out')
             task = self.call('executionGetTask', path={'id': task_id}, timeout=remaining).data
-            if task['state'] in TERMINAL:
-                return WaitResult(task, [], 'terminal')
-            actions = self.call('executionRequiredActions', path={'id': task['session_id']}, timeout=max(0.001, deadline-time.monotonic())).data['data']
-            actions = [a for a in actions if a['task_id'] == task_id]
-            if actions or task['state'] == 'unknown':
-                return WaitResult(task, actions, 'action')
-            time.sleep(max(0, min(interval, deadline-time.monotonic())))
+            result = self._wait_probe(task_id, task, deadline, trigger)
+            if result:
+                return result
+            trigger = self._wait_subscribe(task['session_id'], task_id, deadline, interval)
+            if trigger == 'broken':
+                break
+        attempt = 0
+        while True:  # stream unusable: fall back to backoff polling
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError('task wait timed out')
+            task = self.call('executionGetTask', path={'id': task_id}, timeout=remaining).data
+            result = self._wait_probe(task_id, task, deadline, '')
+            if result:
+                return result
+            attempt += 1
+            time.sleep(min(_wait_poll_delay(attempt, interval), max(0, deadline - time.monotonic())))
 
     def approve(self, task: str, call: str, approve: bool):
         return self.call('executionResolveToolResult', path={'id': task, 'call': call}, body={'approve': approve})
@@ -384,17 +472,91 @@ class AsyncClient(_Base):
             if attempt < max_reconnects:
                 await asyncio.sleep(_delay(None, attempt))
 
+    async def _wait_probe(self, task_id: str, task: dict[str, Any], deadline: float, trigger: str) -> WaitResult | None:
+        """Check authoritative task state after a read. Required actions are
+        fetched when the state is waiting/unknown, or unconditionally when a
+        tool.* or agent.wait event triggered the re-read. Every HTTP attempt
+        carries the remaining deadline."""
+        if task['state'] in TERMINAL:
+            return WaitResult(task, [], 'terminal')
+        if not (task['state'] in ('waiting', 'unknown') or trigger.startswith('tool.') or trigger == 'agent.wait'):
+            return None
+        actions = (await self.call('executionRequiredActions', path={'id': task['session_id']},
+                                   timeout=max(0.001, deadline - time.monotonic()))).data['data']
+        actions = [a for a in actions if a['task_id'] == task_id]
+        if actions or task['state'] == 'unknown':
+            return WaitResult(task, actions, 'action')
+        return None
+
+    async def _wait_subscribe(self, session: str, task_id: str, deadline: float, interval: float) -> str:
+        """Watch the session stream for a relevant event, racing a re-check
+        timer. Returns the waking event type (or 'timer' when the window
+        elapsed), or 'broken' when the stream is unusable and polling must
+        take over. Every attempt is bounded by the remaining deadline."""
+        cursor, attempt = None, 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return 'timer'
+            headers = {'Accept': 'text/event-stream'}
+            if cursor is not None:
+                headers['Last-Event-ID'] = str(cursor)
+            _, request = self._request('executionStreamEvents', {'id': session}, None, headers)
+            window = max(0.001, min(interval, remaining))
+            try:
+                async with self.http.stream(**request,
+                                            timeout=httpx.Timeout(window, connect=max(0.001, min(10, remaining)))) as response:
+                    if response.status_code != 200:
+                        raise _error(response, (await response.aread())[:1024*1024])
+                    if response.headers.get('content-type', '').split(';')[0].strip() != 'text/event-stream':
+                        raise ValueError('expected text/event-stream')
+                    parser, wake_at = _SSE(), time.monotonic() + window
+                    async for line in response.aiter_lines():
+                        event = parser.feed(line)
+                        if event:
+                            cursor = event.id
+                            if _wait_wake(event, task_id):
+                                return event.type
+                        if time.monotonic() >= wake_at:
+                            return 'timer'
+            except httpx.ReadTimeout:
+                return 'timer'
+            except httpx.TransportError:
+                pass
+            except APIError as error:
+                if error.status not in RETRY_STATUS:
+                    raise
+            if attempt >= SSE_RECONNECTS:
+                return 'broken'
+            attempt += 1
+            await asyncio.sleep(min(0.2 * 2 ** min(attempt, 5), max(0, deadline - time.monotonic())))
+
     async def wait(self, task_id: str, *, timeout=300.0, interval=1.0) -> WaitResult:
+        deadline = time.monotonic() + timeout
         async with _deadline(timeout):
+            trigger = ''
             while True:
-                task = (await self.call('executionGetTask', path={'id': task_id})).data
-                if task['state'] in TERMINAL:
-                    return WaitResult(task, [], 'terminal')
-                actions = (await self.call('executionRequiredActions', path={'id': task['session_id']})).data['data']
-                actions = [a for a in actions if a['task_id'] == task_id]
-                if actions or task['state'] == 'unknown':
-                    return WaitResult(task, actions, 'action')
-                await asyncio.sleep(interval)
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError('task wait timed out')
+                task = (await self.call('executionGetTask', path={'id': task_id}, timeout=remaining)).data
+                result = await self._wait_probe(task_id, task, deadline, trigger)
+                if result:
+                    return result
+                trigger = await self._wait_subscribe(task['session_id'], task_id, deadline, interval)
+                if trigger == 'broken':
+                    break
+            attempt = 0
+            while True:  # stream unusable: fall back to backoff polling
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError('task wait timed out')
+                task = (await self.call('executionGetTask', path={'id': task_id}, timeout=remaining)).data
+                result = await self._wait_probe(task_id, task, deadline, '')
+                if result:
+                    return result
+                attempt += 1
+                await asyncio.sleep(min(_wait_poll_delay(attempt, interval), max(0, deadline - time.monotonic())))
 
     async def approve(self, task: str, call: str, approve: bool):
         return await self.call('executionResolveToolResult', path={'id': task, 'call': call}, body={'approve': approve})

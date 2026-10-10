@@ -98,7 +98,7 @@ iterate a paginated typed response, and `Call` when you need status or headers.
 | --- | --- |
 | `Call` | Invoke one JSON operation, returning `*Response` |
 | `Each` | Iterate a paginated operation, one `json.RawMessage` per item |
-| `Wait` | Poll until the task reaches a terminal state or requires action |
+| `Wait` | Await a terminal state or required action over SSE, with a recheck timer and polling fallback |
 | `Approve(ctx, task, call, approve)` | Allow or deny one tool call |
 | `SubmitResult(ctx, task, call, result, isError, errorCode)` | Submit a client-executed tool result |
 | `Events` | Consume the session event stream |

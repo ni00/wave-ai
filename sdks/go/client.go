@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -363,31 +364,77 @@ type WaitResult struct {
 	Reason          string           `json:"reason"`
 }
 
+// Wait blocks until the task reaches a terminal state or requires user input.
+// It prefers the session's SSE stream: state-relevant events trigger an
+// authoritative re-read of the task, racing a recheck timer (interval ±
+// jitter) that guards against missed events. When the stream and its
+// reconnects are exhausted it degrades to pure polling with exponential
+// backoff + jitter, capped at interval. Cancellation is controlled entirely
+// by ctx; there is no default timeout.
 func (c *Client) Wait(ctx context.Context, taskID string, interval time.Duration) (*WaitResult, error) {
 	if interval <= 0 {
 		interval = time.Second
 	}
-	for {
-		r, e := c.Call(ctx, "executionGetTask", Options{Path: map[string]string{"id": taskID}})
-		if e != nil {
-			return nil, e
-		}
-		var task map[string]any
-		decoder := json.NewDecoder(bytes.NewReader(r.Data))
-		decoder.UseNumber()
-		if e = decoder.Decode(&task); e != nil {
-			return nil, e
-		}
-		result := &WaitResult{Task: task, RequiredActions: []map[string]any{}}
-		switch task["state"] {
-		case "succeeded", "partial", "failed", "canceled":
-			result.Reason = "terminal"
-			return result, nil
-		}
-		session, _ := task["session_id"].(string)
+	result, session, e := c.waitProbe(ctx, taskID, "")
+	if e != nil || result != nil {
+		return result, e
+	}
+	if result, e = c.waitStream(ctx, taskID, session, interval); e != nil || result != nil {
+		return result, e
+	}
+	return c.waitPoll(ctx, taskID, interval)
+}
+
+// waitEventRelevant reports whether an event type can change the awaited
+// task's state. Chatty progress events (deltas, spans, agent bookkeeping)
+// must not trigger a re-read of the authoritative task.
+func waitEventRelevant(eventType string) bool {
+	switch eventType {
+	case "agent.wait", "generation.failed", "generation.interrupted", "cancel.requested",
+		"budget.exhausted", "input.accepted", "input.consumed":
+		return true
+	}
+	return strings.HasPrefix(eventType, "task.") || strings.HasPrefix(eventType, "tool.")
+}
+
+// waitMaxReconnects bounds SSE reconnection attempts before Wait degrades to
+// pure polling. The recheck timer keeps probing during reconnect pauses, so
+// liveness never depends on the stream alone.
+const waitMaxReconnects = 2
+
+var errWaitStreamStopped = errors.New("wave: wait event stream stopped")
+
+// waitProbe reads the authoritative task state and the session's required
+// actions filtered to this task. Actions are read for waiting/unknown states,
+// and unconditionally when the probe was triggered by a tool.* or agent.wait
+// event: approval may be requested while the task is still marked running. A
+// non-nil result means the wait is resolved; otherwise the session ID is
+// returned for the event subscription. trigger is the event type that caused
+// the re-read, or "" for the initial, timer, and fallback probes.
+func (c *Client) waitProbe(ctx context.Context, taskID, trigger string) (*WaitResult, string, error) {
+	r, e := c.Call(ctx, "executionGetTask", Options{Path: map[string]string{"id": taskID}})
+	if e != nil {
+		return nil, "", e
+	}
+	var task map[string]any
+	decoder := json.NewDecoder(bytes.NewReader(r.Data))
+	decoder.UseNumber()
+	if e = decoder.Decode(&task); e != nil {
+		return nil, "", e
+	}
+	result := &WaitResult{Task: task, RequiredActions: []map[string]any{}}
+	state, _ := task["state"].(string)
+	switch state {
+	case "succeeded", "partial", "failed", "canceled":
+		result.Reason = "terminal"
+		return result, "", nil
+	}
+	session, _ := task["session_id"].(string)
+	forceActions := strings.HasPrefix(trigger, "tool.") || trigger == "agent.wait"
+	if state == "waiting" || state == "unknown" || forceActions {
 		r, e = c.Call(ctx, "executionRequiredActions", Options{Path: map[string]string{"id": session}})
 		if e != nil {
-			return nil, e
+			return nil, "", e
 		}
 		var actions struct {
 			Data []map[string]any `json:"data"`
@@ -395,21 +442,96 @@ func (c *Client) Wait(ctx context.Context, taskID string, interval time.Duration
 		decoder = json.NewDecoder(bytes.NewReader(r.Data))
 		decoder.UseNumber()
 		if e = decoder.Decode(&actions); e != nil {
-			return nil, e
+			return nil, "", e
 		}
 		for _, a := range actions.Data {
 			if a["task_id"] == taskID {
 				result.RequiredActions = append(result.RequiredActions, a)
 			}
 		}
-		if len(result.RequiredActions) > 0 || task["state"] == "unknown" {
+		if len(result.RequiredActions) > 0 || state == "unknown" {
 			result.Reason = "action"
+			return result, "", nil
+		}
+	}
+	return nil, session, nil
+}
+
+// waitStream consumes the session event stream, racing state-relevant events
+// against the recheck timer. It returns a resolved result, an error (ctx
+// canceled or a probe failed), or nil,nil when the stream and its reconnects
+// are exhausted and the caller should fall back to polling.
+func (c *Client) waitStream(ctx context.Context, taskID, session string, interval time.Duration) (*WaitResult, error) {
+	streamCtx, stopStream := context.WithCancel(ctx)
+	defer stopStream()
+	// Coalesce state-relevant events into a single-slot signal carrying the
+	// trigger type: the stream keeps running and its cursor keeps advancing
+	// while Wait re-probes.
+	relevant := make(chan string, 1)
+	stopped := make(chan error, 1)
+	go func() {
+		stopped <- c.Events(streamCtx, session, StreamOptions{TaskID: taskID, MaxReconnects: waitMaxReconnects}, func(ev Event) error {
+			if !waitEventRelevant(ev.Type) {
+				return nil
+			}
+			select {
+			case relevant <- ev.Type:
+				return nil
+			case <-streamCtx.Done():
+				return errWaitStreamStopped
+			}
+		})
+	}()
+	timer := time.NewTimer(waitJitter(interval, 0.1))
+	defer timer.Stop()
+	for {
+		var trigger string
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case trigger = <-relevant:
+		case <-timer.C:
+			timer.Reset(waitJitter(interval, 0.1))
+		case <-stopped:
+			// Stream ended and reconnects are exhausted; fall back to polling.
+			return nil, nil
+		}
+		result, _, e := c.waitProbe(ctx, taskID, trigger)
+		if e != nil {
+			return nil, e
+		}
+		if result != nil {
 			return result, nil
 		}
-		if e = pause(ctx, interval); e != nil {
+	}
+}
+
+// waitPoll is the stream-less fallback: re-probe with exponential backoff and
+// jitter, capped at interval, until the wait resolves or ctx ends.
+func (c *Client) waitPoll(ctx context.Context, taskID string, interval time.Duration) (*WaitResult, error) {
+	base := max(interval/8, time.Millisecond)
+	for attempt := 0; ; attempt++ {
+		result, _, e := c.waitProbe(ctx, taskID, "")
+		if e != nil {
+			return nil, e
+		}
+		if result != nil {
+			return result, nil
+		}
+		delay := min(base*time.Duration(1<<min(attempt, 8)), interval)
+		if e = pause(ctx, waitJitter(delay, 0.25)); e != nil {
 			return nil, e
 		}
 	}
+}
+
+// waitJitter spreads d by ±frac so concurrent waiters do not poll in lockstep.
+func waitJitter(d time.Duration, frac float64) time.Duration {
+	spread := int64(float64(int64(d)) * frac)
+	if spread <= 0 {
+		return d
+	}
+	return time.Duration(int64(d) - spread + rand.Int64N(2*spread+1))
 }
 
 func (c *Client) Approve(ctx context.Context, task, call string, approve bool) error {

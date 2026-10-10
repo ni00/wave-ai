@@ -218,12 +218,66 @@ export class Client {
   }
   async wait(taskID: string, {signal, timeout = 300000, interval = 1000}: {signal?: AbortSignal; timeout?: number; interval?: number} = {}): Promise<WaitResult> {
     const stop = signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout);
-    while (true) {
-      const task = (await this.call<JSONRecord>('executionGetTask', {path: {id: taskID}, signal: stop})).data;
-      if (terminal.has(task.state)) return {task, required_actions: [], reason: 'terminal'};
-      const actions = (await this.call<{data: JSONRecord[]}>('executionRequiredActions', {path: {id: task.session_id}, signal: stop})).data.data.filter(a => a.task_id === taskID);
-      if (actions.length || task.state === 'unknown') return {task, required_actions: actions, reason: 'action'};
-      await sleep(interval, stop);
+    // State-relevant events: task lifecycle transitions or tool activity.
+    const relevantTypes = ['agent.wait', 'generation.failed', 'generation.interrupted', 'cancel.requested', 'budget.exhausted', 'input.accepted', 'input.consumed'];
+    let stream: AsyncGenerator<Event> | undefined;       // persistent stream; cursor advances across re-checks
+    let pending: Promise<IteratorResult<Event>> | undefined; // single in-flight stream read, reused across timer races
+    let attempt = 0;                                    // backoff attempts after the stream dies
+    const timer = Symbol('timer');
+    // Interval timer that can be cancelled once the stream wins the race, so no
+    // dangling timer keeps the process alive and no late rejection goes unhandled.
+    const tick = () => {
+      let cancel = () => {};
+      const promise = new Promise<typeof timer>((resolve, reject) => {
+        const onAbort = () => { clearTimeout(t); reject(stop.reason); };
+        const t = setTimeout(() => { detach(); resolve(timer); }, interval);
+        const detach = () => { stop.removeEventListener('abort', onAbort); cancel = () => {}; };
+        cancel = () => { clearTimeout(t); detach(); };
+        stop.addEventListener('abort', onAbort, {once: true});
+      });
+      return {promise, cancel};
+    };
+    // Dedicated abort for the stream: a generator blocked on a network read only
+    // unwinds via .return() once that read fails, so abort it before closing.
+    const streamAbort = new AbortController();
+    try {
+      while (true) {
+        const task = (await this.call<JSONRecord>('executionGetTask', {path: {id: taskID}, signal: stop})).data;
+        if (terminal.has(task.state)) return {task, required_actions: [], reason: 'terminal'};
+        // Required actions only exist while the task is waiting (or its state is unknown).
+        if (task.state === 'waiting' || task.state === 'unknown') {
+          const actions = (await this.call<{data: JSONRecord[]}>('executionRequiredActions', {path: {id: task.session_id}, signal: stop})).data.data.filter(a => a.task_id === taskID);
+          if (actions.length || task.state === 'unknown') return {task, required_actions: actions, reason: 'action'};
+        }
+        // Race the event stream against a requery timer; the timer also covers the
+        // subscription race where state changed between the GET and stream start.
+        let requery = false;
+        if (!stream) {
+          stream = this.events(task.session_id, {taskID, signal: AbortSignal.any([stop, streamAbort.signal])});
+          pending = undefined; // fresh subscription; no read is in flight yet
+          attempt = 0;
+        }
+        while (!requery) {
+          // A dead stream (reconnects exhausted or fatal error) resolves as done and falls back to polling.
+          pending ??= stream.next().catch(() => ({done: true, value: undefined}) as IteratorResult<Event>);
+          const recheck = tick();
+          const result = await Promise.race([pending, recheck.promise]);
+          recheck.cancel();
+          if (result === timer) break; // periodic re-check regardless of stream activity
+          pending = undefined;
+          if (result.done) { await stream.return(undefined).catch(() => {}); stream = undefined; break; }
+          const {type} = result.value;
+          if (type.startsWith('task.') || type.startsWith('tool.') || relevantTypes.includes(type)) requery = true;
+        }
+        if (!stream && !requery) {
+          // Stream dead: exponential backoff with jitter, capped at the poll interval.
+          await sleep(Math.min(interval, 200 * 2 ** Math.min(attempt, 5)) * (0.5 + Math.random() / 2), stop);
+          attempt++;
+        }
+      }
+    } finally {
+      streamAbort.abort();
+      await stream?.return(undefined).catch(() => {});
     }
   }
   approve(task: string, call: string, approve: boolean, signal?: AbortSignal) {

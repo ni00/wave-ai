@@ -138,6 +138,23 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		send(w, 200, page)
 	case strings.HasPrefix(scenario, "wait"):
+		// The SSE-first wait implementations subscribe to the session stream;
+		// emit one state-relevant event for the waited task and hold the
+		// stream open so the client re-reads authoritative state and returns.
+		if strings.HasSuffix(path, "/events/stream") {
+			event := "tool.created"
+			if scenario == "wait-child" {
+				event = "agent.wait"
+			}
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.WriteHeader(200)
+			fmt.Fprintf(w, "id: 1\nevent: %s\ndata: {\"task_id\":\"task_target\"}\n\n", event)
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
+			<-r.Context().Done()
+			return
+		}
 		if path == "/v1/tasks/task_target" {
 			var task map[string]any
 			_ = json.Unmarshal(s.values["task"], &task)
