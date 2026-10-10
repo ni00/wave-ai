@@ -1,14 +1,12 @@
 // Package xid generates the public resource identifiers used by the API.
 //
 // Public IDs carry a type prefix (agent_, sess_, sevt_, ...) followed by a
-// ULID-like time-ordered identifier, except environment IDs which follow the
-// snapshot contract's UUID form (env_019e8f00-...).
+// ULID-like time-ordered identifier.
 package xid
 
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"math"
 	"strings"
@@ -84,31 +82,8 @@ func encodeULID(b [16]byte) string {
 	return string(out[:])
 }
 
-// uuidV7 produces a time-ordered UUID formatted in canonical hyphenated form.
-func uuidV7(t time.Time) string {
-	ms := uint64(t.UnixMilli())
-	var b [16]byte
-	b[0] = byte(ms >> 40)
-	b[1] = byte(ms >> 32)
-	b[2] = byte(ms >> 24)
-	b[3] = byte(ms >> 16)
-	b[4] = byte(ms >> 8)
-	b[5] = byte(ms)
-	rand.Read(b[6:16])      // one syscall for the whole random part
-	b[6] = 0x70 | b[6]&0x0f // version 7
-	b[8] = 0x80 | b[8]&0x3f // RFC 4122 variant
-	return fmt.Sprintf("%s-%s-%s-%s-%s",
-		hex.EncodeToString(b[0:4]), hex.EncodeToString(b[4:6]),
-		hex.EncodeToString(b[6:8]), hex.EncodeToString(b[8:10]),
-		hex.EncodeToString(b[10:16]))
-}
-
 // New returns a prefixed public identifier such as "sess_01J...".
 func New(prefix string) string { return prefix + "_" + ulid(time.Now()) }
-
-// NewEnv returns the environment identifier form mandated by the contract
-// (env_ + UUID v7), which clients validate with a UUID pattern.
-func NewEnv() string { return "env_" + uuidV7(time.Now()) }
 
 // SkillVersion returns the server-generated epoch-microsecond version string.
 func SkillVersion(t time.Time) string {

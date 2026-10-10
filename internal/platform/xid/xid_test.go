@@ -25,22 +25,6 @@ func TestNewPrefixes(t *testing.T) {
 	}
 }
 
-func TestNewEnvUUIDForm(t *testing.T) {
-	id := NewEnv()
-	if !strings.HasPrefix(id, "env_") {
-		t.Fatalf("id = %q", id)
-	}
-	uuid := strings.TrimPrefix(id, "env_")
-	parts := strings.Split(uuid, "-")
-	if len(parts) != 5 || len(parts[0]) != 8 || len(parts[4]) != 12 {
-		t.Fatalf("not a canonical uuid: %q", uuid)
-	}
-	// version nibble 7
-	if parts[2][0] != '7' {
-		t.Errorf("expected uuid v7 version nibble, got %q", parts[2])
-	}
-}
-
 func TestSkillVersionForm(t *testing.T) {
 	v := SkillVersion(time.UnixMicro(1000))
 	if v != "1000" {
