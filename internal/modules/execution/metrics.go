@@ -8,7 +8,11 @@ import (
 // Persist measurements with the authoritative completion, never with a log that
 // can precede a failed commit. Retried provider calls each have their own sample.
 func saveGeneration(tx *gorm.DB, s *Session, g *Generation) error {
-	if err := tx.Save(g).Error; err != nil {
+	// Completion rewrites only the mutable columns: the identity columns
+	// (task, message, purpose, model, attempt, started_at) are fixed by the
+	// create in startGeneration, and re-saving them would churn the row on
+	// every model turn.
+	if err := tx.Model(g).Select("state", "finished_at", "duration_ms", "first_delta_ms", "usage", "error").Updates(g).Error; err != nil {
 		return err
 	}
 	if g.FinishedAt == nil {

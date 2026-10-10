@@ -59,11 +59,15 @@ func TestDurablePhaseAndTraceOwnership(t *testing.T) {
 	}
 	w := Worker{DB: db}
 	ctx := w.traceContext(context.Background(), claimed)
+	log := w.spanLog()
+	t.Cleanup(log.stop)
 	if err := observe.Do(ctx, "workspace.prepare", func(ctx context.Context) error {
 		return observe.Do(ctx, "sandbox.ensure", func(context.Context) error { return nil })
 	}); err != nil {
 		t.Fatal(err)
 	}
+	// Spans buffer in the worker's span log; the recorder flush persists them.
+	log.flush(true)
 	r, err := TaskTrace(ctx, db, p, created.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -86,6 +90,8 @@ func TestDurablePhaseAndTraceOwnership(t *testing.T) {
 	if err = observe.Do(ctx, "sandbox.stop", func(context.Context) error { called = true; return nil }); err != nil || !called {
 		t.Fatal("telemetry affected operation")
 	}
+	// The stale claim cannot pass the fence, so the flushed batch is dropped.
+	log.flush(true)
 	r, err = TaskTrace(ctx, db, p, created.ID)
 	if err != nil || len(r.Spans) != 4 {
 		t.Fatal("unfenced telemetry persisted", err, r)

@@ -21,9 +21,9 @@ func (h handler) trace(c *gin.Context) {
 	c.JSON(200, t)
 }
 
-func correlateTask(c *gin.Context, t Task) {
+func correlateTask(c *gin.Context, id, root, session string) {
 	s := observe.From(c.Request.Context())
-	s.TraceID, s.TaskID, s.SessionID = t.RootID, t.ID, t.SessionID
+	s.TraceID, s.TaskID, s.SessionID = root, id, session
 	c.Request = c.Request.WithContext(observe.With(c.Request.Context(), s))
-	c.Header("X-Wave-Trace-ID", t.RootID)
+	c.Header("X-Wave-Trace-ID", root)
 }

@@ -20,13 +20,68 @@ import (
 type handler struct {
 	db     *gorm.DB
 	signal EventSignaler
+	// cache serves task polls without re-reading JSONB payloads; see
+	// taskcache.go for the validation and eviction contract.
+	cache *taskResponseCache
+}
+
+// taskView mirrors the Task JSON contract while carrying the heavy JSONB
+// columns (agent snapshot, experts, budget, evaluation) as pre-encoded JSON.
+// The task read path is polled once per client interval; decoding those
+// columns into structs only to re-encode them dominates request CPU at high
+// client counts, so they are spliced through as raw bytes instead.
+type taskView struct {
+	ID              string          `json:"id"`
+	SessionID       string          `json:"session_id"`
+	RootID          string          `json:"root_id"`
+	ParentID        string          `json:"parent_id,omitempty"`
+	State           string          `json:"state"`
+	Snapshot        json.RawMessage `json:"agent"`
+	Experts         json.RawMessage `json:"experts,omitempty"`
+	AgentID         string          `json:"agent_id"`
+	AgentVersion    int             `json:"agent_version"`
+	Budget          json.RawMessage `json:"budget"`
+	UsedTokens      int64           `json:"used_tokens"`
+	UsageKnown      bool            `json:"usage_known"`
+	ToolCount       int             `json:"tool_calls"`
+	AgentCount      int             `json:"agent_count"`
+	CancelRequested bool            `json:"cancel_requested"`
+	StartedAt       *time.Time      `json:"started_at,omitempty"`
+	FinishedAt      *time.Time      `json:"finished_at,omitempty"`
+	Attempts        int             `json:"attempts"`
+	Evaluation      json.RawMessage `json:"evaluation,omitempty"`
+	Result          string          `json:"result,omitempty"`
+	Error           string          `json:"error,omitempty"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+// taskViewColumns is the task read projection: every contract field except
+// the private worker columns and the messages history.
+var taskViewColumns = []string{
+	"tasks.id", "tasks.session_id", "tasks.root_id", "tasks.parent_id", "tasks.state",
+	"tasks.snapshot", "tasks.experts", "tasks.agent_id", "tasks.agent_version", "tasks.budget",
+	"tasks.used_tokens", "tasks.usage_known", "tasks.tool_count", "tasks.agent_count",
+	"tasks.cancel_requested", "tasks.started_at", "tasks.finished_at", "tasks.attempts",
+	"tasks.evaluation", "tasks.result", "tasks.error", "tasks.created_at", "tasks.updated_at",
+}
+
+// normalizeTaskView keeps the omitempty contract for JSONB columns whose
+// empty object form (`{}`) the struct-based path dropped: raw splicing must
+// drop them too.
+func (t *taskView) normalize() {
+	for _, raw := range []*json.RawMessage{&t.Experts, &t.Evaluation} {
+		if len(*raw) == 2 && string(*raw) == "{}" {
+			*raw = nil
+		}
+	}
 }
 
 // Register mounts the documented routes. A non-nil signal lets event streams
 // wake on committed events instead of waiting out their poll interval; nil
 // keeps streams in pure polling mode (tests, role splits without a listener).
 func Register(r *gin.RouterGroup, db *gorm.DB, signal EventSignaler) {
-	h := handler{db: db, signal: signal}
+	h := handler{db: db, signal: signal, cache: newTaskResponseCache(8192)}
 	r.GET("/sessions/:id/messages", h.messages)
 	r.GET("/sessions/:id/required_actions", h.requiredActions)
 	r.GET("/tasks/:id/generations", h.generations)
@@ -186,50 +241,29 @@ func (h handler) createTask(c *gin.Context) {
 		httpx.Error(c, e)
 		return
 	}
-	correlateTask(c, t)
+	correlateTask(c, t.ID, t.RootID, t.SessionID)
 	c.JSON(202, t)
 }
-
-// listTasks handles the documented HTTP operation.
 func (h handler) listTasks(c *gin.Context) {
 	if _, e := session(c.Request.Context(), h.db, c.MustGet("principal").(*auth.Principal), c.Param("id")); e != nil {
 		httpx.Error(c, e)
 		return
 	}
-	rows := []Task{}
-	e := h.db.WithContext(c.Request.Context()).Where(eq("session_id", c.Param("id"))).Order(clause.OrderByColumn{Column: clause.Column{Name: "id"}}).Scopes(httpx.Page(c)).Find(&rows).Error
+	rows := []taskView{}
+	e := h.db.WithContext(c.Request.Context()).Model(&Task{}).Select(taskViewColumns).Where(eq("session_id", c.Param("id"))).Order(clause.OrderByColumn{Column: clause.Column{Name: "id"}}).Scopes(httpx.Page(c)).Find(&rows).Error
 	if e != nil {
 		httpx.Error(c, e)
 		return
+	}
+	for i := range rows {
+		rows[i].normalize()
 	}
 	httpx.List(c, rows)
 }
 
 // getTask handles the documented HTTP operation.
 func (h handler) getTask(c *gin.Context) {
-	var t Task
-	db := h.db.WithContext(c.Request.Context())
-	p := c.MustGet("principal").(*auth.Principal)
-	// Check session ownership in the task read so each poll needs only one
-	// query after authentication. The session primary key prevents duplicate rows.
-	from := clause.From{Joins: []clause.Join{{
-		Type: clause.InnerJoin, Table: clause.Table{Name: "sessions"},
-		ON: clause.Where{Exprs: []clause.Expression{clause.Eq{
-			Column: clause.Column{Table: "sessions", Name: "id"},
-			Value:  clause.Column{Table: "tasks", Name: "session_id"},
-		}}},
-	}}}
-	owned := clause.And(
-		clause.Eq{Column: clause.Column{Table: "sessions", Name: "org_id"}, Value: p.OrgID},
-		clause.Eq{Column: clause.Column{Table: "sessions", Name: "owner_id"}, Value: p.PrincipalID},
-		clause.Eq{Column: clause.Column{Table: "tasks", Name: "id"}, Value: c.Param("id")},
-	)
-	if e := db.Clauses(from).Omit("messages").Where(owned).Take(&t).Error; e != nil {
-		httpx.Error(c, e)
-		return
-	}
-	correlateTask(c, t)
-	c.JSON(200, t)
+	h.serveTask(c)
 }
 
 // addInput handles the documented HTTP operation.
@@ -285,7 +319,7 @@ func (h handler) delegateTask(c *gin.Context) {
 		httpx.Error(c, e)
 		return
 	}
-	correlateTask(c, t)
+	correlateTask(c, t.ID, t.RootID, t.SessionID)
 	c.JSON(202, t)
 }
 

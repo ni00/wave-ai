@@ -13,7 +13,11 @@ import (
 )
 
 func (w *Worker) park(ctx context.Context, t *Task, state string) error {
-	return fenced(ctx, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {
+	// Take before opening the transaction: an in-flight recorder batch of
+	// this session must commit first, and waiting while holding the session
+	// lock would deadlock.
+	pending := w.takeSpans(t)
+	return fencedSlim(ctx, w.DB, t, nil, func(tx *gorm.DB, s *Session, current *Task) error {
 		if state == "waiting" {
 			// Resolve may have committed between the worker's snapshot and
 			// this park; parking over it would strand a call that is ready
@@ -36,7 +40,14 @@ func (w *Worker) park(ctx context.Context, t *Task, state string) error {
 		current.State = state
 		current.Owner = ""
 		current.LeaseUntil = nil
-		if e := tx.Save(current).Error; e != nil {
+		// Parking releases the claim, so the buffered spans ride this
+		// transaction: a later recorder flush would fail the fence.
+		if e := emitSpans(tx, s, pending); e != nil {
+			return e
+		}
+		// Only the release columns change; a full-row save would rewrite the
+		// message and snapshot JSONB on every tool wait.
+		if e := tx.Model(current).Select("state", "owner", "lease_until").Updates(current).Error; e != nil {
 			return e
 		}
 		if state == "queued" {
@@ -48,16 +59,23 @@ func (w *Worker) park(ctx context.Context, t *Task, state string) error {
 	})
 }
 func (w *Worker) fail(ctx context.Context, t *Task, cause error) error {
-	return fenced(ctx, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {
+	// The task stays running (the next step finishes it), so buffered spans
+	// keep flowing to the finish drain; only the two columns change here.
+	return fencedSlim(ctx, w.DB, t, nil, func(tx *gorm.DB, s *Session, current *Task) error {
 		current.Error = cause.Error()
 		current.PendingFinish = "failed"
-		return tx.Save(current).Error
+		return tx.Model(current).Select("error", "pending_finish").Updates(current).Error
 	})
 }
 func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 	var s Session
 	var task Task
 	wait := false
+	// Every branch that waits or settles the task writes in one of the two
+	// transactions below; the taken spans ride whichever one runs so the
+	// buffer is empty before the claim is released. Taking before the
+	// transaction cannot deadlock against an in-flight recorder batch.
+	pending := w.takeSpans(claim)
 	e := fenced(ctx, w.DB, claim, func(tx *gorm.DB, sess *Session, t *Task) error {
 		s = *sess
 		task = *t
@@ -75,7 +93,10 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 				t.Error = "cancellation awaits tool outcome confirmation"
 				t.Owner = ""
 				t.LeaseUntil = nil
-				return tx.Save(t).Error
+				if e := emitSpans(tx, sess, pending); e != nil {
+					return e
+				}
+				return tx.Model(t).Select("state", "error", "owner", "lease_until").Updates(t).Error
 			}
 		}
 
@@ -92,7 +113,7 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 						if child.State == "waiting" {
 							child.State = "queued"
 						}
-						if e := tx.Save(&child).Error; e != nil {
+						if e := tx.Model(&child).Select("cancel_requested", "state").Updates(&child).Error; e != nil {
 							return e
 						}
 						// Cancellation cascades requeue waiting children; wake
@@ -111,7 +132,10 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 			t.State = "waiting"
 			t.Owner = ""
 			t.LeaseUntil = nil
-			return tx.Save(t).Error
+			if e := emitSpans(tx, sess, pending); e != nil {
+				return e
+			}
+			return tx.Model(t).Select("pending_finish", "state", "owner", "lease_until").Updates(t).Error
 		}
 
 		t.Finalizing = true
@@ -132,7 +156,16 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 	if task.ParentID == "" && w.Evaluate != nil && (state == "succeeded" || state == "partial") {
 		evaluation = w.Evaluate(ctx, s, task)
 	}
+	// Spans recorded by workspace.finish since the first transaction join
+	// the pre-taken batch here, still in arrival order.
+	pending = append(pending, w.takeSpans(claim)...)
 	e = fencedSlim(ctx, w.DB, claim, []string{"parent_id", "root_id", "result", "error", "created_at"}, func(tx *gorm.DB, s *Session, t *Task) error {
+		// Drain before any finish-path event: the finished task's trace is
+		// complete the moment this transaction commits, with no extra
+		// transaction of its own.
+		if e := emitSpans(tx, s, pending); e != nil {
+			return e
+		}
 		now := time.Now()
 		t.Evaluation = evaluation
 		t.State = state
@@ -178,13 +211,24 @@ func (w *Worker) finish(ctx context.Context, claim *Task, state string) error {
 	return e
 }
 func (w *Worker) parkUnknown(ctx context.Context, t *Task, e error) error {
-	return fenced(ctx, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {
+	// Take before opening the transaction: an in-flight recorder batch of
+	// this session must commit first, and waiting while holding the session
+	// lock would deadlock.
+	pending := w.takeSpans(t)
+	return fencedSlim(ctx, w.DB, t, nil, func(tx *gorm.DB, s *Session, current *Task) error {
 		current.State = "unknown"
 		current.Error = e.Error()
 		current.Owner = ""
 		current.LeaseUntil = nil
-		if e := tx.Save(current).Error; e != nil {
-			return e
+		// Parking unknown releases the claim, so the buffered spans ride
+		// this transaction.
+		if err := emitSpans(tx, s, pending); err != nil {
+			return err
+		}
+		// Only the release columns change; a full-row save would rewrite the
+		// message and snapshot JSONB.
+		if err := tx.Model(current).Select("state", "error", "owner", "lease_until").Updates(current).Error; err != nil {
+			return err
 		}
 		return emit(tx, s, t.ID, "task.unknown", map[string]any{"reason": e.Error()})
 	})

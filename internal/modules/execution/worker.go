@@ -50,12 +50,46 @@ type Worker struct {
 	// claim overrides the claim implementation; tests use it to observe poll
 	// cadence. Nil runs the canonical claimWithAdmission.
 	claim func(context.Context, *gorm.DB, string, time.Duration, Admission) (*Task, error)
+	// spans batches trace.span events for this worker's tasks; lazily
+	// started on the first traced context and stopped when Run returns.
+	spans     *spanLog
+	spansOnce sync.Once
+}
+
+// spanLog lazily starts the worker's span recorder; a pre-set spans field
+// (tests) wins without starting the background loop.
+func (w *Worker) spanLog() *spanLog {
+	w.spansOnce.Do(func() {
+		if w.spans == nil {
+			w.spans = newSpanLog(w.DB)
+		}
+	})
+	return w.spans
+}
+
+// takeSpans removes the buffered spans of one claim for an inline drain;
+// workers that never traced a context have nothing buffered.
+func (w *Worker) takeSpans(claim *Task) []pendingSpan {
+	if w.spans == nil {
+		return nil
+	}
+	return w.spans.takeTask(claim)
+}
+
+func (w *Worker) stopSpans() {
+	if w.spans != nil {
+		w.spans.stop()
+	}
 }
 
 func (w *Worker) Run(ctx context.Context) {
 	if w.Lease == 0 {
 		w.Lease = 30 * time.Second
 	}
+	// Stop the span recorder after the claim loop drains: run() drains
+	// every task inline, so the recorder's final flush only mops up
+	// failures.
+	defer w.stopSpans()
 	owner := xid.New("worker")
 	// The wake signal is the fast path; the timer is the fallback for lost
 	// signals and signaling outages. An idle worker doubles its poll interval
@@ -126,7 +160,11 @@ func (w *Worker) run(ctx context.Context, t *Task) {
 		wg.Wait()
 		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
 		defer stop()
-		_ = fenced(cleanup, w.DB, t, func(tx *gorm.DB, s *Session, current *Task) error {
+		// Take before opening the transaction: an in-flight recorder batch
+		// of this session must commit first, and waiting while holding the
+		// session lock would deadlock.
+		pending := w.takeSpans(t)
+		_ = fencedSlim(cleanup, w.DB, t, []string{"attempts", "finalizing", "session_id", "parent_id", "root_id"}, func(tx *gorm.DB, s *Session, current *Task) error {
 			if e := interruptGenerations(tx, current); e != nil {
 				return e
 			}
@@ -148,7 +186,14 @@ func (w *Worker) run(ctx context.Context, t *Task) {
 			}
 			current.Owner = ""
 			current.LeaseUntil = nil
-			if e := tx.Save(current).Error; e != nil {
+			// Releasing the claim drains the buffered spans here: a later
+			// recorder flush would fail the fence and drop them.
+			if e := emitSpans(tx, s, pending); e != nil {
+				return e
+			}
+			// Only the release columns change; a full-row save would rewrite
+			// the message and snapshot JSONB on every worker handoff.
+			if e := tx.Model(current).Select("state", "error", "owner", "lease_until").Updates(current).Error; e != nil {
 				return e
 			}
 			if current.State == "unknown" {

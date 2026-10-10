@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -54,31 +55,286 @@ func (w *Worker) traceContext(ctx context.Context, t *Task) context.Context {
 		}
 	}
 	s.Record = func(ctx context.Context, span observe.Span) {
-		// Bounded best-effort writes: telemetry failure must not fail/retry a tool.
-		// The budget exceeds saturated-phase fence latency so span finish events
-		// survive load spikes; a drop leaves an interrupted span in the trace.
-		write, cancel := context.WithTimeout(context.WithoutCancel(ctx), 750*time.Millisecond)
-		defer cancel()
-		raw, _ := json.Marshal(span)
-		data := map[string]any{}
-		_ = json.Unmarshal(raw, &data)
-		err := fencedSlim(write, w.DB, t, nil, func(tx *gorm.DB, s *Session, current *Task) error {
-			if span.Name == "sandbox.ensure" && span.FinishedAt != nil && span.DurationMS != nil {
-				values := map[string]float64{"sandbox.startup": *span.DurationMS}
-				if span.State == "failed" {
-					values["sandbox.failed"] = 1
-				}
-				if err := telemetry.Enqueue(tx, s.OrgID, s.OwnerID, *span.FinishedAt, values); err != nil {
-					return err
-				}
-			}
-			return emit(tx, s, t.ID, "trace.span", data)
-		})
-		if err != nil {
-			observe.Logger(ctx).Warn("trace.write_failed", "name", span.Name)
-		}
+		// Bounded best-effort writes: telemetry failure must not fail/retry
+		// a tool. Spans buffer in the worker's span log and reach the events
+		// table in batches (recorder flush or inline drain); overflow or a
+		// failed batch drops spans, leaving an interrupted span in the trace.
+		w.spanLog().record(ctx, t, span)
 	}
 	return observe.With(ctx, s)
+}
+
+// Span batching. Profiling showed one fenced transaction per span (four or
+// more per task) dominating inter-span latency, so spans buffer in a bounded
+// per-worker log and reach the events table in batches: a background
+// recorder flushes periodically or at a count threshold, and the paths that
+// release a claim (park, finish, worker cleanup) drain the buffer inside the
+// transaction they already run. Both consumers take from the same
+// mutex-guarded buffer, so arrival order survives: a drain first waits for
+// any in-flight recorder batch of its session to commit, then the drained
+// spans follow at higher sequence numbers. trace.span remains an ordinary
+// event with unchanged seq semantics; only its grouping into transactions
+// changed.
+const (
+	// spanBufferCapacity bounds the spans buffered per worker. Overflow
+	// drops and counts spans — the unbatched writer already tolerated loss.
+	spanBufferCapacity = 256
+	// spanFlushBatch caps one flush take: spans grouped by claim, one fenced
+	// transaction per group, arrival order preserved inside the group.
+	spanFlushBatch = 64
+	// spanFlushEvery bounds how long a span can sit in the buffer between
+	// count-triggered flushes; it is the live-visibility budget for SSE
+	// consumers of trace.span events.
+	spanFlushEvery = 200 * time.Millisecond
+	// spanWriteTimeout bounds one recorder batch write, matching the
+	// per-span budget the unbatched writer used.
+	spanWriteTimeout = 750 * time.Millisecond
+)
+
+// pendingSpan is one buffered span document with the claim it was recorded
+// under; data is precomputed so flushes and drains only emit.
+type pendingSpan struct {
+	claim *Task
+	span  observe.Span
+	data  map[string]any
+}
+
+type spanLog struct {
+	db       *gorm.DB
+	capacity int
+	batch    int
+	every    time.Duration
+
+	mu       sync.Mutex
+	cond     *sync.Cond
+	pending  []pendingSpan
+	inflight map[string]int
+	dropped  int
+	stopped  bool
+
+	wake     chan struct{}
+	stopCh   chan struct{}
+	done     chan struct{}
+	stopOnce sync.Once
+	started  bool
+}
+
+func newSpanLog(db *gorm.DB) *spanLog {
+	l := newSpanLogWith(db, spanBufferCapacity, spanFlushBatch, spanFlushEvery)
+	l.start()
+	return l
+}
+
+// newSpanLogWith builds a log without starting the recorder; tests drive
+// flush directly or exercise inline drains only.
+func newSpanLogWith(db *gorm.DB, capacity, batch int, every time.Duration) *spanLog {
+	l := &spanLog{
+		db:       db,
+		capacity: capacity,
+		batch:    batch,
+		every:    every,
+		inflight: map[string]int{},
+		wake:     make(chan struct{}, 1),
+		stopCh:   make(chan struct{}),
+		done:     make(chan struct{}),
+	}
+	l.cond = sync.NewCond(&l.mu)
+	return l
+}
+
+func (l *spanLog) start() {
+	l.started = true
+	go l.loop()
+}
+
+// record buffers one span document. Marshaling happens here, outside every
+// lock and transaction, so flushes and drains only emit.
+func (l *spanLog) record(ctx context.Context, claim *Task, span observe.Span) {
+	raw, _ := json.Marshal(span)
+	data := map[string]any{}
+	_ = json.Unmarshal(raw, &data)
+	l.mu.Lock()
+	if l.stopped || len(l.pending) >= l.capacity {
+		l.dropped++
+		dropped := l.dropped
+		l.mu.Unlock()
+		observe.Logger(ctx).Warn("trace.span_dropped", "name", span.Name, "dropped_total", dropped)
+		return
+	}
+	l.pending = append(l.pending, pendingSpan{claim: claim, span: span, data: data})
+	full := len(l.pending) >= l.batch
+	l.mu.Unlock()
+	if full {
+		select {
+		case l.wake <- struct{}{}:
+		default:
+		}
+	}
+}
+
+// takeTask removes every buffered span of one task for an inline drain. It
+// waits until no recorder batch of this session is in flight: that batch
+// holds earlier arrivals and must commit first. Waiting before the caller
+// opens its fenced transaction cannot deadlock, because the recorder holds
+// no session lock at this point.
+func (l *spanLog) takeTask(claim *Task) []pendingSpan {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for l.inflight[claim.SessionID] > 0 {
+		l.cond.Wait()
+	}
+	kept := l.pending[:0]
+	var out []pendingSpan
+	for _, ps := range l.pending {
+		if ps.claim.ID == claim.ID {
+			out = append(out, ps)
+			continue
+		}
+		kept = append(kept, ps)
+	}
+	l.pending = kept
+	return out
+}
+
+func (l *spanLog) drops() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.dropped
+}
+
+// loop is the recorder: periodic and count-triggered flushes until stop,
+// then one final flush of whatever is left.
+func (l *spanLog) loop() {
+	defer close(l.done)
+	ticker := time.NewTicker(l.every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-l.stopCh:
+			l.flush(true)
+			return
+		case <-l.wake:
+		case <-ticker.C:
+		}
+		l.flush(false)
+	}
+}
+
+func (l *spanLog) stop() {
+	l.stopOnce.Do(func() {
+		l.mu.Lock()
+		l.stopped = true
+		l.mu.Unlock()
+		close(l.stopCh)
+	})
+	if l.started {
+		<-l.done
+	}
+}
+
+// flush writes buffered spans in batches. final drains the whole buffer
+// (stop path); otherwise bursts larger than one batch keep looping so a
+// wake signal cannot leave a full buffer behind until the next tick.
+func (l *spanLog) flush(final bool) {
+	for {
+		groups := l.take(final)
+		for _, g := range groups {
+			l.write(g)
+		}
+		if len(groups) == 0 || (!final && l.backlog() < l.batch) {
+			return
+		}
+	}
+}
+
+// take removes up to one batch (all of it when final) and returns the spans
+// grouped by claim. One worker runs one task per session at a time, so a
+// claim group is the session's batch; grouping by claim keeps the fence
+// exact when a stale claim's spans linger after a failed drain.
+func (l *spanLog) take(final bool) [][]pendingSpan {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	n := len(l.pending)
+	if n == 0 {
+		return nil
+	}
+	if !final && n > l.batch {
+		n = l.batch
+	}
+	taken := make([]pendingSpan, n)
+	copy(taken, l.pending)
+	l.pending = append(l.pending[:0], l.pending[n:]...)
+	groups := [][]pendingSpan{}
+	index := map[string]int{}
+	for _, ps := range taken {
+		if i, ok := index[ps.claim.ID]; ok {
+			groups[i] = append(groups[i], ps)
+			continue
+		}
+		l.inflight[ps.claim.SessionID]++
+		index[ps.claim.ID] = len(groups)
+		groups = append(groups, []pendingSpan{ps})
+	}
+	return groups
+}
+
+func (l *spanLog) backlog() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.pending)
+}
+
+// write persists one claim group as a single fenced transaction, in arrival
+// order. A failure drops the group: telemetry is best-effort, and replaying
+// events after a lost fence would corrupt the new owner's sequence.
+func (l *spanLog) write(group []pendingSpan) {
+	defer l.release(group[0].claim.SessionID)
+	claim := group[len(group)-1].claim
+	write, cancel := context.WithTimeout(context.Background(), spanWriteTimeout)
+	defer cancel()
+	if err := fencedSlim(write, l.db, claim, nil, func(tx *gorm.DB, s *Session, t *Task) error {
+		return emitSpans(tx, s, group)
+	}); err != nil {
+		observe.Logger(write).Warn("trace.write_failed", "name", group[0].span.Name, "spans", len(group))
+	}
+}
+
+func (l *spanLog) release(sessionID string) {
+	l.mu.Lock()
+	l.inflight[sessionID]--
+	if l.inflight[sessionID] <= 0 {
+		delete(l.inflight, sessionID)
+	}
+	l.cond.Broadcast()
+	l.mu.Unlock()
+}
+
+// emitSpans writes drained or flushed spans inside an already-fenced
+// transaction, preserving arrival order. The fence of the surrounding
+// transaction covers these emits; the session lock orders event_seq.
+func emitSpans(tx *gorm.DB, s *Session, spans []pendingSpan) error {
+	for _, ps := range spans {
+		if e := spanMetrics(tx, s, ps.span); e != nil {
+			return e
+		}
+		if e := emit(tx, s, ps.claim.ID, "trace.span", ps.data); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+// spanMetrics charges sandbox startup telemetry for finished sandbox.ensure
+// spans, exactly as the per-span writer did.
+func spanMetrics(tx *gorm.DB, s *Session, span observe.Span) error {
+	if span.Name != "sandbox.ensure" || span.FinishedAt == nil || span.DurationMS == nil {
+		return nil
+	}
+	values := map[string]float64{"sandbox.startup": *span.DurationMS}
+	if span.State == "failed" {
+		values["sandbox.failed"] = 1
+	}
+	return telemetry.Enqueue(tx, s.OrgID, s.OwnerID, *span.FinishedAt, values)
 }
 
 // TaskTrace checks ownership before loading telemetry and bounds every query.
@@ -98,6 +354,7 @@ func TaskTrace(ctx context.Context, db *gorm.DB, p *auth.Principal, id string) (
 			return err
 		}
 		const limit = 5000
+
 		var gs []Generation
 		var calls []ToolCall
 		var events []Event

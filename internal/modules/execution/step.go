@@ -88,10 +88,13 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 					return e
 				}
 				call.Delivered = true
-				if e := tx.Save(&call).Error; e != nil {
+				// Only the delivery flag and the appended message change; full-row
+				// saves would rewrite the arguments and message JSONB on every
+				// tool result.
+				if e := tx.Model(&call).Select("delivered").Updates(&call).Error; e != nil {
 					return e
 				}
-				return tx.Save(t).Error
+				return tx.Model(t).Select("messages").Updates(t).Error
 			}); e != nil {
 				return e
 			}
@@ -205,6 +208,10 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 		if ctx.Err() != nil {
 			return e
 		}
+		// Take before opening the transaction: an in-flight recorder batch
+		// of this session must commit first, and waiting while holding the
+		// session lock would deadlock.
+		pending := w.takeSpans(claim)
 		return fenced(ctx, w.DB, claim, func(tx *gorm.DB, s *Session, current *Task) error {
 			if err := saveGeneration(tx, s, &generation); err != nil {
 				return err
@@ -224,7 +231,14 @@ func (w *Worker) step(ctx context.Context, claim *Task) error {
 				current.Owner = ""
 				current.LeaseUntil = nil
 			}
-			if err := tx.Save(current).Error; err != nil {
+			// The requeue branch releases the claim; drain the buffered
+			// spans here so the trace stays complete for the retry worker.
+			if err := emitSpans(tx, s, pending); err != nil {
+				return err
+			}
+			// Only the retry columns change; a full-row save would rewrite
+			// the message and snapshot JSONB on every model failure.
+			if err := tx.Model(current).Select("failures", "usage_known", "error", "pending_finish", "state", "owner", "lease_until").Updates(current).Error; err != nil {
 				return err
 			}
 			// A requeued retry is claimable again; wake the idle workers.
