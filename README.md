@@ -116,6 +116,7 @@ For development without Compose, see the [local setup instructions](skills/wave-
 
 | Use case | Guide |
 | --- | --- |
+| Learn by running real workflows | [Examples](examples/README.md) |
 | Manage resources and follow tasks | [wavectl](cli/README.md) |
 | Integrate an application | [Go SDK](sdks/go/README.md), [Python SDK](sdks/python/README.md), [TypeScript SDK](sdks/typescript/README.md) |
 | Give an external agent Wave workflows | [wave-client skill](skills/wave-client/SKILL.md) |

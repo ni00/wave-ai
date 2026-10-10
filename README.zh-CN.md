@@ -90,6 +90,7 @@ Agent 可以保存偏好、项目约定等信息，在不同任务和会话中�
 
 | 用途 | 文档 |
 | --- | --- |
+| 通过真实工作流上手 | [示例](examples/README.zh-CN.md) |
 | 管理资源、跟踪任务 | [wavectl](cli/README.zh-CN.md) |
 | 集成到应用 | [Go SDK](sdks/go/README.zh-CN.md)、[Python SDK](sdks/python/README.zh-CN.md)、[TypeScript SDK](sdks/typescript/README.zh-CN.md) |
 | 为外部 Agent 提供 Wave 操作流程 | [wave-client 技能](skills/wave-client/SKILL.md) |
