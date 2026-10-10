@@ -443,3 +443,44 @@ func TestListDirAgainstRealEngine(t *testing.T) {
 		t.Fatalf("file listing error = %v, want not-a-directory", err)
 	}
 }
+
+// Stop must release the capacity reservation when the backing container is
+// already gone (external cleanup, host restarts, pruned containers): the
+// sandbox is de facto stopped, and returning the inspect error would pin the
+// per-host sandbox slots until manual cleanup.
+func TestStopReleasesMissingContainer(t *testing.T) {
+	db, prefix := capacityDB(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/json") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		t.Errorf("unexpected engine operation: %s", r.URL.Path)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+	c, err := NewContainer(ContainerOptions{Backend: "gvisor", Store: db, CPUs: 1, MemoryMiB: 1024, Image: "test-image", MaxRunning: 2, MemoryBudgetMiB: 3072})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.api.Close()
+	c.api, err = client.New(client.WithHost("tcp://"+strings.TrimPrefix(server.URL, "http://")), client.WithAPIVersion("1.40"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	sid := prefix + "-gone"
+	if err := db.Create(&Record{SessionID: sid, Name: "wave-" + sid, State: "running", BackendID: "missing-container", Backend: "gvisor", EngineHost: "unix:///var/run/docker.sock", Runtime: "wave-runsc", Network: "none", CPUs: 1, MemoryMiB: 1024, Image: "test-image"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Stop(context.Background(), sid); err != nil {
+		t.Fatalf("stop with missing container: %v", err)
+	}
+	var r Record
+	if err := db.Take(&r, "session_id = ?", sid).Error; err != nil {
+		t.Fatal(err)
+	}
+	if r.State != "stopped" {
+		t.Fatalf("record state = %q, want stopped", r.State)
+	}
+}

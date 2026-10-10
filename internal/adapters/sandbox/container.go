@@ -250,6 +250,12 @@ func (c *Container) Stop(ctx context.Context, sid string) error {
 		ref = r.Name
 	}
 	info, err := c.api.ContainerInspect(ctx, ref, client.ContainerInspectOptions{})
+	if errdefs.IsNotFound(err) {
+		// The container is already gone — external cleanup, or a confirmed
+		// kill after an interrupted exec. The sandbox is de facto stopped,
+		// so release the capacity reservation instead of leaking it.
+		return c.state(ctx, sid, "stopped")
+	}
 	if err != nil {
 		return err
 	}
