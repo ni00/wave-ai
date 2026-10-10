@@ -161,6 +161,12 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if scenario == "wait-child" && count > 0 {
 				task["state"] = "succeeded"
 			}
+			// wait-action parks in "waiting": the client only queries
+			// required actions for waiting/unknown tasks, and the TS suite
+			// asserts wait() returns reason "action" for this scenario.
+			if scenario == "wait-action" {
+				task["state"] = "waiting"
+			}
 			send(w, 200, task)
 			return
 		}
