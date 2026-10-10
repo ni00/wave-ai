@@ -27,6 +27,13 @@ var (
 func ulid(t time.Time) string {
 	ms := t.UnixMilli()
 	mu.Lock()
+	// A real clock step backwards — or the +1ms bucket bump after the
+	// sequence budget overflows — leaves ms behind lastMS. Pin to the last
+	// bucket so the shared same-bucket path below consumes a fresh sequence
+	// number; reusing (lastMS, lastSeq) verbatim would collide.
+	if ms < lastMS {
+		ms = lastMS
+	}
 	if ms == lastMS {
 		lastSeq++
 		if lastSeq >= 3200 { // entropy budget per millisecond
@@ -36,11 +43,9 @@ func ulid(t time.Time) string {
 			lastMS = ms
 			lastSeq = 0
 		}
-	} else if ms > lastMS {
+	} else {
 		lastMS = ms
 		lastSeq = 0
-	} else {
-		ms = lastMS // clock went backwards; reuse last bucket
 	}
 	seq := lastSeq
 	mu.Unlock()
